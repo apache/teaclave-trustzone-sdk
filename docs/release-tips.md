@@ -62,7 +62,7 @@ Manually trigger the Github Action workflow to draft the release notes:
 4. Confirm to Run workflow
 
 After the workflow completes, a draft release will appear at:
-<https://github.com/apache/incubator-teaclave-trustzone-sdk/releases>
+<https://github.com/apache/teaclave-trustzone-sdk/releases>
 
 The workflow categorizes the PRs according to their labels.
 
@@ -77,34 +77,31 @@ Please note that once a release is published (including pre-releases), its relea
 ### Email template for voting
 
 ````
-Title: [VOTE] Release Apache Teaclave TrustZone SDK (incubating) v$VERSION-$RC
+Title: [VOTE] Release Apache Teaclave TrustZone SDK v$VERSION-$RC
 
 Hi all,
 
 I am pleased to be calling this vote for the release of
-Apache Teaclave TrustZone SDK (incubating) $VERSION ($RC).
+Apache Teaclave TrustZone SDK $VERSION ($RC).
 
 The release note is available in:
-- https://github.com/apache/incubator-teaclave-trustzone-sdk/releases/tag/v$VERSION-$RC
+- https://github.com/apache/teaclave-trustzone-sdk/releases/tag/v$VERSION-$RC
 
 The release candidate to be voted over is available at:
-- https://dist.apache.org/repos/dist/dev/incubator/teaclave/trustzone-sdk-$VERSION-$RC/
+- https://dist.apache.org/repos/dist/dev/teaclave/trustzone-sdk-$VERSION-$RC/
 
 The release candidate is signed with a GPG key available at:
-- https://downloads.apache.org/incubator/teaclave/KEYS 
+- https://downloads.apache.org/teaclave/KEYS 
 
 Instructions to verify the release candidate’s signature:
 - https://teaclave.apache.org/download/#verify-the-integrity-of-the-files
 
-A release checklist for reference:
-- https://cwiki.apache.org/confluence/display/INCUBATOR/Incubator+Release+Checklist
-
 The release artifacts have passed all GitHub Actions CI checks. You can also reproduce the build process manually from source using the following commands:
 
 ```bash
-$ wget https://dist.apache.org/repos/dist/dev/incubator/teaclave/trustzone-sdk-$VERSION-$RC/apache-teaclave-trustzone-sdk-$VERSION-incubating.tar.gz
-$ tar zxvf apache-teaclave-trustzone-sdk-$VERSION-incubating.tar.gz
-$ cd apache-teaclave-trustzone-sdk-$VERSION-incubating
+$ wget https://dist.apache.org/repos/dist/dev/teaclave/trustzone-sdk-$VERSION-$RC/apache-teaclave-trustzone-sdk-$VERSION.tar.gz
+$ tar zxvf apache-teaclave-trustzone-sdk-$VERSION.tar.gz
+$ cd apache-teaclave-trustzone-sdk-$VERSION
 $ docker run --rm -it -v$(pwd):/teaclave-trustzone-sdk -w \
 /teaclave-trustzone-sdk yuanz0/teaclave-trustzone-sdk:ubuntu-24.04 \
 bash -c "./setup.sh && (./build_optee_libraries.sh optee) && source \

@@ -82,7 +82,7 @@ examples/acipher-rs/
    The changes are:
    
    a. Move linking parameters from the original 
-   [`/.cargo/config`](https://github.com/apache/incubator-teaclave-trustzone-sdk/blob/master/.cargo/config):
+   [`/.cargo/config`](https://github.com/apache/teaclave-trustzone-sdk/blob/master/.cargo/config):
 	This change is primarily designed to accommodate more complex build targets.
 	For standard TAs, the specific build targets are `aarch64-unknown-optee-trustzone` 
 	and `arm-unknown-optee-trustzone`.
@@ -172,27 +172,27 @@ manually migrate those files:
 3. **`ta_static.rs`**:  
    Usually, developers don't need to modify this file. If you have made 
    modifications to this file, compare them with the latest version here:  
-   [ta_static.rs diff](https://github.com/apache/incubator-teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..9e3906e9d82f0471e96bf892afe0df37dd90a86e#diff-c0cdd7b28f558bd417069b8e60ed35b70ac1cd01e68e3c0ba6c7311a5a444e22)
+   [ta_static.rs diff](https://github.com/apache/teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..9e3906e9d82f0471e96bf892afe0df37dd90a86e#diff-c0cdd7b28f558bd417069b8e60ed35b70ac1cd01e68e3c0ba6c7311a5a444e22)
 
 4. **`build.rs`**:  
    Usually, developers don't need to modify this file. If you have made
    changes to link other libraries or dependencies in `build.rs`, compare
    the two versions and migrate accordingly:  
-   [build.rs diff](https://github.com/apache/incubator-teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..9e3906e9d82f0471e96bf892afe0df37dd90a86e#diff-c07432a8a8ecbc1f00799a2bd008bd8dcbba9d58fd0a9e5815b835e4ed425e86)
+   [build.rs diff](https://github.com/apache/teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..9e3906e9d82f0471e96bf892afe0df37dd90a86e#diff-c07432a8a8ecbc1f00799a2bd008bd8dcbba9d58fd0a9e5815b835e4ed425e86)
 
 5. **Makefiles**:  
 You may have modified some of the Makefiles. Please compare them 
 with the current versions to ensure compatibility:
 
 - **For `no_std` builds**:  
-   - [Top-level Makefile](https://github.com/apache/incubator-teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..dc1523cbcf6c716213854d9a16d39b8d498a9bb6#diff-df315bfec3c0b8e84c64b31e4450660ea66c33aa833f5b1b9d76250481c15887)  
-   - [Host Makefile](https://github.com/apache/incubator-teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..dc1523cbcf6c716213854d9a16d39b8d498a9bb6#diff-96468cc392cceb21806dbfb2dd24007d772f19992955ed81c4979a45f753378a)  
-   - [TA Makefile](https://github.com/apache/incubator-teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..dc1523cbcf6c716213854d9a16d39b8d498a9bb6#diff-29c530c8f83308f34fae9b3516015f07fa80c1b879cc9a8834c4dfaa497af1a5)
+   - [Top-level Makefile](https://github.com/apache/teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..dc1523cbcf6c716213854d9a16d39b8d498a9bb6#diff-df315bfec3c0b8e84c64b31e4450660ea66c33aa833f5b1b9d76250481c15887)  
+   - [Host Makefile](https://github.com/apache/teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..dc1523cbcf6c716213854d9a16d39b8d498a9bb6#diff-96468cc392cceb21806dbfb2dd24007d772f19992955ed81c4979a45f753378a)  
+   - [TA Makefile](https://github.com/apache/teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..dc1523cbcf6c716213854d9a16d39b8d498a9bb6#diff-29c530c8f83308f34fae9b3516015f07fa80c1b879cc9a8834c4dfaa497af1a5)
 
 - **For `std` builds**:  
-   - [Top-level Makefile](https://github.com/apache/incubator-teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..dc1523cbcf6c716213854d9a16d39b8d498a9bb6#diff-15685120d44f0ca4ea11ac90799a621f19378cebf5b018792ebc25bee68c3824)  
-   - [Host Makefile](https://github.com/apache/incubator-teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..dc1523cbcf6c716213854d9a16d39b8d498a9bb6#diff-dfb3cbc25e6b4bad652b716b9d051c9fb7c45d2d8303caa936666774c49a624a)  
-   - [TA Makefile](https://github.com/apache/incubator-teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..dc1523cbcf6c716213854d9a16d39b8d498a9bb6#diff-e0618a8a49e0ac65dd1acd48a0108c280a3821bcfb233f46f4baa56c77369001)
+   - [Top-level Makefile](https://github.com/apache/teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..dc1523cbcf6c716213854d9a16d39b8d498a9bb6#diff-15685120d44f0ca4ea11ac90799a621f19378cebf5b018792ebc25bee68c3824)  
+   - [Host Makefile](https://github.com/apache/teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..dc1523cbcf6c716213854d9a16d39b8d498a9bb6#diff-dfb3cbc25e6b4bad652b716b9d051c9fb7c45d2d8303caa936666774c49a624a)  
+   - [TA Makefile](https://github.com/apache/teaclave-trustzone-sdk/compare/cd19ac2e1c3cb1a848d5131d4af8138d84be8708..dc1523cbcf6c716213854d9a16d39b8d498a9bb6#diff-e0618a8a49e0ac65dd1acd48a0108c280a3821bcfb233f46f4baa56c77369001)
 
 ### Step 2: **Update `Cargo.toml`**  
 You may need to update your `Cargo.toml` file to include newer 

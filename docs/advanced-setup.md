@@ -60,8 +60,8 @@ Prerequisites](https://optee.readthedocs.io/en/latest/building/prerequisites.htm
    code from the official GitHub repository:
    
    ```sh
-   git clone https://github.com/apache/incubator-teaclave-trustzone-sdk.git
-   cd incubator-teaclave-trustzone-sdk
+   git clone https://github.com/apache/teaclave-trustzone-sdk.git
+   cd teaclave-trustzone-sdk
    ```
 
 ## Setup Building Environment
@@ -78,7 +78,7 @@ Currently, we support building on both `aarch64` and `x86_64` host machines, and
 2. Build OP-TEE libraries
 
    By default, the `OPTEE_DIR` is 
-   `incubator-teaclave-trustzone-sdk/optee/`. OP-TEE submodules 
+   `teaclave-trustzone-sdk/optee/`. OP-TEE submodules 
    (`optee_os` and `optee_client` for QEMUv8) will be initialized 
    automatically by executing:
 
@@ -124,7 +124,7 @@ make -C examples/[YOUR_APPLICATION]
 ```
 
 Besides, you can collect all example CAs and TAs to
-`/incubator-teaclave-trustzone-sdk/out`:
+`/teaclave-trustzone-sdk/out`:
 
 ```sh
 make examples-install

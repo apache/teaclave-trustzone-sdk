@@ -27,7 +27,7 @@ $ rustup target add aarch64-linux-android
 export PATH=$PATH:/your/path/to/android-ndk-r21e/toolchains/llvm/prebuilt/linux-x86_64/bin/
 ```
 
-4. Edit `incubator-teaclave-trustzone-sdk/.cargo/config`, add:
+4. Edit `teaclave-trustzone-sdk/.cargo/config`, add:
 
 ```
 [target.aarch64-linux-android]
@@ -36,7 +36,7 @@ ar = "aarch64-linux-android-ar"
 ```
 
 5. Copy Android libteec.so to
-`/incubator-teaclave-trustzone-sdk/optee/optee_client/out/export/usr/lib`. 
+`/teaclave-trustzone-sdk/optee/optee_client/out/export/usr/lib`. 
 
 - Note: If you've not built the libteec.so of Android, you can build it using:
 ```

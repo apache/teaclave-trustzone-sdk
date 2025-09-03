@@ -30,9 +30,9 @@ ASF_PASSWORD="${ASF_PASSWORD:-your_asf_password}"
 
 # ------------------- Specific for Repo ------------------
 # Name of Github Repo
-REPO_NAME="incubator-teaclave-trustzone-sdk"
+REPO_NAME="teaclave-trustzone-sdk"
 # Name of Apache release artifacts
-TAR_NAME="apache-teaclave-trustzone-sdk-${RELEASE_VERSION}-incubating"
+TAR_NAME="apache-teaclave-trustzone-sdk-${RELEASE_VERSION}"
 
 # SVN directory to put these artifacts
 SVN_RC_DIR="trustzone-sdk-${RELEASE_VERSION}-rc.${RC_NUMBER}"
@@ -44,8 +44,8 @@ TAR_TOP_DIR_NAME="${REPO_NAME}-${RELEASE_VERSION}"
 TAG="v${RELEASE_VERSION}-rc.${RC_NUMBER}"
 
 # SVN repository URLs
-SVN_DEV_BASE="https://dist.apache.org/repos/dist/dev/incubator/teaclave"
-SVN_RELEASE_BASE="https://dist.apache.org/repos/dist/release/incubator/teaclave"
+SVN_DEV_BASE="https://dist.apache.org/repos/dist/dev/teaclave"
+SVN_RELEASE_BASE="https://dist.apache.org/repos/dist/release/teaclave"
 
 show_usage() {
     echo "Usage: $0 <command>"

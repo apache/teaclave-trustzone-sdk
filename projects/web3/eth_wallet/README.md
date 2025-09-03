@@ -76,7 +76,7 @@ production-grade security.
 ## Setup
 
 To set up the environment, follow the instructions in the
-[Apache Teaclave TrustZone SDK README](https://github.com/apache/incubator-teaclave-trustzone-sdk/blob/master/README.md).
+[Apache Teaclave™ TrustZone SDK README](https://github.com/apache/teaclave-trustzone-sdk/blob/master/README.md).
 
 ## Functionalities
 

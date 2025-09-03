@@ -63,10 +63,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          path: 'incubator-teaclave-trustzone-sdk'
+          path: 'teaclave-trustzone-sdk'
       - name: Install OP-TEE dependencies
         run: |
-          cd $GITHUB_WORKSPACE/incubator-teaclave-trustzone-sdk
+          cd $GITHUB_WORKSPACE/teaclave-trustzone-sdk
           chmod +x setup_optee_dependencies.sh
           sudo ./setup_optee_dependencies.sh
       - name: Checkout OP-TEE repository
@@ -78,7 +78,7 @@ jobs:
         run: |
           cd ~/optee-qemuv8
           rm -rf optee_rust/ &&
-          mv $GITHUB_WORKSPACE/incubator-teaclave-trustzone-sdk optee_rust/
+          mv $GITHUB_WORKSPACE/teaclave-trustzone-sdk optee_rust/
           cd build &&
           make -j3 toolchains &&
           make -j`nproc` RUST_ENABLE=y check
@@ -116,10 +116,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          path: 'incubator-teaclave-trustzone-sdk'
+          path: 'teaclave-trustzone-sdk'
       - name: Install OP-TEE dependencies
         run: |
-          cd $GITHUB_WORKSPACE/incubator-teaclave-trustzone-sdk
+          cd $GITHUB_WORKSPACE/teaclave-trustzone-sdk
           chmod +x setup_optee_dependencies.sh
           sudo ./setup_optee_dependencies.sh
       - name: Checkout OP-TEE repository
@@ -131,7 +131,7 @@ jobs:
         run: |
           cd ~/optee-qemuv8
           rm -rf optee_rust/ &&
-          mv $GITHUB_WORKSPACE/incubator-teaclave-trustzone-sdk optee_rust/
+          mv $GITHUB_WORKSPACE/teaclave-trustzone-sdk optee_rust/
           cd build &&
           make -j3 toolchains &&
           make -j`nproc` RUST_ENABLE=y COMPILE_S_USER=32 check

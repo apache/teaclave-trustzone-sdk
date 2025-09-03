@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-name-template: 'Apache Teaclave TrustZone SDK (incubating) v$RESOLVED_VERSION'
+name-template: 'Apache Teaclave™ TrustZone SDK v$RESOLVED_VERSION'
 
 categories:
   - title: "🚀 Features"

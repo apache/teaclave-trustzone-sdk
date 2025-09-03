@@ -20,8 +20,8 @@ both the Normal World and Secure World environments.
 $ docker pull teaclave/teaclave-trustzone-emulator-nostd-optee-4.5.0-expand-memory:latest
 
 # Clone the repository
-$ git clone https://github.com/apache/incubator-teaclave-trustzone-sdk.git && \
-  cd incubator-teaclave-trustzone-sdk
+$ git clone https://github.com/apache/teaclave-trustzone-sdk.git && \
+  cd teaclave-trustzone-sdk
 
 # Launch the development container
 $ docker run -it --rm \

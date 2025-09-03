@@ -49,7 +49,7 @@ include!(concat!(env!("OUT_DIR"), "/user_ta_header.rs"));
 
 After that, everything finished, we can start building the TA now.
 
-For full codes, you can check the [`hello_world-rs example`](https://github.com/apache/incubator-teaclave-trustzone-sdk/tree/main/examples/hello_world-rs/ta)
+For full codes, you can check the [`hello_world-rs example`](https://github.com/apache/teaclave-trustzone-sdk/tree/main/examples/hello_world-rs/ta)
 
 ## Explaination of Minimal Example
 
@@ -192,7 +192,7 @@ fn main() -> Result<(), Error> {
 # Migration Guide
 
 For developers still using `const configuration values` in `src/main.rs` and
-`custom build scripts` in `build.rs`(described in [\[migrating-to-new-building-env\]](https://github.com/apache/incubator-teaclave-trustzone-sdk/blob/main/docs/migrating-to-new-building-env.md)),
+`custom build scripts` in `build.rs`(described in [\[migrating-to-new-building-env\]](https://github.com/apache/teaclave-trustzone-sdk/blob/main/docs/migrating-to-new-building-env.md)),
 they can upgrade to `optee-utee-build` by following step:
 
 Firstly, add `optee-utee-build` as `build-dependencies`:
