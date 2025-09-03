@@ -15,7 +15,7 @@ https://nightlies.apache.org/teaclave/teaclave-trustzone-sdk/ or patch the code
 and build the images by yourself.
 
 For details on the modifications, please refer to the 
-[Patches](https://github.com/apache/teaclave-trustzone-sdk/.patches/test_qemu/README.md)
+[Patches](https://github.com/apache/teaclave-trustzone-sdk/.patches/test_qemu)
 
 Finally, build images:
 
