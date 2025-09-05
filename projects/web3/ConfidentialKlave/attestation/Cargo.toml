@@ -1,0 +1,51 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+[package]
+name = "attestation"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+basic_utils = { path = "../basic_utils" }
+crypto = { path = "../crypto" }
+
+bit-vec = "0.6"
+num-bigint = "0.4"
+yasna = { version = "0.4", features = ["chrono", "bit-vec", "num-bigint"] }
+chrono = { version = "=0.4.26", default-features = false }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+
+rustls = { git = "https://github.com/DemesneGH/rustls-optee.git", branch = "0.21.0-optee", features = ["dangerous_configuration"]}
+rustls-webpki = "=0.100.1"
+webpki-roots = "=0.22.0"
+webpki = "=0.22.0"
+rustls-pemfile = "1.0"
+
+[target.'cfg(target_os="optee")'.dependencies]
+optee-utee-sys = { path = "../../incubator-teaclave-trustzone-sdk/optee-utee/optee-utee-sys" }
+optee-utee = { path = "../../incubator-teaclave-trustzone-sdk/optee-utee" }
+
+[patch.crates-io]
+proc-macro2 = { git = "https://github.com/DemesneGH/proc-macro2.git" }
+ring = { git = "https://github.com/DemesneGH/ring-optee.git", branch = "0.16.20-optee" }
+
+[patch."https://github.com/apache/incubator-teaclave-trustzone-sdk.git"]
+optee-utee = { path = "../../incubator-teaclave-trustzone-sdk/optee-utee" }
+libc = { path = "../../incubator-teaclave-trustzone-sdk/rust/libc" }
