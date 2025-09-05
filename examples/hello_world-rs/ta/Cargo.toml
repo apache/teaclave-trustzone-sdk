@@ -34,6 +34,5 @@ proto = { path = "../proto" }
 optee-utee-build = { path = "../../../optee-utee-build" }
 
 [profile.release]
-panic = "abort"
 lto = true
 opt-level = 1

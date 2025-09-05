@@ -15,18 +15,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use anyhow::{anyhow, Result};
 use std::env;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use uuid::Uuid;
 
-fn main() -> std::io::Result<()> {
-    let out = &PathBuf::from(env::var_os("OUT_DIR").unwrap());
+fn main() -> Result<()> {
+    let out = &PathBuf::from(env::var_os("OUT_DIR").ok_or_else(|| anyhow!("OUT_DIR not set"))?);
     let mut buffer = File::create(out.join("plugin_static.rs"))?;
     buffer.write_all(include_bytes!("plugin_static.rs"))?;
 
-    let plugin_uuid = Uuid::parse_str(proto::PLUGIN_UUID).unwrap();
+    let plugin_uuid = Uuid::parse_str(proto::PLUGIN_UUID)?;
     let (time_low, time_mid, time_hi_and_version, clock_seq_and_node) = plugin_uuid.as_fields();
 
     writeln!(buffer)?;

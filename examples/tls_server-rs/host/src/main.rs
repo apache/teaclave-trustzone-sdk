@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use optee_teec::{Context, Operation, Session, Uuid};
+use optee_teec::{Context, ErrorKind, Operation, Session, Uuid};
 use optee_teec::{ParamNone, ParamTmpRef, ParamType, ParamValue};
 use proto::{Command, UUID};
 use std::io::Read;
@@ -28,16 +28,23 @@ pub const MAX_WIRE_SIZE: usize = (MAX_PAYLOAD + HEADER_SIZE) as usize;
 
 fn main() -> optee_teec::Result<()> {
     let mut ctx = Context::new()?;
-    let uuid = Uuid::parse_str(UUID).unwrap();
+    let uuid = Uuid::parse_str(UUID)?;
     let mut ta_session = ctx.open_session(uuid)?;
 
     let mut session_id: u32 = 0;
     println!("listening");
-    let listener = TcpListener::bind("0.0.0.0:4433").unwrap();
+    let listener = TcpListener::bind("0.0.0.0:4433").map_err(|e| {
+        eprintln!("Failed to bind TCP listener: {}", e);
+        ErrorKind::BadParameters
+    })?;
 
     for stream in listener.incoming() {
         session_id += 1;
-        handle_client(&mut ta_session, session_id, stream.unwrap())?;
+        let stream = stream.map_err(|e| {
+            eprintln!("Failed to accept TCP connection: {}", e);
+            ErrorKind::Communication
+        })?;
+        handle_client(&mut ta_session, session_id, stream)?;
     }
 
     println!("Success");

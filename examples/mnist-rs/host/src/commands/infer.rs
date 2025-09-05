@@ -55,7 +55,7 @@ pub fn execute(args: &Args) -> anyhow::Result<()> {
         .image
         .iter()
         .map(|v| {
-            let img = image::open(v).unwrap().to_luma8();
+            let img = image::open(v)?.to_luma8();
             let bytes = img.as_bytes();
             anyhow::ensure!(bytes.len() == IMAGE_SIZE);
             TryInto::<Image>::try_into(bytes)

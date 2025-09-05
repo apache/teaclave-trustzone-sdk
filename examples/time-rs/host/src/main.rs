@@ -29,7 +29,7 @@ fn time(session: &mut Session) -> optee_teec::Result<()> {
 
 fn main() -> optee_teec::Result<()> {
     let mut ctx = Context::new()?;
-    let uuid = Uuid::parse_str(UUID).unwrap();
+    let uuid = Uuid::parse_str(UUID)?;
     let mut session = ctx.open_session(uuid)?;
 
     time(&mut session)?;

@@ -28,7 +28,7 @@ use optee_utee::LoginType;
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
-use optee_utee::{Error, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::Command;
 
 #[ta_create]
@@ -63,11 +63,11 @@ fn get_properties() -> Result<()> {
     );
     // login type should be Public
     if client_identity.login_type() != LoginType::Public {
-        return Err(Error::new(ErrorKind::BadParameters));
+        return Err(ErrorKind::BadParameters.into());
     }
     // uuid should be all zero
     if client_identity.uuid().to_string() != "00000000-0000-0000-0000-000000000000" {
-        return Err(Error::new(ErrorKind::BadParameters));
+        return Err(ErrorKind::BadParameters.into());
     }
 
     // test the other property:
@@ -75,21 +75,21 @@ fn get_properties() -> Result<()> {
     trace_println!("[+] TA get core version: {}", core_version);
     // core version should not be zero
     if core_version == 0 {
-        return Err(Error::new(ErrorKind::BadParameters));
+        return Err(ErrorKind::BadParameters.into());
     }
 
     let ta_multi_session = TaMultiSession.get()?;
     trace_println!("[+] TA get multi session: {}", ta_multi_session);
     // multi session should be false
     if ta_multi_session {
-        return Err(Error::new(ErrorKind::BadParameters));
+        return Err(ErrorKind::BadParameters.into());
     }
 
     let ta_description = TaDescription.get()?;
     trace_println!("[+] TA get description: {}", ta_description);
     // description should be the specified string
     if ta_description != "An example of Rust OP-TEE TrustZone SDK." {
-        return Err(Error::new(ErrorKind::BadParameters));
+        return Err(ErrorKind::BadParameters.into());
     }
 
     Ok(())
@@ -105,7 +105,7 @@ fn invoke_command(cmd_id: u32, _params: &mut Parameters) -> Result<()> {
             trace_println!("[+] Test passed");
             Ok(())
         }
-        _ => Err(Error::new(ErrorKind::NotSupported)),
+        _ => Err(ErrorKind::NotSupported.into()),
     }
 }
 

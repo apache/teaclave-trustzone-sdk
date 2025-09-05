@@ -33,7 +33,7 @@ all: clippy ta strip sign
 
 clippy:
 	@cargo fmt
-	@xargo clippy --target $(TARGET) -- -D warnings
+	@xargo clippy --target $(TARGET) -- -D warnings -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
 
 ta: clippy
 	@xargo build --target $(TARGET) --release --config $(LINKER_CFG)

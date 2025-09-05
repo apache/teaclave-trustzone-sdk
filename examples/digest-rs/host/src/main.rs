@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use optee_teec::ErrorKind;
 use optee_teec::{
     Context, Operation, ParamNone, ParamTmpRef, ParamType, ParamValue, Session, Uuid,
 };
-use optee_teec::{Error, ErrorKind};
 use proto::{Command, UUID};
 use std::env;
 
@@ -47,11 +47,11 @@ fn main() -> optee_teec::Result<()> {
     if args_len < 2 {
         println!("Do not receive any message for digest.");
         println!("Correct usage: passed more than 1 argument as <part_of_message>");
-        return Err(Error::new(ErrorKind::BadParameters));
+        return Err(ErrorKind::BadParameters.into());
     }
 
     let mut ctx = Context::new()?;
-    let uuid = Uuid::parse_str(UUID).unwrap();
+    let uuid = Uuid::parse_str(UUID)?;
 
     let mut hash: [u8; 32] = [0u8; 32];
     let mut session = ctx.open_session(uuid)?;
@@ -60,7 +60,7 @@ fn main() -> optee_teec::Result<()> {
         update(&mut session, arg.as_bytes())?;
     }
 
-    let hash_length = do_final(&mut session, args[args_len - 1].as_bytes(), &mut hash).unwrap();
+    let hash_length = do_final(&mut session, args[args_len - 1].as_bytes(), &mut hash)?;
     let mut res = hash.to_vec();
     res.truncate(hash_length as usize);
 

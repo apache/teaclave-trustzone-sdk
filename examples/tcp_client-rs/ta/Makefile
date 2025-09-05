@@ -42,7 +42,7 @@ all: clippy ta strip sign
 
 clippy:
 	@cargo fmt
-	@RUSTFLAGS="$(RUSTFLAGS)" $(BUILDER) clippy --target $(TARGET) $(FEATURES) -- -D warnings
+	@RUSTFLAGS="$(RUSTFLAGS)" $(BUILDER) clippy --target $(TARGET) $(FEATURES) -- -D warnings -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
 
 ta: clippy
 	@RUSTFLAGS="$(RUSTFLAGS)" $(BUILDER) build --target $(TARGET) --release $(FEATURES) --config $(LINKER_CFG)

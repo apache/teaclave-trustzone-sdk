@@ -28,7 +28,7 @@ use optee_utee::{
 };
 use optee_utee::{AlgorithmId, Cipher, ElementId, OperationMode};
 use optee_utee::{AttributeId, AttributeMemref, TransientObject, TransientObjectType};
-use optee_utee::{Error, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::{Algo, Command, KeySize, Mode};
 
 pub struct AesCipher {
@@ -77,7 +77,7 @@ fn invoke_command(sess_ctx: &mut AesCipher, cmd_id: u32, params: &mut Parameters
         Command::SetKey => set_aes_key(sess_ctx, params),
         Command::SetIV => reset_aes_iv(sess_ctx, params),
         Command::Cipher => cipher_buffer(sess_ctx, params),
-        _ => Err(Error::new(ErrorKind::BadParameters)),
+        _ => Err(ErrorKind::BadParameters.into()),
     }
 }
 
@@ -86,14 +86,14 @@ pub fn ta2tee_algo_id(algo_id: u32) -> Result<AlgorithmId> {
         Algo::ECB => Ok(AlgorithmId::AesEcbNopad),
         Algo::CBC => Ok(AlgorithmId::AesCbcNopad),
         Algo::CTR => Ok(AlgorithmId::AesCtr),
-        _ => Err(Error::new(ErrorKind::BadParameters)),
+        _ => Err(ErrorKind::BadParameters.into()),
     }
 }
 
 pub fn ta2tee_key_size(key_sz: u32) -> Result<usize> {
     match KeySize::from(key_sz) {
         KeySize::Bit128 | KeySize::Bit256 => Ok(key_sz as usize),
-        _ => Err(Error::new(ErrorKind::BadParameters)),
+        _ => Err(ErrorKind::BadParameters.into()),
     }
 }
 
@@ -101,30 +101,29 @@ pub fn ta2tee_mode_id(mode: u32) -> Result<OperationMode> {
     match Mode::from(mode) {
         Mode::Encode => Ok(OperationMode::Encrypt),
         Mode::Decode => Ok(OperationMode::Decrypt),
-        _ => Err(Error::new(ErrorKind::BadParameters)),
+        _ => Err(ErrorKind::BadParameters.into()),
     }
 }
 
 pub fn alloc_resources(aes: &mut AesCipher, params: &mut Parameters) -> Result<()> {
-    let algo_value = unsafe { params.0.as_value().unwrap().a() };
-    let key_size_value = unsafe { params.1.as_value().unwrap().a() };
-    let mode_id_value = unsafe { params.2.as_value().unwrap().a() };
+    let algo_value = unsafe { params.0.as_value()?.a() };
+    let key_size_value = unsafe { params.1.as_value()?.a() };
+    let mode_id_value = unsafe { params.2.as_value()?.a() };
 
-    aes.key_size = ta2tee_key_size(key_size_value).unwrap();
+    aes.key_size = ta2tee_key_size(key_size_value)?;
 
     // check whether the algorithm is supported
     is_algorithm_supported(
-        ta2tee_algo_id(algo_value).unwrap() as u32,
+        ta2tee_algo_id(algo_value)? as u32,
         ElementId::ElementNone as u32,
     )?;
 
     aes.cipher = Cipher::allocate(
-        ta2tee_algo_id(algo_value).unwrap(),
-        ta2tee_mode_id(mode_id_value).unwrap(),
+        ta2tee_algo_id(algo_value)?,
+        ta2tee_mode_id(mode_id_value)?,
         aes.key_size * 8,
-    )
-    .unwrap();
-    aes.key_object = TransientObject::allocate(TransientObjectType::Aes, aes.key_size * 8).unwrap();
+    )?;
+    aes.key_object = TransientObject::allocate(TransientObjectType::Aes, aes.key_size * 8)?;
     let key = vec![0u8; aes.key_size];
     let attr = AttributeMemref::from_ref(AttributeId::SecretValue, &key);
     aes.key_object.populate(&[attr.into()])?;
@@ -133,12 +132,12 @@ pub fn alloc_resources(aes: &mut AesCipher, params: &mut Parameters) -> Result<(
 }
 
 pub fn set_aes_key(aes: &mut AesCipher, params: &mut Parameters) -> Result<()> {
-    let mut param0 = unsafe { params.0.as_memref().unwrap() };
+    let mut param0 = unsafe { params.0.as_memref()? };
     let key = param0.buffer();
 
     if key.len() != aes.key_size {
         trace_println!("[+] Get wrong key size !\n");
-        return Err(Error::new(ErrorKind::BadParameters));
+        return Err(ErrorKind::BadParameters.into());
     }
 
     let attr = AttributeMemref::from_ref(AttributeId::SecretValue, key);
@@ -151,7 +150,7 @@ pub fn set_aes_key(aes: &mut AesCipher, params: &mut Parameters) -> Result<()> {
 }
 
 pub fn reset_aes_iv(aes: &mut AesCipher, params: &mut Parameters) -> Result<()> {
-    let mut param0 = unsafe { params.0.as_memref().unwrap() };
+    let mut param0 = unsafe { params.0.as_memref()? };
     let iv = param0.buffer();
 
     aes.cipher.init(iv);
@@ -161,19 +160,19 @@ pub fn reset_aes_iv(aes: &mut AesCipher, params: &mut Parameters) -> Result<()> 
 }
 
 pub fn cipher_buffer(aes: &mut AesCipher, params: &mut Parameters) -> Result<()> {
-    let mut param0 = unsafe { params.0.as_memref().unwrap() };
-    let mut param1 = unsafe { params.1.as_memref().unwrap() };
+    let mut param0 = unsafe { params.0.as_memref()? };
+    let mut param1 = unsafe { params.1.as_memref()? };
 
     let input = param0.buffer();
     let output = param1.buffer();
 
     if output.len() < input.len() {
-        return Err(Error::new(ErrorKind::BadParameters));
+        return Err(ErrorKind::BadParameters.into());
     }
 
     trace_println!("[+] TA tries to update ciphers!");
 
-    let tmp_size = aes.cipher.update(input, output).unwrap();
+    let tmp_size = aes.cipher.update(input, output)?;
     param1.set_updated_size(tmp_size);
     Ok(())
 }

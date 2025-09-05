@@ -21,7 +21,7 @@
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
-use optee_utee::{Error, ErrorKind, Parameters, Result, Uuid};
+use optee_utee::{ErrorKind, Parameters, Result, Uuid};
 use optee_utee::{ParamIndex, TaSessionBuilder, TeeParams};
 use proto::{
     Command, HelloWorldTaCommand, SystemPtaCommand, HELLO_WORLD_USER_TA_UUID, SYSTEM_PTA_UUID,
@@ -50,8 +50,7 @@ fn destroy() {
 }
 
 fn test_invoke_system_pta() -> Result<()> {
-    let system_pta_uuid =
-        Uuid::parse_str(SYSTEM_PTA_UUID).map_err(|_| Error::from(ErrorKind::BadFormat))?;
+    let system_pta_uuid = Uuid::parse_str(SYSTEM_PTA_UUID)?;
     // Open a session using the default timeout (TEE_TIMEOUT_INFINITE, meaning no timeout), and no parameters:
     let mut session = TaSessionBuilder::new(system_pta_uuid).build()?;
     trace_println!("[+] TA open PTA session success");
@@ -72,7 +71,7 @@ fn test_invoke_system_pta() -> Result<()> {
     // adjusted to the actual size written by the TA.
     let written_slice = params[ParamIndex::Arg1]
         .written_slice()
-        .ok_or(Error::new(ErrorKind::BadParameters))?;
+        .ok_or(ErrorKind::BadParameters)?;
 
     trace_println!("[+] TA invoke PTA command, output: {:?}", written_slice);
 
@@ -82,12 +81,12 @@ fn test_invoke_system_pta() -> Result<()> {
             "[-] TA invoke PTA command failed, wrong output length: {:?}",
             written_slice.len()
         );
-        return Err(Error::new(ErrorKind::Generic));
+        return Err(ErrorKind::Generic.into());
     }
 
     if written_slice.iter().all(|&x| x == 0) {
         trace_println!("[-] TA invoke PTA command failed, output is all 0");
-        return Err(Error::new(ErrorKind::Generic));
+        return Err(ErrorKind::Generic.into());
     }
 
     trace_println!("[+] TA invoke System PTA command success");
@@ -96,8 +95,7 @@ fn test_invoke_system_pta() -> Result<()> {
 }
 
 fn test_invoke_hello_world_user_ta() -> Result<()> {
-    let hello_world_user_ta_uuid =
-        Uuid::parse_str(HELLO_WORLD_USER_TA_UUID).map_err(|_| Error::from(ErrorKind::BadFormat))?;
+    let hello_world_user_ta_uuid = Uuid::parse_str(HELLO_WORLD_USER_TA_UUID)?;
     // Open a session with a specified timeout in milliseconds (10 seconds).
     // To pass parameters during session opening, use `.with_params(xxx)`.
     let mut session = TaSessionBuilder::new(hello_world_user_ta_uuid)
@@ -116,7 +114,7 @@ fn test_invoke_hello_world_user_ta() -> Result<()> {
     // Get the output value pair through output_value():
     let (value_a, _value_b) = params[ParamIndex::Arg0]
         .output_value()
-        .ok_or(Error::new(ErrorKind::BadParameters))?;
+        .ok_or(ErrorKind::BadParameters)?;
 
     // Check if the output value is as expected:
     if value_a != 129 {
@@ -124,7 +122,7 @@ fn test_invoke_hello_world_user_ta() -> Result<()> {
             "[-] TA invoke user TA command failed, wrong output value: {:?}",
             value_a
         );
-        return Err(Error::new(ErrorKind::Generic));
+        return Err(ErrorKind::Generic.into());
     }
 
     trace_println!("[+] TA invoke hello world TA command success.");
@@ -143,7 +141,7 @@ fn invoke_command(cmd_id: u32, _params: &mut Parameters) -> Result<()> {
             trace_println!("[+] Test passed");
             Ok(())
         }
-        _ => Err(Error::new(ErrorKind::NotSupported)),
+        _ => Err(ErrorKind::NotSupported.into()),
     }
 }
 

@@ -16,8 +16,7 @@
 // under the License.
 
 use optee_teec::{
-    Context, Error, ErrorKind, Operation, ParamNone, ParamTmpRef, ParamType, ParamValue, Session,
-    Uuid,
+    Context, ErrorKind, Operation, ParamNone, ParamTmpRef, ParamType, ParamValue, Session, Uuid,
 };
 use proto::{Command, UUID};
 
@@ -53,7 +52,7 @@ fn get_hotp(session: &mut Session) -> optee_teec::Result<()> {
 
         if hotp_value != expected_value {
             println!("Wrong value get! Expected value: {}", expected_value);
-            return Err(Error::new(ErrorKind::Generic));
+            return Err(ErrorKind::Generic.into());
         }
     }
     Ok(())
@@ -61,7 +60,7 @@ fn get_hotp(session: &mut Session) -> optee_teec::Result<()> {
 
 fn main() -> optee_teec::Result<()> {
     let mut ctx = Context::new()?;
-    let uuid = Uuid::parse_str(UUID).unwrap();
+    let uuid = Uuid::parse_str(UUID)?;
     let mut session = ctx.open_session(uuid)?;
 
     register_shared_key(&mut session)?;

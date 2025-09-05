@@ -25,7 +25,7 @@ use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
 use optee_utee::{DataFlag, GenericObject, ObjectStorageConstants, PersistentObject};
-use optee_utee::{Error, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::Command;
 
 #[ta_create]
@@ -57,12 +57,12 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
         Command::Write => create_raw_object(params),
         Command::Read => read_raw_object(params),
         Command::Delete => delete_object(params),
-        _ => Err(Error::new(ErrorKind::NotSupported)),
+        _ => Err(ErrorKind::NotSupported.into()),
     }
 }
 
 pub fn delete_object(params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref().unwrap() };
+    let mut p0 = unsafe { params.0.as_memref()? };
 
     let mut obj_id = vec![0; p0.buffer().len()];
     obj_id.copy_from_slice(p0.buffer());
@@ -82,8 +82,8 @@ pub fn delete_object(params: &mut Parameters) -> Result<()> {
 }
 
 pub fn create_raw_object(params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref().unwrap() };
-    let mut p1 = unsafe { params.1.as_memref().unwrap() };
+    let mut p0 = unsafe { params.0.as_memref()? };
+    let mut p1 = unsafe { params.1.as_memref()? };
 
     let mut obj_id = vec![0; p0.buffer().len()];
     obj_id.copy_from_slice(p0.buffer());
@@ -117,8 +117,8 @@ pub fn create_raw_object(params: &mut Parameters) -> Result<()> {
 }
 
 pub fn read_raw_object(params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref().unwrap() };
-    let mut p1 = unsafe { params.1.as_memref().unwrap() };
+    let mut p0 = unsafe { params.0.as_memref()? };
+    let mut p1 = unsafe { params.1.as_memref()? };
     let mut obj_id = vec![0; p0.buffer().len()];
     obj_id.copy_from_slice(p0.buffer());
 
@@ -137,11 +137,11 @@ pub fn read_raw_object(params: &mut Parameters) -> Result<()> {
 
             if obj_info.data_size() > p1.buffer().len() {
                 p1.set_updated_size(obj_info.data_size());
-                return Err(Error::new(ErrorKind::ShortBuffer));
+                return Err(ErrorKind::ShortBuffer.into());
             }
-            let read_bytes = object.read(&mut data_buffer).unwrap();
+            let read_bytes = object.read(&mut data_buffer)?;
             if read_bytes != obj_info.data_size() as u32 {
-                return Err(Error::new(ErrorKind::ExcessData));
+                return Err(ErrorKind::ExcessData.into());
             }
 
             p1.set_updated_size(read_bytes as usize);

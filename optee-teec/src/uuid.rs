@@ -16,10 +16,9 @@
 // under the License.
 
 use crate::raw;
+use crate::{ErrorKind, Result};
 use core::fmt;
 use uuid as uuid_crate;
-use uuid_crate::parser::ParseError;
-use uuid_crate::BytesError;
 
 /// A Universally Unique Resource Identifier (UUID) type as defined in RFC4122.
 /// The value is used to identify a trusted application.
@@ -34,14 +33,13 @@ impl Uuid {
     ///
     /// ```
     /// # use optee_teec::Uuid;
-    /// # use uuid::parser::ParseError;
-    /// # fn main() -> Result<(), ParseError> {
+    /// # fn main() -> optee_teec::Result<()> {
     /// let uuid = Uuid::parse_str("8abcf200-2450-11e4-abe2-0002a5d5c51b")?;
     /// # Ok(())
     /// # }
     /// ```
-    pub fn parse_str(input: &str) -> Result<Uuid, ParseError> {
-        let uuid = uuid_crate::Uuid::parse_str(input)?;
+    pub fn parse_str(input: &str) -> Result<Uuid> {
+        let uuid = uuid_crate::Uuid::parse_str(input).map_err(|_| ErrorKind::BadFormat)?;
         let (time_low, time_mid, time_hi_and_version, clock_seq_and_node) = uuid.as_fields();
         Ok(Self::new_raw(
             time_low,
@@ -72,14 +70,14 @@ impl Uuid {
     ///
     /// ```
     /// # use optee_teec::Uuid;
-    /// # fn main() -> Result<(), uuid::BytesError> {
+    /// # fn main() -> optee_teec::Result<()> {
     /// let bytes: &[u8; 16] = &[70, 235, 208, 238, 14, 109, 67, 201, 185, 13, 204, 195, 90, 145, 63, 62,];
     /// let uuid = Uuid::from_slice(bytes)?;
     /// # Ok(())
     /// # }
     /// ```
-    pub fn from_slice(b: &[u8]) -> Result<Uuid, BytesError> {
-        let uuid = uuid_crate::Uuid::from_slice(b)?;
+    pub fn from_slice(b: &[u8]) -> Result<Uuid> {
+        let uuid = uuid_crate::Uuid::from_slice(b).map_err(|_| ErrorKind::BadFormat)?;
         let (time_low, time_mid, time_hi_and_version, clock_seq_and_node) = uuid.as_fields();
         Ok(Self::new_raw(
             time_low,
@@ -149,9 +147,9 @@ mod tests {
             "11173366-2aca-19bc-beb7-10c975e6131e", // random uuid
         ];
         for origin in uuids.iter() {
-            let uuid = Uuid::parse_str(origin);
-            let formatted = uuid.map(|x| x.to_string());
-            assert_eq!(Ok(origin.to_string()), formatted);
+            let uuid = Uuid::parse_str(origin).expect("Test UUID should be valid");
+            let formatted = uuid.to_string();
+            assert_eq!(*origin, formatted);
         }
     }
 }

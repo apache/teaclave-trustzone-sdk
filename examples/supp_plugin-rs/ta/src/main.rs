@@ -58,10 +58,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
         "[+] TA received value {:?} then send to plugin",
         p0.buffer()
     );
-    let uuid = Uuid::parse_str(PLUGIN_UUID).map_err(|err| {
-        trace_println!("Invalid PluginUuid: {:?}", err);
-        ErrorKind::BadParameters
-    })?;
+    let uuid = Uuid::parse_str(PLUGIN_UUID)?;
 
     match Command::from(cmd_id) {
         Command::Ping => {
