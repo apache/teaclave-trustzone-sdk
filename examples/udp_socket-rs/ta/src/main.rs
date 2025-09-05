@@ -42,7 +42,7 @@ use optee_utee::net::UdpSocket;
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
-use optee_utee::{Error, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::{Command, IpVersion};
 
 #[ta_create]
@@ -75,14 +75,19 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
             let mut param0 = unsafe { params.0.as_memref()? };
             let param1 = unsafe { params.1.as_value()? };
 
-            let address = core::str::from_utf8(param0.buffer()).unwrap();
+            let address = core::str::from_utf8(param0.buffer()).map_err(|e| {
+                trace_println!("Failed to parse address from UTF-8: {}", e);
+                ErrorKind::BadParameters
+            })?;
             let port = param1.a() as u16;
-            let ip_version =
-                IpVersion::try_from(param1.b()).map_err(|_| ErrorKind::BadParameters)?;
+            let ip_version = IpVersion::try_from(param1.b()).map_err(|_| {
+                trace_println!("Invalid IP version parameter");
+                ErrorKind::BadParameters
+            })?;
 
             udp_socket(address, port, ip_version)
         }
-        _ => Err(Error::new(ErrorKind::BadParameters)),
+        _ => Err(ErrorKind::BadParameters.into()),
     }
 }
 
@@ -92,7 +97,7 @@ fn udp_socket(address: &str, port: u16, ip_version: IpVersion) -> Result<()> {
         IpVersion::V6 => UdpSocket::connect_v6(address, port),
     }
     .map_err(|err| {
-        trace_println!("failed to connect to {}:{} due to {:?}", address, port, err);
+        trace_println!("Failed to connect to {}:{}: {}", address, port, err);
         ErrorKind::Generic
     })?;
 
@@ -100,7 +105,7 @@ fn udp_socket(address: &str, port: u16, ip_version: IpVersion) -> Result<()> {
     stream.set_recv_timeout_in_milli(60 * 1000);
 
     stream.write_all(b"[TA]: Hello, Teaclave!").map_err(|err| {
-        trace_println!("failed to write_all due to {:?}", err);
+        trace_println!("Failed to write data: {}", err);
         ErrorKind::Generic
     })?;
     let mut response = Vec::new();
@@ -115,7 +120,7 @@ fn udp_socket(address: &str, port: u16, ip_version: IpVersion) -> Result<()> {
                 break;
             }
             Err(err) => {
-                trace_println!("failed to read due to {:?}", err);
+                trace_println!("Failed to read data: {}", err);
                 return Err(ErrorKind::Generic.into());
             }
         }

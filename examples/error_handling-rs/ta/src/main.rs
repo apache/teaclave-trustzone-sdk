@@ -27,7 +27,7 @@ use alloc::vec::Vec;
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
-use optee_utee::{Error, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::Command;
 
 pub struct SessionContext {
@@ -73,8 +73,8 @@ fn invoke_command(
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::ReturnSuccess => Ok(()),
-        Command::ReturnGenericError => Err(Error::new(ErrorKind::Generic)),
-        _ => Err(Error::new(ErrorKind::NotSupported)),
+        Command::ReturnGenericError => Err(ErrorKind::Generic.into()),
+        _ => Err(ErrorKind::NotSupported.into()),
     }
 }
 

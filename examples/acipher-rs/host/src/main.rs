@@ -16,7 +16,7 @@
 // under the License.
 
 use optee_teec::{Context, Operation, ParamType, Session, Uuid};
-use optee_teec::{Error, ErrorKind, ParamNone, ParamTmpRef, ParamValue};
+use optee_teec::{ErrorKind, ParamNone, ParamTmpRef, ParamValue};
 use proto::{Command, UUID};
 use std::{env, str};
 
@@ -41,9 +41,13 @@ fn enc_dec(session: &mut Session, plain_text: &[u8]) -> optee_teec::Result<()> {
     let mut operation2 = Operation::new(0, p0, p1, ParamNone, ParamNone);
 
     session.invoke_command(Command::Encrypt as u32, &mut operation2)?;
+    let plain_text_str = str::from_utf8(plain_text).map_err(|e| {
+        eprintln!("Failed to convert plain text to UTF-8: {}", e);
+        ErrorKind::BadFormat
+    })?;
     println!(
         "Success encrypt input text \"{}\" as {} bytes cipher text: {:?}",
-        str::from_utf8(plain_text).unwrap(),
+        plain_text_str,
         cipher_text.len(),
         cipher_text
     );
@@ -54,10 +58,14 @@ fn enc_dec(session: &mut Session, plain_text: &[u8]) -> optee_teec::Result<()> {
     let mut operation2 = Operation::new(0, p0, p1, ParamNone, ParamNone);
 
     session.invoke_command(Command::Decrypt as u32, &mut operation2)?;
+    let dec_res_str = str::from_utf8(&dec_res).map_err(|e| {
+        eprintln!("Failed to convert decrypted result to UTF-8: {}", e);
+        ErrorKind::BadFormat
+    })?;
     println!(
         "Success decrypt the above ciphertext as {} bytes plain text: {}",
         dec_res.len(),
-        str::from_utf8(&dec_res).unwrap()
+        dec_res_str
     );
     Ok(())
 }
@@ -70,10 +78,13 @@ fn main() -> optee_teec::Result<()> {
             args.len() - 1
         );
         println!("Correct usage: {} <key_size> <string to encrypt>", args[0]);
-        return Err(Error::new(ErrorKind::BadParameters));
+        return Err(ErrorKind::BadParameters.into());
     }
 
-    let mut key_size = args[1].parse::<u32>().unwrap();
+    let mut key_size = args[1].parse::<u32>().map_err(|_| {
+        eprintln!("Invalid key size: {}", args[1]);
+        ErrorKind::BadParameters
+    })?;
     if key_size < 256 {
         println!(
             "Key size of {} is too small. Using default minimal key size 256 instead.",
@@ -83,7 +94,7 @@ fn main() -> optee_teec::Result<()> {
     }
 
     let mut ctx = Context::new()?;
-    let uuid = Uuid::parse_str(UUID).unwrap();
+    let uuid = Uuid::parse_str(UUID)?;
     let mut session = ctx.open_session(uuid)?;
 
     gen_key(&mut session, key_size)?;

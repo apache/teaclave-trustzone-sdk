@@ -21,7 +21,7 @@
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
-use optee_utee::{Error, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::Command;
 
 #[ta_create]
@@ -49,7 +49,7 @@ fn destroy() {
 #[ta_invoke_command]
 fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
     trace_println!("[+] TA invoke command");
-    let mut values = unsafe { params.0.as_value().unwrap() };
+    let mut values = unsafe { params.0.as_value()? };
     match Command::from(cmd_id) {
         Command::IncValue => {
             values.set_a(values.a() + 100);
@@ -59,7 +59,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
             values.set_a(values.a() - 100);
             Ok(())
         }
-        _ => Err(Error::new(ErrorKind::BadParameters)),
+        _ => Err(ErrorKind::BadParameters.into()),
     }
 }
 

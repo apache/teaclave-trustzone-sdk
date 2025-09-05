@@ -20,7 +20,7 @@
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
-use optee_utee::{Error, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::{Command, Point};
 use std::io::Write;
 
@@ -51,13 +51,19 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::DefaultOp => {
-            let mut p = unsafe { params.0.as_memref().unwrap() };
+            let mut p = unsafe { params.0.as_memref()? };
             let mut buffer = p.buffer();
             let point = Point { x: 1, y: 2 };
 
             // Convert the Point to a JSON string.
-            let serialized = serde_json::to_string(&point).unwrap();
-            let len = buffer.write(serialized.as_bytes()).unwrap();
+            let serialized = serde_json::to_string(&point).map_err(|e| {
+                trace_println!("Failed to serialize point: {}", e);
+                ErrorKind::BadParameters
+            })?;
+            let len = buffer.write(serialized.as_bytes()).map_err(|e| {
+                trace_println!("Failed to write to buffer: {}", e);
+                ErrorKind::BadParameters
+            })?;
 
             // update size of output buffer
             unsafe { (*p.raw()).size = len };
@@ -66,14 +72,17 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
             trace_println!("serialized = {}", serialized);
 
             // Convert the JSON string back to a Point.
-            let deserialized: Point = serde_json::from_str(&serialized).unwrap();
+            let deserialized: Point = serde_json::from_str(&serialized).map_err(|e| {
+                trace_println!("Failed to deserialize point: {}", e);
+                ErrorKind::BadParameters
+            })?;
 
             // Prints deserialized = Point { x: 1, y: 2 }
             trace_println!("deserialized = {:?}", deserialized);
 
             Ok(())
         }
-        _ => Err(Error::new(ErrorKind::BadParameters)),
+        _ => Err(ErrorKind::BadParameters.into()),
     }
 }
 

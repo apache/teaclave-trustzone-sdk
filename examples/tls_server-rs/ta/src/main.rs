@@ -20,7 +20,7 @@
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
-use optee_utee::{Error, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::Command;
 
 use anyhow::Context;
@@ -77,7 +77,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
             trace_println!("[+] new_tls_session");
             new_tls_session(session_id).map_err(|e| {
                 trace_println!("[-] Failed to create TLS session: {:?}", e);
-                Error::new(ErrorKind::Generic)
+                ErrorKind::Generic.into()
             })
         }
         Command::DoTlsRead => {
@@ -86,7 +86,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
             trace_println!("[+] do_tls_read");
             do_tls_read(session_id, buffer).map_err(|e| {
                 trace_println!("[-] Failed to read TLS data: {:?}", e);
-                Error::new(ErrorKind::Generic)
+                ErrorKind::Generic.into()
             })
         }
         Command::DoTlsWrite => {
@@ -100,17 +100,17 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
                 })
                 .map_err(|e| {
                     trace_println!("[-] Failed to write TLS data: {:?}", e);
-                    Error::new(ErrorKind::Generic)
+                    ErrorKind::Generic.into()
                 })
         }
         Command::CloseTlsSession => {
             trace_println!("[+] close_tls_session");
             close_tls_session(session_id).map_err(|e| {
                 trace_println!("[-] Failed to close TLS session: {:?}", e);
-                Error::new(ErrorKind::Generic)
+                ErrorKind::Generic.into()
             })
         }
-        _ => Err(Error::new(ErrorKind::BadParameters)),
+        _ => Err(ErrorKind::BadParameters.into()),
     }
 }
 

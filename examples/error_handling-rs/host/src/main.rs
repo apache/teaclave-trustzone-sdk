@@ -16,18 +16,20 @@
 // under the License.
 
 use optee_teec::ParamNone;
-use optee_teec::{Context, ErrorKind, Operation, Uuid};
+use optee_teec::{Context, ErrorKind, Operation, Result, Uuid};
 use proto::{Command, UUID};
 
-fn main() -> optee_teec::Result<()> {
-    test_error_handling();
-    Ok(())
+fn main() -> Result<()> {
+    test_error_handling()
 }
 
-fn test_error_handling() {
-    let mut ctx = Context::new().unwrap();
-    let uuid = Uuid::parse_str(UUID).unwrap();
-    let mut session = ctx.open_session(uuid).unwrap();
+// NOTE: This seems to be a test case, not an example. Temporarily allow the expect
+// here and the reorganization is planned for this kind of test cases.
+#[allow(clippy::expect_used)]
+fn test_error_handling() -> Result<()> {
+    let mut ctx = Context::new()?;
+    let uuid = Uuid::parse_str(UUID)?;
+    let mut session = ctx.open_session(uuid)?;
     let mut operation = Operation::new(0, ParamNone, ParamNone, ParamNone, ParamNone);
 
     // Test successful invocation return Ok().
@@ -48,4 +50,5 @@ fn test_error_handling() {
     assert_eq!(e.kind(), ErrorKind::Generic);
 
     println!("Test passed");
+    Ok(())
 }

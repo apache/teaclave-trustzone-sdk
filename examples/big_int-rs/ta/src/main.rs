@@ -22,7 +22,7 @@ use optee_utee::BigInt;
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
-use optee_utee::{Error, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::Command;
 
 #[ta_create]
@@ -60,9 +60,9 @@ fn convert(n0: &BigInt, n1: &BigInt) -> Result<()> {
     trace_println!(
         "{} in u8 array is {:x?}.",
         n0,
-        n0.convert_to_octet_string().unwrap()
+        n0.convert_to_octet_string()?
     );
-    trace_println!("{} in i32 is {}.", n1, n1.convert_to_s32().unwrap());
+    trace_println!("{} in i32 is {}.", n1, n1.convert_to_s32()?);
     Ok(())
 }
 
@@ -99,8 +99,8 @@ fn module(n0: &BigInt, n1: &BigInt) -> Result<()> {
 #[ta_invoke_command]
 fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
     trace_println!("[+] TA invoke command");
-    let mut n0_buffer = unsafe { params.0.as_memref().unwrap() };
-    let n1_value = unsafe { params.1.as_value().unwrap() };
+    let mut n0_buffer = unsafe { params.0.as_memref()? };
+    let n1_value = unsafe { params.1.as_value()? };
 
     let mut n0 = BigInt::new(64);
     let mut n1 = BigInt::new(2);
@@ -116,7 +116,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
         Command::Multiply => multiply(&n0, &n1),
         Command::Divide => divide(&n0, &n1),
         Command::Module => module(&n0, &n1),
-        _ => Err(Error::new(ErrorKind::BadParameters)),
+        _ => Err(ErrorKind::BadParameters.into()),
     }
 }
 

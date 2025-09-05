@@ -28,7 +28,7 @@ fn random(session: &mut Session) -> optee_teec::Result<()> {
     session.invoke_command(Command::RandomGenerator as u32, &mut operation)?;
     println!("Invoking done!");
 
-    let generate_uuid = Uuid::from_slice(&random_uuid).unwrap();
+    let generate_uuid = Uuid::from_slice(&random_uuid)?;
 
     println!("Generate random UUID: {}", generate_uuid);
     Ok(())
@@ -37,7 +37,7 @@ fn random(session: &mut Session) -> optee_teec::Result<()> {
 fn main() -> optee_teec::Result<()> {
     let mut ctx = Context::new()?;
 
-    let uuid = Uuid::parse_str(UUID).unwrap();
+    let uuid = Uuid::parse_str(UUID)?;
     let mut session = ctx.open_session(uuid)?;
 
     random(&mut session)?;

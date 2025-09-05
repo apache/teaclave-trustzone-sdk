@@ -63,10 +63,15 @@ fn delete_secure_object(session: &mut Session, obj_id: &[u8]) -> optee_teec::Res
 
 fn main() -> optee_teec::Result<()> {
     let mut ctx = Context::new()?;
-    let uuid = Uuid::parse_str(UUID).unwrap();
+    let uuid = Uuid::parse_str(UUID)?;
     let mut session = ctx.open_session(uuid)?;
 
-    let obj1_id = CString::new("object#1").unwrap().into_bytes_with_nul();
+    let obj1_id = CString::new("object#1")
+        .map_err(|e| {
+            eprintln!("Failed to create CString for object#1: {}", e);
+            ErrorKind::BadParameters
+        })?
+        .into_bytes_with_nul();
     let obj1_data = [0xA1u8; TEST_OBJECT_SIZE];
     let mut read_data = [0x00u8; TEST_OBJECT_SIZE];
 
@@ -81,7 +86,12 @@ fn main() -> optee_teec::Result<()> {
     }
     delete_secure_object(&mut session, &obj1_id)?;
 
-    let obj2_id = CString::new("object#2").unwrap().into_bytes_with_nul();
+    let obj2_id = CString::new("object#2")
+        .map_err(|e| {
+            eprintln!("Failed to create CString for object#2: {}", e);
+            ErrorKind::BadParameters
+        })?
+        .into_bytes_with_nul();
 
     println!("\nTest on object \"object#2\"");
     match read_secure_object(&mut session, obj2_id.as_slice(), &mut read_data) {

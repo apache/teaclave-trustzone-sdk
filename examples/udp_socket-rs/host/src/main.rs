@@ -15,26 +15,31 @@
 // specific language governing permissions and limitations
 // under the License.
 use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, UdpSocket};
-use std::str;
 use std::thread;
 
-use optee_teec::{Context, Operation, Uuid};
+use optee_teec::{Context, ErrorKind, Operation, Result, Uuid};
 use optee_teec::{ParamNone, ParamTmpRef, ParamValue};
 use proto::{Command, IpVersion, UUID};
 
-fn udp_socket(ip_version: IpVersion) {
+fn udp_socket(ip_version: IpVersion) -> Result<()> {
     let addr: SocketAddr = match ip_version {
         IpVersion::V4 => SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::LOCALHOST, 0)),
         IpVersion::V6 => SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 0, 0, 0)),
     };
-    let socket = UdpSocket::bind(addr).unwrap();
-    let local_addr = socket.local_addr().unwrap();
+    let socket = UdpSocket::bind(addr).map_err(|e| {
+        eprintln!("Failed to bind UDP socket: {}", e);
+        ErrorKind::BadParameters
+    })?;
+    let local_addr = socket.local_addr().map_err(|e| {
+        eprintln!("Failed to get UDP local address: {}", e);
+        ErrorKind::BadParameters
+    })?;
     println!("Test on: {}", local_addr);
 
-    let child = thread::spawn(move || {
-        let mut ctx = Context::new().unwrap();
-        let uuid = Uuid::parse_str(UUID).unwrap();
-        let mut session = ctx.open_session(uuid).unwrap();
+    let child = thread::spawn(move || -> Result<()> {
+        let mut ctx = Context::new()?;
+        let uuid = Uuid::parse_str(UUID)?;
+        let mut session = ctx.open_session(uuid)?;
 
         let ip = local_addr.ip().to_string();
         let port = local_addr.port();
@@ -49,25 +54,34 @@ fn udp_socket(ip_version: IpVersion) {
             ParamNone,
             ParamNone,
         );
-        session
-            .invoke_command(Command::Start as u32, &mut operation)
-            .unwrap();
+        session.invoke_command(Command::Start as u32, &mut operation)?;
+        Ok(())
     });
 
     let mut buf = [0; 100];
-    let (_, src_addr) = socket.recv_from(&mut buf).unwrap();
+    let (_, src_addr) = socket.recv_from(&mut buf).map_err(|e| {
+        eprintln!("UDP recv error: {}", e);
+        ErrorKind::BadParameters
+    })?;
     socket
         .send_to(b"[Host] Hello, Teaclave!", src_addr)
-        .unwrap();
-    println!("{}", str::from_utf8(&buf).unwrap());
-    let _ = child.join();
+        .map_err(|e| {
+            eprintln!("UDP send error: {}", e);
+            ErrorKind::BadParameters
+        })?;
+    println!("{}", String::from_utf8_lossy(&buf));
+    child.join().map_err(|_| {
+        eprintln!("Thread panicked");
+        ErrorKind::Generic
+    })??;
 
     println!("Success");
+    Ok(())
 }
 
-fn main() -> optee_teec::Result<()> {
-    udp_socket(IpVersion::V4);
-    udp_socket(IpVersion::V6);
+fn main() -> Result<()> {
+    udp_socket(IpVersion::V4)?;
+    udp_socket(IpVersion::V6)?;
 
     Ok(())
 }

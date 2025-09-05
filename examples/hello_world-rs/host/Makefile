@@ -29,7 +29,7 @@ all: clippy host strip
 
 clippy:
 	@cargo fmt
-	@cargo clippy --target $(TARGET) -- -D warnings
+	@cargo clippy --target $(TARGET) -- -D warnings -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
 
 host: clippy
 	@cargo build --target $(TARGET) --release --config $(LINKER_CFG)

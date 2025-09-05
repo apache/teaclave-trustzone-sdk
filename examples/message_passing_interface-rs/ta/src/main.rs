@@ -20,7 +20,7 @@
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
-use optee_utee::{Error, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::{self, Command};
 use std::io::Write;
 
@@ -38,7 +38,7 @@ fn handle_invoke(command: Command, input: proto::EnclaveInput) -> Result<proto::
             };
             Ok(output)
         }
-        _ => Err(Error::new(ErrorKind::BadParameters)),
+        _ => Err(ErrorKind::BadParameters.into()),
     }
 }
 
@@ -67,15 +67,24 @@ fn destroy() {
 #[ta_invoke_command]
 fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
     trace_println!("[+] TA invoke command");
-    let mut p0 = unsafe { params.0.as_memref().unwrap() };
-    let mut p1 = unsafe { params.1.as_memref().unwrap() };
-    let mut p2 = unsafe { params.2.as_value().unwrap() };
+    let mut p0 = unsafe { params.0.as_memref()? };
+    let mut p1 = unsafe { params.1.as_memref()? };
+    let mut p2 = unsafe { params.2.as_value()? };
 
-    let input: proto::EnclaveInput = proto::serde_json::from_slice(p0.buffer()).unwrap();
-    let output = handle_invoke(Command::from(cmd_id), input).unwrap();
+    let input: proto::EnclaveInput = proto::serde_json::from_slice(p0.buffer()).map_err(|e| {
+        trace_println!("Failed to deserialize input: {}", e);
+        ErrorKind::BadFormat
+    })?;
+    let output = handle_invoke(Command::from(cmd_id), input)?;
 
-    let output_vec = proto::serde_json::to_vec(&output).unwrap();
-    p1.buffer().write_all(&output_vec).unwrap();
+    let output_vec = proto::serde_json::to_vec(&output).map_err(|e| {
+        trace_println!("Failed to serialize output: {}", e);
+        ErrorKind::BadFormat
+    })?;
+    p1.buffer().write_all(&output_vec).map_err(|e| {
+        trace_println!("Failed to write output: {}", e);
+        ErrorKind::BadParameters
+    })?;
     p2.set_a(output_vec.len() as u32);
 
     Ok(())

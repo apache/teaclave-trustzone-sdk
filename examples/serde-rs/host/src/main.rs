@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use optee_teec::{Context, Operation, ParamNone, ParamTmpRef, Session, Uuid};
+use optee_teec::{Context, ErrorKind, Operation, ParamNone, ParamTmpRef, Session, Uuid};
 use proto::{Command, Point, UUID};
 
 fn serde(session: &mut Session) -> optee_teec::Result<()> {
@@ -26,7 +26,10 @@ fn serde(session: &mut Session) -> optee_teec::Result<()> {
     session.invoke_command(Command::DefaultOp as u32, &mut operation)?;
     let updated_size = operation.parameters().0.updated_size();
 
-    let p: Point = serde_json::from_slice(&buffer[..updated_size]).unwrap();
+    let p: Point = serde_json::from_slice(&buffer[..updated_size]).map_err(|e| {
+        eprintln!("Failed to deserialize point: {}", e);
+        ErrorKind::BadParameters
+    })?;
     println!("{:?}", p);
 
     Ok(())
@@ -34,7 +37,7 @@ fn serde(session: &mut Session) -> optee_teec::Result<()> {
 
 fn main() -> optee_teec::Result<()> {
     let mut ctx = Context::new()?;
-    let uuid = Uuid::parse_str(UUID).unwrap();
+    let uuid = Uuid::parse_str(UUID)?;
     let mut session = ctx.open_session(uuid)?;
 
     serde(&mut session)?;

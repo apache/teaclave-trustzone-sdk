@@ -25,7 +25,7 @@ use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
 use optee_utee::{AlgorithmId, Digest};
-use optee_utee::{Error, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::Command;
 
 pub struct DigestOp {
@@ -33,6 +33,9 @@ pub struct DigestOp {
 }
 
 impl Default for DigestOp {
+    // This is related to our TA session context design, which requires the struct to implement
+    // the Default trait. Revising this design should be future work, so temporary allow the unwrap() usage.
+    #[allow(clippy::unwrap_used)]
     fn default() -> Self {
         Self {
             op: Digest::allocate(AlgorithmId::Sha256).unwrap(),
@@ -68,21 +71,21 @@ fn invoke_command(sess_ctx: &mut DigestOp, cmd_id: u32, params: &mut Parameters)
     match Command::from(cmd_id) {
         Command::Update => update(sess_ctx, params),
         Command::DoFinal => do_final(sess_ctx, params),
-        _ => Err(Error::new(ErrorKind::BadParameters)),
+        _ => Err(ErrorKind::BadParameters.into()),
     }
 }
 
 pub fn update(digest: &mut DigestOp, params: &mut Parameters) -> Result<()> {
-    let mut p = unsafe { params.0.as_memref().unwrap() };
+    let mut p = unsafe { params.0.as_memref()? };
     let buffer = p.buffer();
     digest.op.update(buffer);
     Ok(())
 }
 
 pub fn do_final(digest: &mut DigestOp, params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref().unwrap() };
-    let mut p1 = unsafe { params.1.as_memref().unwrap() };
-    let mut p2 = unsafe { params.2.as_value().unwrap() };
+    let mut p0 = unsafe { params.0.as_memref()? };
+    let mut p1 = unsafe { params.1.as_memref()? };
+    let mut p2 = unsafe { params.2.as_value()? };
     let input = p0.buffer();
     let output = p1.buffer();
     match digest.op.do_final(input, output) {

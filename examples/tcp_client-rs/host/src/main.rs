@@ -18,7 +18,7 @@
 use std::net::{Ipv6Addr, SocketAddr, SocketAddrV6};
 use std::thread;
 
-use optee_teec::{Context, Operation, ParamType, Session, Uuid};
+use optee_teec::{Context, ErrorKind, Operation, ParamType, Session, Uuid};
 use optee_teec::{ParamNone, ParamTmpRef, ParamValue};
 use proto::{Command, IpVersion, UUID};
 
@@ -47,7 +47,7 @@ fn tcp_client(
 
 fn main() -> optee_teec::Result<()> {
     let mut ctx = Context::new()?;
-    let uuid = Uuid::parse_str(UUID).unwrap();
+    let uuid = Uuid::parse_str(UUID)?;
     let mut session = ctx.open_session(uuid)?;
 
     // test ipv4
@@ -57,8 +57,14 @@ fn main() -> optee_teec::Result<()> {
 
     // test ipv6
     let addr = SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::LOCALHOST, 0, 0, 0));
-    let server = tiny_http::Server::http(addr).unwrap();
-    let listen_addr = server.server_addr().to_ip().unwrap();
+    let server = tiny_http::Server::http(addr).map_err(|e| {
+        eprintln!("Failed to create HTTP server: {}", e);
+        ErrorKind::BadParameters
+    })?;
+    let listen_addr = server.server_addr().to_ip().ok_or_else(|| {
+        eprintln!("Failed to get server IP address");
+        ErrorKind::BadParameters
+    })?;
     let ip = listen_addr.ip().to_string();
     let port = listen_addr.port();
 
@@ -72,7 +78,9 @@ fn main() -> optee_teec::Result<()> {
             );
 
             let response = tiny_http::Response::from_string("hello world");
-            request.respond(response).unwrap();
+            if let Err(e) = request.respond(response) {
+                eprintln!("Failed to respond to request: {}", e);
+            }
         }
     });
     // Use the IP address directly to ensure we're actually trying an IPv6

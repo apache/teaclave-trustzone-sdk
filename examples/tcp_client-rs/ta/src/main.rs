@@ -41,7 +41,7 @@ use optee_utee::net::TcpStream;
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
-use optee_utee::{Error, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::{Command, IpVersion};
 
 #[ta_create]
@@ -77,15 +77,20 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
             let param1 = unsafe { params.1.as_value()? };
             let mut param2 = unsafe { params.2.as_memref()? };
 
-            let address = core::str::from_utf8(param0.buffer()).unwrap();
+            let address = core::str::from_utf8(param0.buffer()).map_err(|e| {
+                trace_println!("Failed to parse address from UTF-8: {}", e);
+                ErrorKind::BadParameters
+            })?;
             let port = param1.a() as u16;
-            let ip_version =
-                IpVersion::try_from(param1.b()).map_err(|_| ErrorKind::BadParameters)?;
+            let ip_version = IpVersion::try_from(param1.b()).map_err(|_| {
+                trace_println!("Invalid IP version parameter");
+                ErrorKind::BadParameters
+            })?;
             let http_data = param2.buffer();
 
             tcp_client(address, port, ip_version, http_data)
         }
-        _ => Err(Error::new(ErrorKind::BadParameters)),
+        _ => Err(ErrorKind::BadParameters.into()),
     }
 }
 

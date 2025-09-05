@@ -23,7 +23,7 @@ use alloc::vec;
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
-use optee_utee::{Error, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::Command;
 use secure_db::{SecureStorageClient, Storable};
 use serde::{Deserialize, Serialize};
@@ -61,10 +61,10 @@ fn invoke_command(cmd_id: u32, _params: &mut Parameters) -> Result<()> {
             }
             Err(e) => {
                 trace_println!("[-] Test failed: {:?}", e);
-                Err(Error::new(ErrorKind::Generic))
+                Err(ErrorKind::Generic.into())
             }
         },
-        _ => Err(Error::new(ErrorKind::NotSupported)),
+        _ => Err(ErrorKind::NotSupported.into()),
     }
 }
 

@@ -32,6 +32,7 @@ optee-teec = { path = "../../../optee-teec" }
 [build-dependencies]
 uuid = { version = "0.8" }
 proto = { path = "../proto" }
+anyhow = "1.0"
 
 [profile.release]
 lto = true

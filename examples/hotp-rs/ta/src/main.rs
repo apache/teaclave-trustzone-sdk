@@ -26,7 +26,7 @@ use optee_utee::{
 };
 use optee_utee::{AlgorithmId, Mac};
 use optee_utee::{AttributeId, AttributeMemref, TransientObject, TransientObjectType};
-use optee_utee::{Error, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::Command;
 
 pub const SHA1_HASH_SIZE: usize = 20;
@@ -78,12 +78,12 @@ fn invoke_command(sess_ctx: &mut HmacOtp, cmd_id: u32, params: &mut Parameters) 
     match Command::from(cmd_id) {
         Command::RegisterSharedKey => register_shared_key(sess_ctx, params),
         Command::GetHOTP => get_hotp(sess_ctx, params),
-        _ => Err(Error::new(ErrorKind::BadParameters)),
+        _ => Err(ErrorKind::BadParameters.into()),
     }
 }
 
 pub fn register_shared_key(hotp: &mut HmacOtp, params: &mut Parameters) -> Result<()> {
-    let mut p = unsafe { params.0.as_memref().unwrap() };
+    let mut p = unsafe { params.0.as_memref()? };
     let buffer = p.buffer();
     hotp.key_len = buffer.len();
     hotp.key[..hotp.key_len].clone_from_slice(buffer);
@@ -102,14 +102,14 @@ pub fn get_hotp(hotp: &mut HmacOtp, params: &mut Parameters) -> Result<()> {
         }
     }
     let hotp_val = truncate(&mut mac);
-    let mut p = unsafe { params.0.as_value().unwrap() };
+    let mut p = unsafe { params.0.as_value()? };
     p.set_a(hotp_val);
     Ok(())
 }
 
 pub fn hmac_sha1(hotp: &mut HmacOtp, out: &mut [u8]) -> Result<usize> {
     if hotp.key_len < MIN_KEY_SIZE || hotp.key_len > MAX_KEY_SIZE {
-        return Err(Error::new(ErrorKind::BadParameters));
+        return Err(ErrorKind::BadParameters.into());
     }
 
     let mac = Mac::allocate(AlgorithmId::HmacSha1, hotp.key_len * 8)?;
