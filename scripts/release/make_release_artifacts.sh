@@ -40,7 +40,7 @@ SVN_FINAL_DIR="trustzone-sdk-${RELEASE_VERSION}"
 # --------------------------------------------------------
 
 WORK_BASE_DIR="teaclave-release-tmp"
-TAR_TOP_DIR_NAME="${REPO_NAME}-${RELEASE_VERSION}"
+TAR_TOP_DIR_NAME="apache-${REPO_NAME}-${RELEASE_VERSION}"
 TAG="v${RELEASE_VERSION}-rc.${RC_NUMBER}"
 
 # SVN repository URLs

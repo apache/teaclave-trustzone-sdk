@@ -17,8 +17,7 @@ The upcoming release in 2025 is as follows:
 
 | Apache Teaclave SDK Release Version | optee-* Rust crate Release version | OP-TEE Version | OP-TEE Release Date | Teaclave SDK Pre-release on Github (approximately) | Teaclave SDK Finalized Release on Apache and `crates.io` (approximately) |
 |-------------------------------------|-------------------------------------|----------------|--------------------|----------------------------------------------------|--------------------------------------------------------------------------|
-| v0.7.0 | v0.7.0 | OP-TEE 4.8.0 | 17/Oct/25 | 31/Oct/25 | 14/Nov/25 |
-| v0.6.0 | v0.6.0 | OP-TEE 4.7.0 | 11/Jul/25 | 25/Jul/25 | 8/Aug/25 |
+| v0.7.0 | v0.7.0 | OP-TEE 4.8.0 | 17/Oct/25 | 14/Nov/25 | 30/Nov/25 |
 
 **Note:** The table outlines the planned release schedule under normal circumstances. However, if there are no updates to the optee-* crates in the SDK during a given quarter, the release will be skipped and deferred to the following quarter.
 
@@ -102,10 +101,12 @@ The release artifacts have passed all GitHub Actions CI checks. You can also rep
 $ wget https://dist.apache.org/repos/dist/dev/teaclave/trustzone-sdk-$VERSION-$RC/apache-teaclave-trustzone-sdk-$VERSION.tar.gz
 $ tar zxvf apache-teaclave-trustzone-sdk-$VERSION.tar.gz
 $ cd apache-teaclave-trustzone-sdk-$VERSION
-$ docker run --rm -it -v$(pwd):/teaclave-trustzone-sdk -w \
-/teaclave-trustzone-sdk yuanz0/teaclave-trustzone-sdk:ubuntu-24.04 \
-bash -c "./setup.sh && (./build_optee_libraries.sh optee) && source \
-environment && make && (cd ci && ./ci.sh)"
+$ docker run -it --rm \
+  -v $(pwd):/root/teaclave_sdk_src \
+  -w /root/teaclave_sdk_src \
+  teaclave/teaclave-trustzone-emulator-nostd-optee-$OPTEE_VERSION-expand-memory:latest
+# Inside the docker container:
+root@xxxx:~/teaclave_sdk_src# make
 ```
 
 The vote will be open for at least 72 hours. Anyone can participate

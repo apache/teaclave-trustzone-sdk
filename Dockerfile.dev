@@ -26,6 +26,10 @@ COPY scripts/setup ${TEACLAVE_TOOLCHAIN_BASE}/setup
 
 WORKDIR ${TEACLAVE_TOOLCHAIN_BASE}/setup
 
+# Build ARG for OP-TEE version
+ARG OPTEE_VERSION
+ENV OPTEE_VERSION=${OPTEE_VERSION}
+
 RUN ./install_dependencies.sh 
 RUN . ./bootstrap_env && ./prepare_emulator_images.sh 
 
