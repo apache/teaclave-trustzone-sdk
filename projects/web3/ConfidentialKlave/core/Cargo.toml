@@ -45,13 +45,13 @@ bincode = "1.3.3"
 rustls-pemfile = "1.0"
 
 [target.'cfg(target_os="optee")'.dependencies]
-optee-utee-sys = { path = "../../incubator-teaclave-trustzone-sdk/optee-utee/optee-utee-sys" }
-optee-utee = { path = "../../incubator-teaclave-trustzone-sdk/optee-utee" }
+optee-utee-sys = { path = "../../../../optee-utee/optee-utee-sys" }
+optee-utee = { path = "../../../../optee-utee" }
 
 [patch.crates-io]
 proc-macro2 = { git = "https://github.com/DemesneGH/proc-macro2.git" }
 ring = { git = "https://github.com/DemesneGH/ring-optee.git", branch = "0.16.20-optee" }
 
 [patch."https://github.com/apache/incubator-teaclave-trustzone-sdk.git"]
-optee-utee = { path = "../../incubator-teaclave-trustzone-sdk/optee-utee" }
-libc = { path = "../../incubator-teaclave-trustzone-sdk/rust/libc" }
+optee-utee = { path = "../../../../optee-utee" }
+libc = { path = "../../../../rust/libc" }

@@ -25,11 +25,11 @@ description = "An example of Rust OP-TEE TrustZone SDK."
 edition = "2018"
 
 [dependencies]
-libc = { path = "../../incubator-teaclave-trustzone-sdk/rust/libc" }
+libc = { version = "=0.2.99", path = "../../../../rust/libc" }
 proto = { path = "../proto" }
 core = { path = "../core" }
-optee-utee-sys = { path = "../../incubator-teaclave-trustzone-sdk/optee-utee/optee-utee-sys" }
-optee-utee = { path = "../../incubator-teaclave-trustzone-sdk/optee-utee" }
+optee-utee-sys = { path = "../../../../optee-utee/optee-utee-sys" }
+optee-utee = { path = "../../../../optee-utee" }
 types = { path = "../types" }
 secure_storage = { path = "../secure_storage" }
 
@@ -56,9 +56,17 @@ debug = false
 codegen-units = 1
 
 [patch."https://github.com/apache/incubator-teaclave-trustzone-sdk.git"]
-optee-utee = { path = "../../incubator-teaclave-trustzone-sdk/optee-utee" }
-libc = { path = "../../incubator-teaclave-trustzone-sdk/rust/libc" }
+optee-utee = { path = "../../../../optee-utee" }
+libc = { path = "../../../../rust/libc" }
 
 [patch.crates-io]
 proc-macro2 = { git = "https://github.com/DemesneGH/proc-macro2.git" }
 ring = { git = "https://github.com/DemesneGH/ring-optee.git", branch = "0.16.20-optee" }
+libc = { path = "../../../../rust/libc" }
+
+# Note: `hex_lit` is a transitive dependency of `bitcoin` and fails to build at
+# hex_lit-0.1.1/src/lib.rs:127 with the error:
+#   error[E0658]: function pointer casts are not allowed in constant functions
+# Workaround:
+# Use a patched version of `hex_lit`. Then import it here:
+# hex_lit = { path = "../hex_lit" }

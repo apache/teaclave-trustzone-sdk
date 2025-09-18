@@ -40,7 +40,7 @@ impl CkNetwork {
         match self {
             CkNetwork::Eth(network_type) => match network_type {
                 NetworkType::Mainnet => 1,
-                NetworkType::Testnet => 3,
+                NetworkType::Testnet => 11155111, // for sepolia
             },
             CkNetwork::Btc(_network_type) => 0, // btc does not have chain id
             CkNetwork::Bsc(network_type) => match network_type {

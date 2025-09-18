@@ -28,8 +28,8 @@ hex = "0.4"
 
 # cargo will try to find the optee-utee path on x86_64, disable them:
 [target.'cfg(target_os="optee")'.dependencies]
-optee-utee-sys = { path = "../../incubator-teaclave-trustzone-sdk/optee-utee/optee-utee-sys"}
-optee-utee = { path = "../../incubator-teaclave-trustzone-sdk/optee-utee"}
+optee-utee-sys = { path = "../../../../optee-utee/optee-utee-sys"}
+optee-utee = { path = "../../../../optee-utee"}
 
 [target.'cfg(target_os="optee")'.patch.crates-io]
 proc-macro2 = { git = "https://github.com/DemesneGH/proc-macro2.git"}

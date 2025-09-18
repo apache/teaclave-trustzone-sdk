@@ -16,10 +16,10 @@
 # under the License.
 
 [dependencies.std]
-path = "../../incubator-teaclave-trustzone-sdk/rust/rust/library/std"
+path = "../../../../rust/rust/library/std"
 
 [patch.crates-io]
-libc =  { path = "../../incubator-teaclave-trustzone-sdk/rust/libc" }
-compiler_builtins =  { path = "../../incubator-teaclave-trustzone-sdk/rust/compiler-builtins" }
-rustc-std-workspace-core = { path = "../../incubator-teaclave-trustzone-sdk/rust/rust/library/rustc-std-workspace-core" }
-rustc-std-workspace-alloc = { path = "../../incubator-teaclave-trustzone-sdk/rust/rust/library/rustc-std-workspace-alloc" }
+libc =  { path = "../../../../rust/libc" }
+compiler_builtins =  { path = "../../../../rust/compiler-builtins" }
+rustc-std-workspace-core = { path = "../../../../rust/rust/library/rustc-std-workspace-core" }
+rustc-std-workspace-alloc = { path = "../../../../rust/rust/library/rustc-std-workspace-alloc" }

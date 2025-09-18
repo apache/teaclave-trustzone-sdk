@@ -50,8 +50,8 @@ ethereum-tx-sign = "=6.1.0"
 bip39 = { version = "=2.0.0", default-features = false }
 
 [target.'cfg(target_os="optee")'.dependencies]
-optee-utee-sys = { path = "../../incubator-teaclave-trustzone-sdk/optee-utee/optee-utee-sys" }
-optee-utee = { path = "../../incubator-teaclave-trustzone-sdk/optee-utee" }
+optee-utee-sys = { path = "../../../../optee-utee/optee-utee-sys" }
+optee-utee = { path = "../../../../optee-utee" }
 
 [patch.crates-io]
 proc-macro2 = { git = "https://github.com/DemesneGH/proc-macro2.git" }
@@ -61,6 +61,6 @@ proc-macro2 = { git = "https://github.com/DemesneGH/proc-macro2.git" }
 #   error[E0658]: function pointer casts are not allowed in constant functions
 # Workaround:
 # - Use a patched version of `hex_lit`.
-# - Add the following override in the Cargo.toml of each crate (`types/`, `proto/`, `core/`, `tls-ta/`):
+# - Add the following override in the Cargo.toml of`tls-ta/`:
 #     hex_lit = { path = "../hex_lit" }
 

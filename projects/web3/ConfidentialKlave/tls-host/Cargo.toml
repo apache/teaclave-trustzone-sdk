@@ -28,10 +28,10 @@ edition = "2018"
 libc = "0.2.48"
 proto = { path = "../proto" }
 constants = { path = "../constants" }
-optee-teec = { path = "../../incubator-teaclave-trustzone-sdk/optee-teec" }
+optee-teec = { path = "../../../../optee-teec" }
 structopt = "0.3"
 anyhow = "1.0"
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "=1.28", features = ["full"] }
 
 [profile.release]
 lto = true
