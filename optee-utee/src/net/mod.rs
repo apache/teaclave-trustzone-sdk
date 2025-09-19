@@ -23,7 +23,7 @@ pub use error::SocketError;
 pub use optee::{Setup, TcpAdapter, TcpStream, UdpAdapter, UdpSocket};
 pub use socket::{Socket, SocketAdapter};
 
-#[cfg(target_os = "optee")]
+#[cfg(feature = "std")]
 mod optee_std;
 
 mod optee_no_std;
