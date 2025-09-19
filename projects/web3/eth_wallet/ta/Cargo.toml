@@ -27,8 +27,8 @@ edition = "2018"
 [dependencies]
 libc = { path = "../../../../rust/libc" }
 proto = { path = "../proto" }
-optee-utee-sys = { path = "../../../../optee-utee/optee-utee-sys" }
-optee-utee = { path = "../../../../optee-utee" }
+optee-utee-sys = { path = "../../../../optee-utee/optee-utee-sys", features = ["std"] }
+optee-utee = { path = "../../../../optee-utee", features = ["std"] }
 secure_db = { path = "../../../../crates/secure_db" }
 
 anyhow = "1.0"
