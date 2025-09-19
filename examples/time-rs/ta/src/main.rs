@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![no_main]
 
 use optee_utee::Time;

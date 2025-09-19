@@ -15,26 +15,26 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#![cfg_attr(not(target_os = "optee"), no_std)]
-#![cfg_attr(not(target_os = "optee"), feature(error_in_core))]
+#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(feature = "std"), feature(error_in_core))]
 
 // Requires `alloc`.
 #[macro_use]
 extern crate alloc;
 
-#[cfg(not(target_os = "optee"))]
+#[cfg(not(feature = "std"))]
 use libc_alloc::LibcAlloc;
 
-#[cfg(not(target_os = "optee"))]
+#[cfg(not(feature = "std"))]
 #[global_allocator]
 static ALLOCATOR: LibcAlloc = LibcAlloc;
 
-#[cfg(not(target_os = "optee"))]
+#[cfg(not(feature = "std"))]
 use core::panic::PanicInfo;
-#[cfg(not(target_os = "optee"))]
+#[cfg(not(feature = "std"))]
 use optee_utee_sys as raw;
 
-#[cfg(all(not(target_os = "optee"), not(feature = "no_panic_handler")))]
+#[cfg(all(not(feature = "std"), not(feature = "no_panic_handler")))]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     unsafe {

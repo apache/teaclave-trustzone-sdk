@@ -29,5 +29,6 @@ links = "utee"
 libc = "0.2"
 
 [features]
-default=[]
-no_link=[]
+default = []
+std = []
+no_link = []

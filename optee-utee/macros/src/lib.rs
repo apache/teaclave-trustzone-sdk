@@ -18,7 +18,7 @@
 extern crate alloc;
 extern crate proc_macro;
 
-#[cfg(not(target_os = "optee"))]
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use proc_macro::TokenStream;
 use quote::quote;

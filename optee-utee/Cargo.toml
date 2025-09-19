@@ -43,6 +43,8 @@ optee-utee-sys = { version = "0.6.0", path = "optee-utee-sys", features = ["no_l
 optee-utee-mock = { version = "0.6.0", path = "optee-utee-mock" }
 
 [features]
+default = []
+std = ["optee-utee-sys/std", "optee-utee-macros/std"]
 no_panic_handler = []
 
 [workspace]

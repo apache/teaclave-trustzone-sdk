@@ -18,7 +18,7 @@
 use crate::{Error, Result};
 use optee_utee_sys as raw;
 use core::{cmp::max, fmt};
-#[cfg(not(target_os = "optee"))]
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
 pub type BigIntUnit = u32;

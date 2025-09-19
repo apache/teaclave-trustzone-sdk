@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#![cfg_attr(not(target_os = "optee"), no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![allow(non_camel_case_types, non_snake_case)]
 
 pub use tee_api::*;
@@ -47,13 +47,13 @@ mod tee_ipsocket;
 // Currently, the libc crate does not support optee_os, and patching it in
 // Xargo.toml within the TA project does not affect optee-utee-sys. Therefore,
 // we need to define the type directly in the crate to ensure compatibility.
-#[cfg(target_os = "optee")]
+#[cfg(feature = "std")]
 mod libc_compat {
     pub type size_t = usize;
     pub type intmax_t = i64;
 }
 
-#[cfg(not(target_os = "optee"))]
+#[cfg(not(feature = "std"))]
 mod libc_compat {
     pub use libc::{size_t, intmax_t};
 }

@@ -24,23 +24,24 @@ OBJCOPY := $(CROSS_COMPILE)objcopy
 LINKER_CFG := target.$(TARGET).linker=\"$(CROSS_COMPILE)gcc\"
 
 # fix for the error: "unwinding panics are not supported without std" reported by clippy
-# Only set panic=abort when STD is not enabled (no-std mode)
-RUSTFLAGS := $(if $(STD),,-C panic=abort)
+# Set panic=abort for std and no-std
+RUSTFLAGS := -C panic=abort
 
 TA_SIGN_KEY ?= $(TA_DEV_KIT_DIR)/keys/default_ta.pem
 SIGN := $(TA_DEV_KIT_DIR)/scripts/sign_encrypt.py
 OUT_DIR := $(CURDIR)/target/$(TARGET)/release
 
 BUILDER ?= $(if $(STD),xargo,cargo)
+FEATURES := $(if $(STD),--features std,)
 
 all: clippy ta strip sign
 
 clippy:
 	@cargo fmt
-	@RUSTFLAGS="$(RUSTFLAGS)" $(BUILDER) clippy --target $(TARGET) -- -D warnings -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
+	@RUSTFLAGS="$(RUSTFLAGS)" $(BUILDER) clippy --target $(TARGET) $(FEATURES) -- -D warnings -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
 
 ta: clippy
-	@RUSTFLAGS="$(RUSTFLAGS)" $(BUILDER) build --target $(TARGET) --release --config $(LINKER_CFG)
+	@RUSTFLAGS="$(RUSTFLAGS)" $(BUILDER) build --target $(TARGET) --release $(FEATURES) --config $(LINKER_CFG)
 
 strip: ta
 	@$(OBJCOPY) --strip-unneeded $(OUT_DIR)/ta $(OUT_DIR)/stripped_ta
