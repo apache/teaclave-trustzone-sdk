@@ -29,6 +29,10 @@ proto = { path = "../proto" }
 optee-utee-sys = { path = "../../../optee-utee/optee-utee-sys" }
 optee-utee = { path = "../../../optee-utee" }
 
+[features]
+default = []
+std = ["optee-utee/std", "optee-utee-sys/std"]
+
 [build-dependencies]
 proto = { path = "../proto" }
 optee-utee-build = { path = "../../../optee-utee-build" }

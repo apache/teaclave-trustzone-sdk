@@ -15,11 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#[cfg(not(target_os = "optee"))]
+#[cfg(not(feature = "std"))]
 use core::error;
 use core::{fmt, result};
 use optee_utee_sys as raw;
-#[cfg(target_os = "optee")]
+#[cfg(feature = "std")]
 use std::error;
 
 /// A specialized [`Result`](https://doc.rust-lang.org/std/result/enum.Result.html)
