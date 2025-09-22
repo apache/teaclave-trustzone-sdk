@@ -27,15 +27,13 @@ LINKER_CFG := target.$(TARGET).linker=\"$(CROSS_COMPILE)gcc\"
 
 # fix for the error: "unwinding panics are not supported without std" reported by clippy
 # Set panic=abort for std and no-std
-# Set panic=abort for std and no-std
 RUSTFLAGS := -C panic=abort
 
 TA_SIGN_KEY ?= $(TA_DEV_KIT_DIR)/keys/default_ta.pem
 SIGN := $(TA_DEV_KIT_DIR)/scripts/sign_encrypt.py
 OUT_DIR := $(CURDIR)/target/$(TARGET)/release
 
-BUILDER ?= $(if $(STD),xargo,cargo)
-FEATURES := $(if $(STD),--features std,)
+BUILDER ?= cargo
 
 all: clippy ta strip sign
 
