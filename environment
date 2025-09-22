@@ -39,9 +39,13 @@ then
   then
     export TARGET_TA="arm-unknown-optee"
     echo "set TARGET_TA=$TARGET_TA (std)"
+    export BUILDER=xargo
+    export FEATURES="--features std"
   else
     export TARGET_TA="arm-unknown-linux-gnueabihf"
     echo "set TARGET_TA=$TARGET_TA (no-std)"
+    export BUILDER=cargo
+    export FEATURES=""
   fi
   export CROSS_COMPILE_TA="$CROSS_COMPILE32"
   echo "set CROSS_COMPILE_TA=$CROSS_COMPILE_TA"
@@ -52,9 +56,13 @@ else
   then
     export TARGET_TA="aarch64-unknown-optee"
     echo "set TARGET_TA=$TARGET_TA (std)"
+    export BUILDER=xargo
+    export FEATURES="--features std"
   else
     export TARGET_TA="aarch64-unknown-linux-gnu"
     echo "set TARGET_TA=$TARGET_TA (no-std)"
+    export BUILDER=cargo
+    export FEATURES=""
   fi
   export CROSS_COMPILE_TA="$CROSS_COMPILE64"
   echo "set CROSS_COMPILE_TA=$CROSS_COMPILE_TA"

@@ -21,6 +21,8 @@ export CROSS_COMPILE_TA="arm-linux-gnueabihf-"
 
 # sdk example using this env to distinguish between xargo and cargo
 export BUILDER="xargo"
+# enable std feature for building std TAs (defined in TA's Cargo.toml and used in TA's Makefile)
+export FEATURES="--features std"
 
 # assume $customized-target.json is located here
 export RUST_TARGET_PATH=$RUST_STD_DIR

@@ -31,8 +31,7 @@ TA_SIGN_KEY ?= $(TA_DEV_KIT_DIR)/keys/default_ta.pem
 SIGN := $(TA_DEV_KIT_DIR)/scripts/sign_encrypt.py
 OUT_DIR := $(CURDIR)/target/$(TARGET)/release
 
-BUILDER ?= $(if $(STD),xargo,cargo)
-FEATURES := $(if $(STD),--features std,)
+BUILDER ?= cargo
 
 all: clippy ta strip sign
 
