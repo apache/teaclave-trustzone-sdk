@@ -34,6 +34,7 @@ SIGN := $(TA_DEV_KIT_DIR)/scripts/sign_encrypt.py
 OUT_DIR := $(CURDIR)/target/$(TARGET)/release
 
 BUILDER ?= cargo
+FEATURES ?= 
 
 all: clippy ta strip sign
 
