@@ -40,10 +40,7 @@ pub fn ta_create(_args: TokenStream, input: TokenStream) -> TokenStream {
 
     // check the function signature
     let valid_signature = f.constness.is_none()
-        && match f.vis {
-            syn::Visibility::Inherited => true,
-            _ => false,
-        }
+        && matches!(f.vis, syn::Visibility::Inherited)
         && f.abi.is_none()
         && f.decl.inputs.is_empty()
         && f.decl.generics.where_clause.is_none()
@@ -87,18 +84,12 @@ pub fn ta_destroy(_args: TokenStream, input: TokenStream) -> TokenStream {
 
     // check the function signature
     let valid_signature = f.constness.is_none()
-        && match f.vis {
-            syn::Visibility::Inherited => true,
-            _ => false,
-        }
+        && matches!(f.vis, syn::Visibility::Inherited)
         && f.abi.is_none()
         && f.decl.inputs.is_empty()
         && f.decl.generics.where_clause.is_none()
         && f.decl.variadic.is_none()
-        && match f.decl.output {
-            syn::ReturnType::Default => true,
-            _ => false,
-        };
+        && matches!(f.decl.output, syn::ReturnType::Default);
 
     if !valid_signature {
         return syn::parse::Error::new(
@@ -141,10 +132,7 @@ pub fn ta_open_session(_args: TokenStream, input: TokenStream) -> TokenStream {
 
     // check the function signature
     let valid_signature = f.constness.is_none()
-        && match f.vis {
-            syn::Visibility::Inherited => true,
-            _ => false,
-        }
+        && matches!(f.vis, syn::Visibility::Inherited)
         && f.abi.is_none()
         && (f.decl.inputs.len() == 1 || f.decl.inputs.len() == 2)
         && f.decl.generics.where_clause.is_none()
@@ -184,12 +172,12 @@ pub fn ta_open_session(_args: TokenStream, input: TokenStream) -> TokenStream {
                 .inputs
                 .iter()
                 .map(|arg| match arg {
-                    &syn::FnArg::Captured(ref val) => &val.ty,
+                    syn::FnArg::Captured(val) => &val.ty,
                     _ => unreachable!(),
                 })
                 .collect();
             let ctx_type = match input_types.last().unwrap() {
-                &syn::Type::Reference(ref r) => &r.elem,
+                syn::Type::Reference(r) => &r.elem,
                 _ => unreachable!(),
             };
 
@@ -241,18 +229,12 @@ pub fn ta_close_session(_args: TokenStream, input: TokenStream) -> TokenStream {
 
     // check the function signature
     let valid_signature = f.constness.is_none()
-        && match f.vis {
-            syn::Visibility::Inherited => true,
-            _ => false,
-        }
+        && matches!(f.vis, syn::Visibility::Inherited)
         && f.abi.is_none()
-        && (f.decl.inputs.len() == 0 || f.decl.inputs.len() == 1)
+        && (f.decl.inputs.is_empty() || f.decl.inputs.len() == 1)
         && f.decl.generics.where_clause.is_none()
         && f.decl.variadic.is_none()
-        && match f.decl.output {
-            syn::ReturnType::Default => true,
-            _ => false,
-        };
+        && matches!(f.decl.output, syn::ReturnType::Default);
 
     if !valid_signature {
         return syn::parse::Error::new(
@@ -279,12 +261,12 @@ pub fn ta_close_session(_args: TokenStream, input: TokenStream) -> TokenStream {
                 .inputs
                 .iter()
                 .map(|arg| match arg {
-                    &syn::FnArg::Captured(ref val) => &val.ty,
+                    syn::FnArg::Captured(val) => &val.ty,
                     _ => unreachable!(),
                 })
                 .collect();
             let t = match input_types.first().unwrap() {
-                &syn::Type::Reference(ref r) => &r.elem,
+                syn::Type::Reference(r) => &r.elem,
                 _ => unreachable!(),
             };
 
@@ -328,10 +310,7 @@ pub fn ta_invoke_command(_args: TokenStream, input: TokenStream) -> TokenStream 
 
     // check the function signature
     let valid_signature = f.constness.is_none()
-        && match f.vis {
-            syn::Visibility::Inherited => true,
-            _ => false,
-        }
+        && matches!(f.vis, syn::Visibility::Inherited)
         && f.abi.is_none()
         && (f.decl.inputs.len() == 2 || f.decl.inputs.len() == 3)
         && f.decl.generics.where_clause.is_none()
@@ -373,12 +352,12 @@ pub fn ta_invoke_command(_args: TokenStream, input: TokenStream) -> TokenStream 
                 .inputs
                 .iter()
                 .map(|arg| match arg {
-                    &syn::FnArg::Captured(ref val) => &val.ty,
+                    syn::FnArg::Captured(val) => &val.ty,
                     _ => unreachable!(),
                 })
                 .collect();
             let t = match input_types.first().unwrap() {
-                &syn::Type::Reference(ref r) => &r.elem,
+                syn::Type::Reference(r) => &r.elem,
                 _ => unreachable!(),
             };
 

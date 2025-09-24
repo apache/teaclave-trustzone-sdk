@@ -59,6 +59,9 @@ jobs:
           (cd optee-utee && cargo build --target aarch64-unknown-linux-gnu -vv)
           (cd optee-teec && cargo build --target aarch64-unknown-linux-gnu -vv)
 
+          # Clippy checks
+          (cd optee-utee && cargo clippy --target aarch64-unknown-linux-gnu -- -D warnings)
+
   # Cross-compile on host and run tests in QEMU
   #
   # Cross-compile target pairs:

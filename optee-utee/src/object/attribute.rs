@@ -66,7 +66,7 @@ impl<'attrref> AttributeMemref<'attrref> {
             attributeID: 0,
             content: raw::content {
                 memref: raw::Memref {
-                    buffer: 0 as *mut _,
+                    buffer: core::ptr::null_mut(),
                     size: 0,
                 },
             },
