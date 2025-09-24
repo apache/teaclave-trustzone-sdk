@@ -74,7 +74,7 @@ pub struct ParamMemref<'parameter> {
 impl<'parameter> ParamMemref<'parameter> {
     pub fn buffer(&mut self) -> &mut [u8] {
         unsafe {
-            slice::from_raw_parts_mut((*self.raw).buffer as *mut u8, (*self.raw).size as usize)
+            slice::from_raw_parts_mut((*self.raw).buffer as *mut u8, (*self.raw).size)
         }
     }
 
@@ -100,10 +100,12 @@ impl Parameter {
     pub fn from_raw(ptr: *mut raw::TEE_Param, param_type: ParamType) -> Self {
         Self {
             raw: ptr,
-            param_type: param_type,
+            param_type,
         }
     }
 
+    /// # Safety
+    /// The caller must ensure that the raw pointer is valid and points to a properly initialized TEE_Param.
     pub unsafe fn as_value(&mut self) -> Result<ParamValue> {
         match self.param_type {
             ParamType::ValueInput | ParamType::ValueInout | ParamType::ValueOutput => {
@@ -117,6 +119,8 @@ impl Parameter {
         }
     }
 
+    /// # Safety
+    /// The caller must ensure that the raw pointer is valid and points to a properly initialized TEE_Param.
     pub unsafe fn as_memref(&mut self) -> Result<ParamMemref> {
         match self.param_type {
             ParamType::MemrefInout | ParamType::MemrefInput | ParamType::MemrefOutput => {

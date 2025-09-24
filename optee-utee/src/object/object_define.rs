@@ -29,9 +29,9 @@ pub enum Whence {
     DataSeekEnd,
 }
 
-impl Into<raw::TEE_Whence> for Whence {
-    fn into(self) -> raw::TEE_Whence {
-        match self {
+impl From<Whence> for raw::TEE_Whence {
+    fn from(val: Whence) -> Self {
+        match val {
             Whence::DataSeekSet => raw::TEE_Whence::TEE_DATA_SEEK_SET,
             Whence::DataSeekCur => raw::TEE_Whence::TEE_DATA_SEEK_CUR,
             Whence::DataSeekEnd => raw::TEE_Whence::TEE_DATA_SEEK_END,

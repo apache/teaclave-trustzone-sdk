@@ -288,12 +288,12 @@ impl From<ErrorKind> for Error {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 #[repr(u32)]
 pub enum ErrorOrigin {
-    API = raw::TEE_ORIGIN_API,
-    COMMS = raw::TEE_ORIGIN_COMMS,
-    TEE = raw::TEE_ORIGIN_TEE,
-    TA = raw::TEE_ORIGIN_TRUSTED_APP,
+    Api = raw::TEE_ORIGIN_API,
+    Comms = raw::TEE_ORIGIN_COMMS,
+    Tee = raw::TEE_ORIGIN_TEE,
+    Ta = raw::TEE_ORIGIN_TRUSTED_APP,
     #[default]
-    UNKNOWN,
+    Unknown,
 }
 
 impl From<ErrorOrigin> for u32 {
@@ -305,11 +305,11 @@ impl From<ErrorOrigin> for u32 {
 impl From<u32> for ErrorOrigin {
     fn from(code: u32) -> ErrorOrigin {
         match code {
-            raw::TEE_ORIGIN_API => ErrorOrigin::API,
-            raw::TEE_ORIGIN_COMMS => ErrorOrigin::COMMS,
-            raw::TEE_ORIGIN_TEE => ErrorOrigin::TEE,
-            raw::TEE_ORIGIN_TRUSTED_APP => ErrorOrigin::TA,
-            _ => ErrorOrigin::UNKNOWN,
+            raw::TEE_ORIGIN_API => ErrorOrigin::Api,
+            raw::TEE_ORIGIN_COMMS => ErrorOrigin::Comms,
+            raw::TEE_ORIGIN_TEE => ErrorOrigin::Tee,
+            raw::TEE_ORIGIN_TRUSTED_APP => ErrorOrigin::Ta,
+            _ => ErrorOrigin::Unknown,
         }
     }
 }
