@@ -15,6 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
+# Default build parameters if not specified
+TARGET ?= aarch64-unknown-linux-gnu
+CROSS_COMPILE ?= aarch64-linux-gnu-
+CROSS_COMPILE_HOST ?= $(CROSS_COMPILE)
+CROSS_COMPILE_TA ?= $(CROSS_COMPILE)
+TARGET_HOST ?= $(TARGET)
+TARGET_TA ?= $(TARGET)
+BUILDER ?= cargo
+FEATURES ?=
+
 # Define example categories based on std/no-std support
 # STD-only examples (require STD=y to build)
 STD_ONLY_EXAMPLES = \

@@ -43,6 +43,8 @@ CROSS_COMPILE_HOST ?= $(CROSS_COMPILE)
 CROSS_COMPILE_TA ?= $(CROSS_COMPILE)
 TARGET_HOST ?= $(TARGET)
 TARGET_TA ?= $(TARGET)
+BUILDER ?= cargo
+FEATURES ?=
 
 .PHONY: all examples std-examples no-std-examples \
 	install clean examples-clean help
@@ -64,7 +66,9 @@ std-examples no-std-examples:
 		CROSS_COMPILE_HOST=$(CROSS_COMPILE_HOST) \
 		CROSS_COMPILE_TA=$(CROSS_COMPILE_TA) \
 		TA_DEV_KIT_DIR=$(TA_DEV_KIT_DIR) \
-		OPTEE_CLIENT_EXPORT=$(OPTEE_CLIENT_EXPORT)
+		OPTEE_CLIENT_EXPORT=$(OPTEE_CLIENT_EXPORT) \
+		BUILDER=$(BUILDER) \
+		FEATURES="$(FEATURES)"
 
 install: examples
 	$(echo) '  INSTALL ${out-dir}/lib/optee_armtz'
