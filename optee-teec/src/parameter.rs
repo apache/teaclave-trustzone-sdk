@@ -19,7 +19,7 @@ use crate::raw;
 use std::{marker, mem};
 
 pub trait Param {
-    fn into_raw(&mut self) -> raw::TEEC_Parameter;
+    fn to_raw(&mut self) -> raw::TEEC_Parameter;
     fn param_type(&self) -> ParamType;
     fn from_raw(raw: raw::TEEC_Parameter, param_type: ParamType) -> Self;
 }
@@ -53,14 +53,14 @@ impl ParamValue {
 }
 
 impl Param for ParamValue {
-    fn into_raw(&mut self) -> raw::TEEC_Parameter {
+    fn to_raw(&mut self) -> raw::TEEC_Parameter {
         raw::TEEC_Parameter { value: self.raw }
     }
 
     fn from_raw(raw: raw::TEEC_Parameter, param_type: ParamType) -> Self {
         Self {
             raw: unsafe { raw.value },
-            param_type: param_type,
+            param_type,
         }
     }
 
@@ -73,7 +73,7 @@ impl Param for ParamValue {
 pub struct ParamNone;
 
 impl Param for ParamNone {
-    fn into_raw(&mut self) -> raw::TEEC_Parameter {
+    fn to_raw(&mut self) -> raw::TEEC_Parameter {
         let raw: raw::TEEC_Parameter = unsafe { mem::zeroed() };
         raw
     }
@@ -133,7 +133,7 @@ impl<'a> ParamTmpRef<'a> {
 }
 
 impl<'a> Param for ParamTmpRef<'a> {
-    fn into_raw(&mut self) -> raw::TEEC_Parameter {
+    fn to_raw(&mut self) -> raw::TEEC_Parameter {
         raw::TEEC_Parameter { tmpref: self.raw }
     }
 
@@ -144,7 +144,7 @@ impl<'a> Param for ParamTmpRef<'a> {
     fn from_raw(raw: raw::TEEC_Parameter, param_type: ParamType) -> Self {
         Self {
             raw: unsafe { raw.tmpref },
-            param_type: param_type,
+            param_type,
             _marker: marker::PhantomData,
         }
     }
