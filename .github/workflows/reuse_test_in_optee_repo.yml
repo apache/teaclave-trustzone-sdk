@@ -57,6 +57,12 @@ jobs:
           done
           sudo apt-get autoremove -y || true
           sudo apt-get clean || true
+
+          echo "Removing heavy preinstalled SDKs..."
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/hostedtoolcache
+          
           echo "Disk usage after cleanup:"
           df -h
       - name: Checkout repository
@@ -110,6 +116,12 @@ jobs:
           done
           sudo apt-get autoremove -y || true
           sudo apt-get clean || true
+          
+          echo "Removing heavy preinstalled SDKs..."
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/hostedtoolcache
+          
           echo "Disk usage after cleanup:"
           df -h
       - name: Checkout repository
