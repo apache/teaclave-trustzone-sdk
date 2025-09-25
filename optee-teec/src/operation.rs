@@ -40,7 +40,7 @@ impl<A: Param, B: Param, C: Param, D: Param> Operation<A, B, C, D> {
             p3.param_type(),
         )
         .into();
-        raw_op.params = [p0.into_raw(), p1.into_raw(), p2.into_raw(), p3.into_raw()];
+        raw_op.params = [p0.to_raw(), p1.to_raw(), p2.to_raw(), p3.to_raw()];
         Operation {
             raw: raw_op,
             phantom0: PhantomData,

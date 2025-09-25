@@ -61,6 +61,7 @@ jobs:
 
           # Clippy checks
           (cd optee-utee && cargo clippy --target aarch64-unknown-linux-gnu -- -D warnings)
+          (cd optee-teec && cargo clippy --target aarch64-unknown-linux-gnu -- -D warnings)
 
   # Cross-compile on host and run tests in QEMU
   #
