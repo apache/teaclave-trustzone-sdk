@@ -253,7 +253,7 @@ impl TransientObject {
             raw::TEE_PopulateTransientObject(self.0.handle(), p.as_ptr() as _, attrs.len() as u32)
         } {
             raw::TEE_SUCCESS => Ok(()),
-            code => return Err(Error::from_raw_error(code)),
+            code => Err(Error::from_raw_error(code)),
         }
     }
 

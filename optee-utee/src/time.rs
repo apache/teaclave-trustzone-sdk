@@ -27,6 +27,12 @@ pub struct Time {
     pub millis: u32,
 }
 
+impl Default for Time {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Time {
     /// Create a new empty time structure.
     pub fn new() -> Self {

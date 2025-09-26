@@ -41,11 +41,17 @@ extern "C" {
     pub fn __utee_entry(func: c_ulong, session_id: c_ulong, up: *mut utee_params, cmd_id: c_ulong) -> TEE_Result;
 }
 
+/// # Safety
+/// This function is the main entry point for a Trusted Application (TA) in OP-TEE.
+/// It must only be called by the OP-TEE OS with valid parameters. The `up` parameter
+/// is a raw pointer that must point to a valid `utee_params` structure initialized
+/// by the OP-TEE runtime environment. This function should never be called directly
+/// from user code - it is only exported for the OP-TEE OS loader.
 #[no_mangle]
-pub fn __ta_entry(func: c_ulong, session_id: c_ulong, up: *mut utee_params, cmd_id: c_ulong) -> ! {
-    let res: u32 = unsafe { __utee_entry(func, session_id, up, cmd_id) };
+unsafe fn __ta_entry(func: c_ulong, session_id: c_ulong, up: *mut utee_params, cmd_id: c_ulong) -> ! {
+    let res: u32 = __utee_entry(func, session_id, up, cmd_id);
 
-    unsafe { _utee_return(res.into()) };
+    _utee_return(res.into());
 }
 
 unsafe impl Sync for ta_head {}

@@ -217,7 +217,7 @@ impl OperationHandle {
 
     fn set_key<T: GenericObject>(&self, object: &T) -> Result<()> {
         match unsafe { raw::TEE_SetOperationKey(self.handle(), object.handle()) } {
-            raw::TEE_SUCCESS => return Ok(()),
+            raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
         }
     }
@@ -243,7 +243,7 @@ pub fn is_algorithm_supported(alg_id: u32, element: u32) -> Result<()> {
 impl Drop for OperationHandle {
     fn drop(&mut self) {
         unsafe {
-            if self.raw != ptr::null_mut() {
+            if !self.raw.is_null() {
                 raw::TEE_FreeOperation(self.handle());
             }
             drop(Box::from_raw(self.raw));
@@ -336,7 +336,7 @@ impl Digest {
                 &mut hash_size,
             )
         } {
-            raw::TEE_SUCCESS => return Ok(hash_size),
+            raw::TEE_SUCCESS => Ok(hash_size),
             code => Err(Error::from_raw_error(code)),
         }
     }
@@ -622,7 +622,7 @@ impl Cipher {
             )
         } {
             raw::TEE_SUCCESS => {
-                return Ok(dest_size as usize);
+                Ok(dest_size)
             }
             code => Err(Error::from_raw_error(code)),
         }
@@ -657,7 +657,7 @@ impl Cipher {
                 &mut dest_size,
             )
         } {
-            raw::TEE_SUCCESS => return Ok(dest_size as usize),
+            raw::TEE_SUCCESS => Ok(dest_size),
             code => Err(Error::from_raw_error(code)),
         }
     }
@@ -746,7 +746,7 @@ impl Cipher {
         match unsafe {
             raw::TEE_SetOperationKey2(self.handle(), object1.handle(), object2.handle())
         } {
-            raw::TEE_SUCCESS => return Ok(()),
+            raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
         }
     }
@@ -1008,7 +1008,7 @@ impl AE {
                 pay_load_len,
             )
         } {
-            raw::TEE_SUCCESS => return Ok(()),
+            raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
         }
     }
@@ -1068,7 +1068,7 @@ impl AE {
             )
         } {
             raw::TEE_SUCCESS => {
-                return Ok(dest_size);
+                Ok(dest_size)
             }
             code => Err(Error::from_raw_error(code)),
         }
@@ -1156,7 +1156,7 @@ impl AE {
             )
         } {
             raw::TEE_SUCCESS => {
-                return Ok((dest_size, tag_size));
+                Ok((dest_size, tag_size))
             }
             code => Err(Error::from_raw_error(code)),
         }
@@ -1199,7 +1199,7 @@ impl AE {
             )
         } {
             raw::TEE_SUCCESS => {
-                return Ok(dest_size);
+                Ok(dest_size)
             }
             code => Err(Error::from_raw_error(code)),
         }
@@ -1314,7 +1314,7 @@ impl Asymmetric {
     pub fn encrypt(&self, params: &[Attribute], src: &[u8]) -> Result<Vec<u8>> {
         let p: Vec<raw::TEE_Attribute> = params.iter().map(|p| p.raw()).collect();
         let mut res_size: usize = self.info().key_size() as usize;
-        let mut res_vec: Vec<u8> = vec![0u8; res_size as usize];
+        let mut res_vec: Vec<u8> = vec![0u8; res_size];
         match unsafe {
             raw::TEE_AsymmetricEncrypt(
                 self.handle(),
@@ -1328,7 +1328,7 @@ impl Asymmetric {
         } {
             raw::TEE_SUCCESS => {
                 res_vec.truncate(res_size);
-                return Ok(res_vec);
+                Ok(res_vec)
             }
             code => Err(Error::from_raw_error(code)),
         }
@@ -1357,7 +1357,7 @@ impl Asymmetric {
     pub fn decrypt(&self, params: &[Attribute], src: &[u8]) -> Result<Vec<u8>> {
         let p: Vec<raw::TEE_Attribute> = params.iter().map(|p| p.raw()).collect();
         let mut res_size: usize = self.info().key_size() as usize;
-        let mut res_vec: Vec<u8> = vec![0u8; res_size as usize];
+        let mut res_vec: Vec<u8> = vec![0u8; res_size];
         match unsafe {
             raw::TEE_AsymmetricDecrypt(
                 self.handle(),
@@ -1370,8 +1370,8 @@ impl Asymmetric {
             )
         } {
             raw::TEE_SUCCESS => {
-                res_vec.truncate(res_size as usize);
-                return Ok(res_vec);
+                res_vec.truncate(res_size);
+                Ok(res_vec)
             }
             code => Err(Error::from_raw_error(code)),
         }
@@ -1418,7 +1418,7 @@ impl Asymmetric {
             )
         } {
             raw::TEE_SUCCESS => {
-                return Ok(signature_size);
+                Ok(signature_size)
             }
             code => Err(Error::from_raw_error(code)),
         }
@@ -1537,7 +1537,7 @@ impl DeriveKey {
     ///         key_pair_1.generate_key(256, &[attr_prime.into(), attr_base.into()])?;
     ///         key_pair_1.ref_attribute(AttributeId::DhPublicValue, &mut public_1)?;
     ///         Ok(())
-    ///     },
+    ///     }
     ///     Err(e) => Err(e),
     /// }
     /// # }

@@ -176,9 +176,7 @@ impl<'a> Param<'a> {
                 *written = new_size;
                 Ok(())
             }
-            _ => {
-                return Err(Error::new(ErrorKind::BadFormat));
-            }
+            _ => Err(Error::new(ErrorKind::BadFormat)),
         }
     }
 
@@ -212,6 +210,12 @@ impl<'a> Param<'a> {
 /// The TeeParams struct is used to manage the parameters for TEE commands.
 pub struct TeeParams<'a> {
     params: [Param<'a>; 4],
+}
+
+impl<'a> Default for TeeParams<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<'a> TeeParams<'a> {

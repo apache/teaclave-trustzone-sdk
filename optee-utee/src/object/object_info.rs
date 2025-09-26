@@ -63,7 +63,7 @@ impl ObjectInfo {
 
     /// Return the `dataSize` field of the raw structure `TEE_ObjectInfo`.
     pub fn data_size(&self) -> usize {
-        self.raw.dataSize as usize
+        self.raw.dataSize
     }
 
     /// Return the `objectSize` field of the raw structure `TEE_ObjectInfo`.

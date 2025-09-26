@@ -262,7 +262,7 @@ impl PersistentObject {
         // So we must forget the raw_handle to prevent calling TEE_CloseObject
         // on it (no matter the result of TEE_CloseAndDeletePersistentObject1).
         self.0.forget();
-        return result;
+        result
     }
 
     /// Changes the identifier of an object.

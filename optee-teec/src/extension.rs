@@ -24,7 +24,7 @@ pub struct PluginMethod {
     pub name: *const c_char,
     pub uuid: raw::TEEC_UUID,
     pub init: fn() -> raw::TEEC_Result,
-    pub invoke: fn(
+    pub invoke: unsafe fn(
         cmd: u32,
         sub_cmd: u32,
         data: *mut c_char,
@@ -51,7 +51,7 @@ impl<'a> PluginParameters<'a> {
             cmd,
             sub_cmd,
             inout,
-            outlen: 0 as usize,
+            outlen: 0_usize,
         }
     }
     pub fn set_buf_from_slice(&mut self, sendslice: &[u8]) -> Result<()> {
@@ -59,8 +59,8 @@ impl<'a> PluginParameters<'a> {
             println!("Overflow: Input length is less than output length");
             return Err(Error::new(ErrorKind::Security));
         }
-        self.outlen = sendslice.len() as usize;
-        self.inout[..self.outlen].copy_from_slice(&sendslice);
+        self.outlen = sendslice.len();
+        self.inout[..self.outlen].copy_from_slice(sendslice);
         Ok(())
     }
     pub fn get_out_slice(&self) -> &[u8] {

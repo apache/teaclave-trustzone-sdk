@@ -110,12 +110,12 @@ impl LoadablePlugin {
     /// # }
     /// ```
     /// Notice: the shared buffer could grow to fit the request data automatically.
-    pub fn invoke_with_capacity<'a>(
-        &'a self,
+    pub fn invoke_with_capacity(
+        &self,
         command_id: u32,
         subcommand_id: u32,
         capacity: usize,
-    ) -> LoadablePluginCommand<'a> {
+    ) -> LoadablePluginCommand<'_> {
         LoadablePluginCommand::new_with_capacity(self, command_id, subcommand_id, capacity)
     }
 }

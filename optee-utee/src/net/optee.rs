@@ -110,7 +110,7 @@ impl SocketAdapter for TcpAdapter {
         let ret = unsafe {
             ((*raw::TEE_tcpSocket).send)(
                 handle.0,
-                buf.as_ptr() as *const u8 as _,
+                buf.as_ptr() as _,
                 &mut length,
                 timeout,
             )
@@ -170,7 +170,7 @@ impl SocketAdapter for UdpAdapter {
         let ret = unsafe {
             ((*raw::TEE_udpSocket).send)(
                 handle.0,
-                buf.as_ptr() as *const u8 as _,
+                buf.as_ptr() as _,
                 &mut length,
                 timeout,
             )
