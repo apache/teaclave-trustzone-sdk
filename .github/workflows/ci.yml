@@ -65,6 +65,47 @@ jobs:
           (cd optee-teec && cargo run -p systest)
           (cd optee-utee && cargo build -p systest)
 
+  # Test build no-std examples on dev docker container
+  test-nostd-build-on-dev-docker:
+    runs-on: ubuntu-latest
+    container: 
+      image: teaclave/teaclave-trustzone-emulator-nostd-optee-4.7.0-expand-memory:latest
+      options: --entrypoint /entrypoint.sh
+    env:
+      HOME: /root
+      TEACLAVE_TOOLCHAIN_BASE: /opt/teaclave
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build no-std and common examples
+        shell: "bash -l {0}"
+        run: |
+          # Build examples
+          make
+
+  # Test build std examples on dev docker container
+  test-std-build-on-dev-docker:
+    runs-on: ubuntu-latest
+    container:
+      image: teaclave/teaclave-trustzone-emulator-std-optee-4.7.0-expand-memory:latest
+      options: --entrypoint /entrypoint.sh
+    env:
+      HOME: /root
+      TEACLAVE_TOOLCHAIN_BASE: /opt/teaclave
+      RUST_STD_DIR: /opt/teaclave/std
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build std and common examples
+        shell: "bash -l {0}"
+        run: |
+          # Create rust symlink and run make
+          ln -s $RUST_STD_DIR rust
+          # Build examples
+          make std-examples
+
   license:
     runs-on: ubuntu-latest
     steps:
