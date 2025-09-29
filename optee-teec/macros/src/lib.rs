@@ -125,7 +125,7 @@ pub fn plugin_invoke(_args: TokenStream, input: TokenStream) -> TokenStream {
     quote!(
         /// # Safety
         ///
-        /// The `_plugin_invoke` function is the `extern "C"` entrypoint called by OP-TEE OS.  
+        /// The `_plugin_invoke` function is the `extern "C"` entrypoint called by OP-TEE OS.
         /// This SDK allows developers to implement the inner logic for a Normal World plugin in Rust.
         /// More about plugins:
         /// https://optee.readthedocs.io/en/latest/architecture/globalplatform_api.html#loadable-plugins-framework
@@ -134,46 +134,81 @@ pub fn plugin_invoke(_args: TokenStream, input: TokenStream) -> TokenStream {
         /// must be marked `unsafe`. This applies here because the function directly
         /// dereferences `data` and `out_len`.
         ///
-        /// ## Security assumptions
+        /// ## Security Assumptions
         /// The caller (OP-TEE OS) must ensure:
         /// - `data` points to valid memory for reads and writes of at least `in_len` bytes
-        /// - `out_len` is a valid, writable, and properly aligned pointer to a `u32`
+        /// - `out_len` is a valid, writable, and properly aligned pointer to a `u32` (cannot be null)
         /// - If `in_len == 0`, `data` may be null; otherwise it must be non-null
+        /// - The memory region pointed to by `data` must not be modified by other threads
+        ///   or processes during plugin execution
         ///
         /// Additional guarantees enforced by `PluginParameters` in this SDK:
-        /// - The output length (`outslice.len()`) will never exceed `in_len`
-        ///   because [`PluginParameters::set_buf_from_slice`] checks and rejects overflows.
-        /// - Input and output share the same buffer (`inout`), so overlap is intentional
-        ///   and safely handled by [`PluginParameters::set_buf_from_slice`].
+        /// - If `data` is null and `in_len` is 0, it is treated as an empty input buffer;
+        ///   the inner logic (developer code) should consider this case
+        /// - If the output length exceeds `in_len`, it will be rejected and a short buffer
+        ///   error returned, with the required `out_len` set
+        /// - Input and output share the same buffer, so overlap is intentional and safely
+        ///   handled by [`PluginParameters::set_buf_from_slice`] when `out_len <= in_len`
+        /// - If no output is set for a success call, `out_len` will be `0`
         ///
-        /// ## Scenarios
-        /// - **Valid empty call**: `data = null`, `in_len = 0` → allowed; produces an empty output.
-        /// - **Normal call**: `data` points to a buffer of size `in_len`; the plugin writes
-        ///   up to `in_len` bytes and updates `*out_len`.
-        /// - **Overflow attempt**: plugin inner logic (developer code) tries to return
-        ///   more bytes than `in_len` → rejected by `set_buf_from_slice`, error returned.
-        /// - **Invalid pointers**: if `data` or `out_len` are invalid (null, dangling, misaligned,
-        ///   or pointing to read-only memory), dereferencing them causes undefined behavior.
-        ///   This must be prevented by the caller (OP-TEE OS).
+        /// ## Usage Scenarios
+        /// - **Valid empty call**: `data = null`, `in_len = 0` → allowed (empty input to inner)
+        /// - **Normal call**: `data` points to a buffer of size `in_len`; if `out_len <= in_len`,
+        ///   the plugin writes up to `in_len` bytes and updates `*out_len`; if `out_len > in_len`,
+        ///   it is rejected with a short buffer error
+        /// - **Buffer overflow attempt**: if inner logic (developer code) tries to return
+        ///   more bytes than `in_len` → rejected by `set_buf_from_slice`, error returned with required `out_len`
+        /// - **Invalid pointers**: null pointers are checked, but other invalid cases of pointers
+        ///   such as dangling, misaligned, or read-only pointers will cause undefined behavior 
+        ///   and must be prevented by the caller
         pub unsafe fn _plugin_invoke(
             cmd: u32,
             sub_cmd: u32,
             data: *mut core::ffi::c_char,
             in_len: u32,
-            out_len: *mut u32
+            out_len: *mut u32,
         ) -> optee_teec::raw::TEEC_Result {
             fn inner(#params) -> optee_teec::Result<()> {
                 #f_block
             }
-            let mut inbuf = std::slice::from_raw_parts_mut(data, in_len as usize);
-            let mut params = optee_teec::PluginParameters::new(cmd, sub_cmd, inbuf);
-            if let Err(err) = inner(&mut params) {
-                return err.raw_code();
+
+            // Check for null pointers
+            if data.is_null() && in_len != 0 {
+                return optee_teec::raw::TEEC_ERROR_BAD_PARAMETERS;
+            }
+            if out_len.is_null() {
+                return optee_teec::raw::TEEC_ERROR_BAD_PARAMETERS;
+            }
+
+            // Prepare input buffer
+            // `data` is guaranteed to be non-null if `in_len > 0` (checked above)
+            // If `data` is null, `in_len` must be 0, so we create an empty slice
+            // Otherwise, we create a mutable slice from the raw pointer and length
+            let inbuf = if data.is_null() {
+                &mut []
+            } else {
+                // SAFETY: from_raw_parts_mut() is unsafe, but avoids copying the memory
+                // (which is unacceptable for large io buffers).
+                // Note that the caller must ensure the memory is consistent during the plugin execution.
+                std::slice::from_raw_parts_mut(data, in_len as usize)
             };
-            let outslice = params.get_out_slice();
-            *out_len = outslice.len() as u32;
-            std::ptr::copy(outslice.as_ptr(), data, outslice.len());
-            return optee_teec::raw::TEEC_SUCCESS;
+
+            let mut params = optee_teec::PluginParameters::new(cmd, sub_cmd, inbuf);
+            match inner(&mut params) {
+                Ok(()) => {
+                    *out_len = params.get_required_out_len() as u32;
+                    optee_teec::raw::TEEC_SUCCESS
+                }
+                Err(err) => {
+                    if err.kind() == optee_teec::ErrorKind::ShortBuffer {
+                        // Inform the caller about the required buffer size
+                        *out_len = params.get_required_out_len() as u32;
+                        optee_teec::raw::TEEC_ERROR_SHORT_BUFFER
+                    } else {
+                        err.raw_code()
+                    }
+                }
+            }
         }
     )
     .into()

@@ -37,13 +37,13 @@ pub struct PluginMethod {
 /// @cmd: u32,              plugin cmd, defined in proto/
 /// @sub_cmd: u32,          plugin subcmd, defined in proto/
 /// @inout: &'a mut [u8],   input/output buffer shared with TA and plugin
-/// @outlen,                length of output sent to TA
+/// @required_outlen,                length of output sent to TA
 /// }
 pub struct PluginParameters<'a> {
     pub cmd: u32,
     pub sub_cmd: u32,
     pub inout: &'a mut [u8],
-    outlen: usize,
+    required_outlen: usize,
 }
 impl<'a> PluginParameters<'a> {
     pub fn new(cmd: u32, sub_cmd: u32, inout: &'a mut [u8]) -> Self {
@@ -51,19 +51,29 @@ impl<'a> PluginParameters<'a> {
             cmd,
             sub_cmd,
             inout,
-            outlen: 0_usize,
+            required_outlen: 0_usize,
         }
     }
+
+    // This function copies data from the provided slice to the inout buffer
+    // Please note that the Result should be properly handled by the caller
+    // If the inout buffer is smaller than the provided slice, an error will be returned
+    // Ignoring this error will lead to undefined behavior
     pub fn set_buf_from_slice(&mut self, sendslice: &[u8]) -> Result<()> {
         if self.inout.len() < sendslice.len() {
             println!("Overflow: Input length is less than output length");
-            return Err(Error::new(ErrorKind::Security));
+            self.required_outlen = sendslice.len();
+            return Err(Error::new(ErrorKind::ShortBuffer));
         }
-        self.outlen = sendslice.len();
-        self.inout[..self.outlen].copy_from_slice(sendslice);
+        self.required_outlen = sendslice.len();
+        self.inout[..self.required_outlen].copy_from_slice(sendslice);
         Ok(())
     }
-    pub fn get_out_slice(&self) -> &[u8] {
-        &self.inout[..self.outlen]
+
+    /// This function returns the required output length
+    /// If the inout buffer is too small, this indicates the size needed
+    /// If the inout buffer is large enough, this is the actual output length
+    pub fn get_required_out_len(&self) -> usize {
+        self.required_outlen
     }
 }
