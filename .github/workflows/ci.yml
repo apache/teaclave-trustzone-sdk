@@ -70,18 +70,20 @@ jobs:
     runs-on: ubuntu-latest
     container: 
       image: teaclave/teaclave-trustzone-emulator-nostd-optee-4.7.0-expand-memory:latest
-      options: --entrypoint /entrypoint.sh
     env:
       HOME: /root
       TEACLAVE_TOOLCHAIN_BASE: /opt/teaclave
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Build no-std and common examples
-        shell: "bash -l {0}"
+      - name: Setup environment
         run: |
-          # Build examples
+          # Run entrypoint.sh to set up the bash profile
+          /entrypoint.sh true
+      - name: Build no-std and common examples
+        shell: bash -l {0}  # Use login shell to load the profile
+        run: |
+          # Now the environment should be properly loaded via login shell
           make
 
   # Test build std examples on dev docker container
@@ -89,7 +91,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: teaclave/teaclave-trustzone-emulator-std-optee-4.7.0-expand-memory:latest
-      options: --entrypoint /entrypoint.sh
     env:
       HOME: /root
       TEACLAVE_TOOLCHAIN_BASE: /opt/teaclave
@@ -97,11 +98,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Build std and common examples
-        shell: "bash -l {0}"
+      - name: Setup environment
         run: |
-          # Create rust symlink and run make
+          # Run entrypoint.sh to set up the bash profile
+          /entrypoint.sh true
+      - name: Build no-std and common examples
+        shell: bash -l {0}  # Use login shell to load the profile
+        run: |
           ln -s $RUST_STD_DIR rust
           # Build examples
           make std-examples
