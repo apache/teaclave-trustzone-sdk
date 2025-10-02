@@ -70,6 +70,8 @@ jobs:
     runs-on: ubuntu-latest
     container: 
       image: teaclave/teaclave-trustzone-emulator-nostd-optee-4.7.0-expand-memory:latest
+    env:
+      HOME: /root
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -87,6 +89,8 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: teaclave/teaclave-trustzone-emulator-std-optee-4.7.0-expand-memory:latest
+    env:
+      HOME: /root
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
