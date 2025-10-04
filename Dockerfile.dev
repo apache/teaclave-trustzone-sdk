@@ -19,6 +19,7 @@ FROM ubuntu:24.04 AS no-std-build-env
 
 # Base environment
 ENV TEACLAVE_TOOLCHAIN_BASE=/opt/teaclave
+ENV OPTEE_VERSION=4.7.0
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Copy scripts into image
@@ -73,8 +74,8 @@ COPY scripts/setup-std ${TEACLAVE_TOOLCHAIN_BASE}/setup-std
 
 WORKDIR ${TEACLAVE_TOOLCHAIN_BASE}/setup-std
 
-# setup rust-std
-RUN . ${HOME}/.cargo/env && . ./setup_rust_std.sh 
+# setup rust-std (bootstrap_env sets RUSTUP_HOME and CARGO_HOME)
+RUN . ${TEACLAVE_TOOLCHAIN_BASE}/setup/bootstrap_env && source ${CARGO_HOME}/env && ./setup_rust_std.sh 
 
 # copy customized-target.json to $RUST_STD_DIR for std development use
 COPY arm-unknown-optee.json $RUST_STD_DIR
@@ -84,7 +85,7 @@ COPY aarch64-unknown-optee.json $RUST_STD_DIR
 RUN cd ${TEACLAVE_TOOLCHAIN_BASE}/config/ta && ln -sf "std/aarch64" active
 
 # export rust-std root env for std build variant only
-RUN echo "export RUST_STD_DIR=${RUST_STD_DIR}" >> "${HOME}/.profile"
+RUN echo "export RUST_STD_DIR=${RUST_STD_DIR}" >> "${TEACLAVE_TOOLCHAIN_BASE}/environment"
 
 # switch to root directory for bash interactive use
 WORKDIR "/root"

@@ -31,6 +31,9 @@ set -xe
 mkdir -p $RUST_STD_DIR
 cd $RUST_STD_DIR
 
+# Set up Rust and Cargo environment (RUSTUP_HOME and CARGO_HOME are set in bootstrap_env)
+source ${CARGO_HOME}/env
+
 # install Xargo if not exist
 which xargo || cargo install xargo
 

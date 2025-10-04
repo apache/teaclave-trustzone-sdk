@@ -26,13 +26,24 @@ SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")/config"
 
 echo "Loading OP-TEE environment configuration..."
 
-# Validate required environment variables
+# Validate required environment variables from bootstrap_env
 : "${TEACLAVE_TOOLCHAIN_BASE:?TEACLAVE_TOOLCHAIN_BASE must be set - directory where Teaclave toolchain is installed}"
 : "${OPTEE_DIR:?OPTEE_DIR must be set - directory where OPTEE will be built}"
 : "${OPTEE_OS_DIR:?OPTEE_OS_DIR must be set - directory where OPTEE OS will be built}"
 : "${OPTEE_CLIENT_DIR:?OPTEE_CLIENT_DIR must be set - directory where OPTEE Client will be built}"
 : "${IMG_DIRECTORY:?IMG_DIRECTORY must be set - directory where images will be stored}"
 : "${IMG_NAME:?IMG_NAME must be set - name of the image to download}"
+: "${RUSTUP_HOME:?RUSTUP_HOME must be set - directory where rustup is installed}"
+: "${CARGO_HOME:?CARGO_HOME must be set - directory where cargo is installed}"
+
+# Set up Rust environment (source cargo/env for PATH)
+if [ -f "${CARGO_HOME}/env" ]; then
+    source ${CARGO_HOME}/env
+else
+    echo "Error: Cargo environment not found at ${CARGO_HOME}/env" >&2
+    echo "This indicates rustup installation might not be properly done by the docker build routine" >&2
+    exit 1
+fi
 
 # Check if active configurations exist, set defaults if not
 if [ ! -f "$SCRIPT_DIR/ta/active" ]; then
