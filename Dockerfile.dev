@@ -19,7 +19,6 @@ FROM ubuntu:24.04 AS no-std-build-env
 
 # Base environment
 ENV TEACLAVE_TOOLCHAIN_BASE=/opt/teaclave
-ENV OPTEE_VERSION=4.7.0
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Copy scripts into image
