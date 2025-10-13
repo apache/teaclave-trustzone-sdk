@@ -65,6 +65,45 @@ jobs:
           (cd optee-teec && cargo run -p systest)
           (cd optee-utee && cargo build -p systest)
 
+  # Test build no-std examples on dev docker container
+  test-nostd-build-on-dev-docker:
+    runs-on: ubuntu-latest
+    container: 
+      image: teaclave/teaclave-trustzone-emulator-nostd-optee-4.7.0-expand-memory:latest
+    env:
+      HOME: /root
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup environment
+        run: |
+          # Run entrypoint.sh to set up the bash profile
+          /entrypoint.sh true
+      - name: Build no-std and common examples
+        shell: bash -l {0}  # Use login shell to load the profile
+        run: |
+          make
+
+  # Test build std examples on dev docker container
+  test-std-build-on-dev-docker:
+    runs-on: ubuntu-latest
+    container:
+      image: teaclave/teaclave-trustzone-emulator-std-optee-4.7.0-expand-memory:latest
+    env:
+      HOME: /root
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup environment
+        run: |
+          # Run entrypoint.sh to set up the bash profile
+          /entrypoint.sh true
+      - name: Build no-std and common examples
+        shell: bash -l {0}  # Use login shell to load the profile
+        run: |
+          ln -s $RUST_STD_DIR rust
+          make std-examples
+
   license:
     runs-on: ubuntu-latest
     steps:
