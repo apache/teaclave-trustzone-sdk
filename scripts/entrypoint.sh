@@ -51,7 +51,6 @@ setup_bash_profile() {
     # Add core environment sources to .profile (preserve any existing build-time setup)
     cat >> ~/.profile << 'EOF'
 # Teaclave TrustZone SDK Environment Setup (added by entrypoint)
-source ${HOME}/.cargo/env
 source ${TEACLAVE_TOOLCHAIN_BASE}/setup/bootstrap_env
 source ${TEACLAVE_TOOLCHAIN_BASE}/environment
 export PATH=${TEACLAVE_TOOLCHAIN_BASE}/bin:$PATH
@@ -64,21 +63,15 @@ EOF
 
     # Append the unified function definition
     define_switch_config >> ~/.bashrc
-    
-    # Pre-source cargo environment for current session
-    source ${HOME}/.cargo/env
 }
 
 # Set up the bash profile
 setup_bash_profile
 
-# Define switch_config function for current session by sourcing the definition
-eval "$(define_switch_config)"
-
 # If no command provided, start interactive bash
 if [ $# -eq 0 ]; then
     exec /bin/bash -l
 else
-    # Execute the provided command
-    exec "$@"
+    # Execute the provided command in a login shell (which sources .profile)
+    exec /bin/bash -lc "$*"
 fi

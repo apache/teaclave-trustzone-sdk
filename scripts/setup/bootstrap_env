@@ -17,8 +17,11 @@
 
 export TEACLAVE_TOOLCHAIN_BASE=${TEACLAVE_TOOLCHAIN_BASE:-/opt/teaclave}
 
+# Rust and Cargo environment (custom locations instead of $HOME)
+export RUSTUP_HOME=${TEACLAVE_TOOLCHAIN_BASE}/rustup
+export CARGO_HOME=${TEACLAVE_TOOLCHAIN_BASE}/cargo
+
 export OPTEE_DIR=${TEACLAVE_TOOLCHAIN_BASE}/optee
-export OPTEE_VERSION="${OPTEE_VERSION:-4.5.0}"
 
 export OPTEE_OS_DIR=${OPTEE_DIR}/optee_os
 export OPTEE_CLIENT_DIR=${OPTEE_DIR}/optee_client

@@ -21,16 +21,18 @@ set -xe
 
 export CARGO_NET_GIT_FETCH_WITH_CLI=true
 
-# install rustup and stable Rust if needed
+# Ensure rustup is not already installed (we want fresh installation)
 if command -v rustup &>/dev/null ; then
-    # 1. rustup early than 1.28 fails with `rustup toolchain install` 
-    #    due to parameter mismatch. So self update first.
-    # 2. uninstall to avoid file corruption
-    rustup self update && rustup uninstall stable && rustup install stable
-else
-	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-	source "$HOME/.cargo/env"
+    echo "Error: rustup is already installed. This script requires a fresh installation." >&2
+    exit 1
 fi
+
+# Clean installation of rustup with custom locations
+echo "Installing rustup to ${RUSTUP_HOME} and cargo to ${CARGO_HOME}..."
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+
+# Source the cargo environment from the new location to make rustup available for toolchain install
+source ${CARGO_HOME}/env
 
 # install the Rust toolchain set in rust-toolchain.toml
 rustup toolchain install
