@@ -31,3 +31,7 @@ header:
     - 'DISCLAIMER'
     - '*.json'
     - 'examples/tls_server-rs/ta/test-ca/**'
+    - '**/uuid.txt'
+    - '**/plugin_uuid.txt'
+    - '**/ta_uuid.txt'
+    - 'optee-version.txt'

@@ -107,6 +107,10 @@ jobs:
   license:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Check License Header
-        uses: apache/skywalking-eyes/header@501a28d2fb4a9b962661987e50cf0219631b32ff
+        uses: apache/skywalking-eyes/header@v0.7.0
+        with:
+          config: .licenserc.yaml
+          mode: check
+          token: ""  # don't post PR comments from check step
