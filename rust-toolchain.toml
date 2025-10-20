@@ -18,7 +18,7 @@
 # Toolchain override for rustup
 
 [toolchain]
-channel = "nightly-2024-05-15"
+channel = "nightly-2024-09-01"
 components = [ "rust-src", "rustfmt", "clippy" ]
 targets = ["aarch64-unknown-linux-gnu", "arm-unknown-linux-gnueabihf"]
 # minimal profile: install rustc, cargo, and rust-std
