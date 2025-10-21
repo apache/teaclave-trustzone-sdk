@@ -20,9 +20,14 @@
 name: Test in OP-TEE Repo
 
 on:
-  push:
-    branches:
-      - main
+  schedule:
+    # Run every day at 00:00 UTC.
+    # Since some crates occasionally raise their MSRV and break the CI in OP-TEE
+    # and Teaclave, running this test daily helps us detect issues introduced by
+    # crate updates earlier.
+    - cron: '0 0 * * *'
+  # allow us to run the test manually
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
