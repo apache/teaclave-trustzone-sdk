@@ -15,29 +15,4 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# If _HOST or _TA specific compiler/target are not specified, then use common
-# compiler/target for both
-CROSS_COMPILE_HOST ?= aarch64-linux-gnu-
-CROSS_COMPILE_TA ?= aarch64-linux-gnu-
-TARGET_HOST ?= aarch64-unknown-linux-gnu
-TARGET_TA ?= aarch64-unknown-linux-gnu
-BUILDER ?= cargo
-FEATURES ?=
-
-.PHONY: host ta all clean
-
-all: host ta
-
-host:
-	$(q)make -C host TARGET=$(TARGET_HOST) \
-		CROSS_COMPILE=$(CROSS_COMPILE_HOST)
-
-ta:
-	$(q)make -C ta TARGET=$(TARGET_TA) \
-		CROSS_COMPILE=$(CROSS_COMPILE_TA) \
-		BUILDER=$(BUILDER) \
-		FEATURES="$(FEATURES)"
-
-clean:
-	$(q)make -C host clean
-	$(q)make -C ta clean
+include ../mk/example-root.mk

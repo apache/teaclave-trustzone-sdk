@@ -15,26 +15,4 @@
 # specific language governing permissions and limitations
 # under the License.
 
-NAME := udp_socket-rs
-
-TARGET ?= aarch64-unknown-linux-gnu
-CROSS_COMPILE ?= aarch64-linux-gnu-
-OBJCOPY := $(CROSS_COMPILE)objcopy
-LINKER_CFG := target.$(TARGET).linker=\"$(CROSS_COMPILE)gcc\"
-
-OUT_DIR := $(CURDIR)/target/$(TARGET)/release
-
-all: clippy host strip
-
-clippy:
-	@cargo fmt
-	@cargo clippy --target $(TARGET_HOST) -- -D warnings -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
-
-host: clippy
-	@cargo build --target $(TARGET_HOST) --release --config $(LINKER_CFG)
-
-strip: host
-	@$(OBJCOPY) --strip-unneeded $(OUT_DIR)/$(NAME) $(OUT_DIR)/$(NAME)
-
-clean:
-	@cargo clean
+include ../../mk/host.mk

@@ -15,35 +15,4 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# STD-ONLY example
-
-UUID ?= $(shell cat "../uuid.txt")
-
-TARGET ?= aarch64-unknown-optee
-CROSS_COMPILE ?= aarch64-linux-gnu-
-OBJCOPY := $(CROSS_COMPILE)objcopy
-# Configure the linker to use GCC, which works on both cross-compilation and ARM machines
-LINKER_CFG := target.$(TARGET).linker=\"$(CROSS_COMPILE)gcc\"
-
-TA_SIGN_KEY ?= $(TA_DEV_KIT_DIR)/keys/default_ta.pem
-SIGN := $(TA_DEV_KIT_DIR)/scripts/sign_encrypt.py
-OUT_DIR := $(CURDIR)/target/$(TARGET)/release
-
-all: clippy ta strip sign
-
-clippy:
-	@cargo fmt
-	@xargo clippy --target $(TARGET) -- -D warnings -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
-
-ta: clippy
-	@xargo build --target $(TARGET) --release --config $(LINKER_CFG)
-
-strip: ta
-	@$(OBJCOPY) --strip-unneeded $(OUT_DIR)/ta $(OUT_DIR)/stripped_ta
-
-sign: strip
-	@$(SIGN) --uuid $(UUID) --key $(TA_SIGN_KEY) --in $(OUT_DIR)/stripped_ta --out $(OUT_DIR)/$(UUID).ta
-	@echo "SIGN =>  ${UUID}"
-
-clean:
-	@cargo clean
+include ../../mk/std-ta.mk
