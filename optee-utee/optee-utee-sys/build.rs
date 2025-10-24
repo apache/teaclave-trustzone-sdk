@@ -16,7 +16,7 @@
 // under the License.
 
 use std::env::{self, VarError};
-use std::path::Path;
+use std::path::PathBuf;
 
 fn main() -> Result<(), VarError> {
     if !is_feature_enable("no_link")? {
@@ -38,10 +38,16 @@ fn is_feature_enable(feature: &str) -> Result<bool, VarError> {
 }
 
 fn link() {
-    let optee_os_dir = env::var("TA_DEV_KIT_DIR").unwrap();
-    let search_path = Path::new(&optee_os_dir).join("lib");
+    let optee_os_dir = env::var("TA_DEV_KIT_DIR").expect("TA_DEV_KIT_DIR not set");
+    let library_path = PathBuf::from(optee_os_dir).join("lib");
+    if !library_path.exists() {
+        panic!(
+            "Library path {} does not exist",
+            library_path.display()
+        );
+    }
 
-    println!("cargo:rustc-link-search={}", search_path.display());
+    println!("cargo:rustc-link-search={}", library_path.display());
     println!("cargo:rustc-link-lib=static=utee");
     println!("cargo:rustc-link-lib=static=utils");
     println!("cargo:rustc-link-lib=static=mbedtls");
