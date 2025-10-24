@@ -18,35 +18,19 @@
 use anyhow::{bail, Result};
 use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::path::Path;
+use std::path::PathBuf;
+use std::process::Command;
 use tempfile::TempDir;
+
+use crate::common::{print_output_and_bail, Arch, ChangeDirectoryGuard};
 
 // Embed the target JSON files at compile time
 const AARCH64_TARGET_JSON: &str = include_str!("../aarch64-unknown-optee.json");
 const ARM_TARGET_JSON: &str = include_str!("../arm-unknown-optee.json");
 
-// Helper function to print command output and return error
-fn print_output_and_bail(cmd_name: &str, output: &Output) -> Result<()> {
-    eprintln!(
-        "{} stdout: {}",
-        cmd_name,
-        String::from_utf8_lossy(&output.stdout)
-    );
-    eprintln!(
-        "{} stderr: {}",
-        cmd_name,
-        String::from_utf8_lossy(&output.stderr)
-    );
-    bail!(
-        "{} failed with exit code: {:?}",
-        cmd_name,
-        output.status.code()
-    )
-}
-
 pub struct TaBuildConfig {
-    pub arch: String,            // "aarch64" or "arm"
+    pub arch: Arch,              // Architecture
     pub std: bool,               // Enable std feature
     pub ta_dev_kit_dir: PathBuf, // Path to TA dev kit
     pub signing_key: PathBuf,    // Path to signing key
@@ -56,9 +40,9 @@ pub struct TaBuildConfig {
 }
 
 // Helper function to derive target and cross-compile from arch and std
-fn get_target_and_cross_compile(arch: &str, std: bool) -> (String, String) {
+fn get_target_and_cross_compile(arch: Arch, std: bool) -> (String, String) {
     match arch {
-        "arm" => {
+        Arch::Arm => {
             if std {
                 (
                     "arm-unknown-optee".to_string(),
@@ -71,7 +55,7 @@ fn get_target_and_cross_compile(arch: &str, std: bool) -> (String, String) {
                 )
             }
         }
-        _ => {
+        Arch::Aarch64 => {
             if std {
                 (
                     "aarch64-unknown-optee".to_string(),
@@ -108,7 +92,7 @@ fn setup_build_command(
     command: &str,
 ) -> Result<(Command, Option<TempDir>)> {
     // Determine target and cross-compile based on arch
-    let (target, _cross_compile) = get_target_and_cross_compile(&config.arch, config.std);
+    let (target, _cross_compile) = get_target_and_cross_compile(config.arch, config.std);
 
     // Determine builder (cargo or xargo)
     let builder = if config.std { "xargo" } else { "cargo" };
@@ -151,14 +135,7 @@ fn setup_build_command(
 // Main function to build the TA
 pub fn build_ta(config: TaBuildConfig) -> Result<()> {
     // Change to the TA directory
-    let original_dir = env::current_dir()?;
-
-    env::set_current_dir(&config.path)?;
-
-    // Ensure we return to the original directory when done
-    let _guard = ChangeDirectoryGuard {
-        original: original_dir.clone(),
-    };
+    let _guard = ChangeDirectoryGuard::new(&config.path)?;
 
     println!("Building TA in directory: {:?}", config.path);
 
@@ -211,7 +188,7 @@ fn build_binary(config: &TaBuildConfig) -> Result<()> {
     println!("Building TA binary...");
 
     // Determine target and cross-compile based on arch
-    let (target, cross_compile) = get_target_and_cross_compile(&config.arch, config.std);
+    let (target, cross_compile) = get_target_and_cross_compile(config.arch, config.std);
 
     // Setup build command with common environment
     let (mut build_cmd, _temp_dir) = setup_build_command(config, "build")?;
@@ -238,7 +215,7 @@ fn strip_binary(config: &TaBuildConfig) -> Result<PathBuf> {
     println!("Stripping binary...");
 
     // Determine target based on arch
-    let (target, cross_compile) = get_target_and_cross_compile(&config.arch, config.std);
+    let (target, cross_compile) = get_target_and_cross_compile(config.arch, config.std);
 
     let profile = if config.debug { "debug" } else { "release" };
     let target_dir = PathBuf::from("target").join(target).join(profile);
@@ -286,7 +263,7 @@ fn sign_ta(config: &TaBuildConfig, stripped_path: &Path) -> Result<()> {
     }
 
     // Determine target based on arch
-    let (target, _) = get_target_and_cross_compile(&config.arch, config.std);
+    let (target, _) = get_target_and_cross_compile(config.arch, config.std);
 
     // Output path
     let profile = if config.debug { "debug" } else { "release" };
@@ -315,15 +292,4 @@ fn sign_ta(config: &TaBuildConfig, stripped_path: &Path) -> Result<()> {
     println!("TA signed and saved to: {:?}", output_path);
 
     Ok(())
-}
-
-// Guard to ensure we return to the original directory
-struct ChangeDirectoryGuard {
-    original: PathBuf,
-}
-
-impl Drop for ChangeDirectoryGuard {
-    fn drop(&mut self) {
-        let _ = env::set_current_dir(&self.original);
-    }
 }

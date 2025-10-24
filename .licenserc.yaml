@@ -29,7 +29,7 @@ header:
     - '**/Cargo.lock'
     - 'KEYS'
     - 'DISCLAIMER'
-    - '*.json'
+    - '**/*.json'
     - 'examples/tls_server-rs/ta/test-ca/**'
     - '**/uuid.txt'
     - '**/plugin_uuid.txt'
