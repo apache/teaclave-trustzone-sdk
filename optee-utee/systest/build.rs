@@ -23,11 +23,11 @@ use std::path::PathBuf;
 fn main() {
     let mut cfg = ctest::TestGenerator::new();
     let ta_include_path = {
-        let optee_os_dir = env::var("TA_DEV_KIT_DIR").expect("TA_DEV_KIT_DIR not set");
-        let include_path = PathBuf::from(optee_os_dir).join("include");
+        let ta_dev_kit_dir = env::var("TA_DEV_KIT_DIR").expect("TA_DEV_KIT_DIR not set");
+        let include_path = PathBuf::from(ta_dev_kit_dir).join("include");
         if !include_path.exists() {
             panic!(
-                "TA DevKit include path {} does not exist",
+                "TA_DEV_KIT_DIR include path {} does not exist",
                 include_path.display()
             );
         }

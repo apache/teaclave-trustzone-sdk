@@ -46,7 +46,7 @@ fn link() {
     let library_path = PathBuf::from(optee_client_dir).join("usr/lib");
     if !library_path.exists() {
         panic!(
-            "Library path {} does not exist",
+            "OPTEE_CLIENT_EXPORT usr/lib path {} does not exist",
             library_path.display()
         );
     }

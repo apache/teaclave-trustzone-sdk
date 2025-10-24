@@ -38,11 +38,11 @@ fn is_feature_enable(feature: &str) -> Result<bool, VarError> {
 }
 
 fn link() {
-    let optee_os_dir = env::var("TA_DEV_KIT_DIR").expect("TA_DEV_KIT_DIR not set");
-    let library_path = PathBuf::from(optee_os_dir).join("lib");
+    let ta_dev_kit_dir = env::var("TA_DEV_KIT_DIR").expect("TA_DEV_KIT_DIR not set");
+    let library_path = PathBuf::from(ta_dev_kit_dir).join("lib");
     if !library_path.exists() {
         panic!(
-            "Library path {} does not exist",
+            "TA_DEV_KIT_DIR lib path {} does not exist",
             library_path.display()
         );
     }
