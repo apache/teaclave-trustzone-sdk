@@ -15,13 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use anyhow::bail;
 use clap::{Parser, Subcommand};
 use std::env;
 use std::path::PathBuf;
 use std::process::abort;
 
+mod ca_builder;
+mod common;
 mod ta_builder;
+
+use common::Arch;
 
 #[derive(Debug, Parser)]
 #[clap(version = env!("CARGO_PKG_VERSION"))]
@@ -31,23 +34,29 @@ pub(crate) struct Cli {
     cmd: Command,
 }
 
+#[derive(Debug, Parser)]
+struct BuildTypeCommonOptions {
+    /// Path to the app directory (default: current directory)
+    #[arg(long = "path", default_value = ".")]
+    path: PathBuf,
+
+    /// Target architecture: aarch64 or arm (default: aarch64)
+    #[arg(long = "arch", default_value = "aarch64")]
+    arch: Arch,
+
+    /// Path to the UUID file (default: ../uuid.txt)
+    #[arg(long = "uuid_path", default_value = "../uuid.txt")]
+    uuid_path: PathBuf,
+
+    /// Build in debug mode (default is release)
+    #[arg(long = "debug")]
+    debug: bool,
+}
+
 #[derive(Debug, Subcommand)]
-enum Command {
-    /// Build a Trusted Application (TA)
-    #[clap(name = "build")]
-    Build {
-        /// Type of build target (currently only 'ta' is supported)
-        #[arg(value_name = "TYPE")]
-        build_type: String,
-
-        /// Path to the TA directory (default: current directory)
-        #[arg(long = "path", default_value = ".")]
-        path: PathBuf,
-
-        /// Target architecture: aarch64 or arm (default: aarch64)
-        #[arg(long = "arch", default_value = "aarch64")]
-        arch: String,
-
+enum BuildCommand {
+    /// Build a Trusted Application
+    TA {
         /// Enable std feature for the TA
         #[arg(long = "std")]
         std: bool,
@@ -60,14 +69,26 @@ enum Command {
         #[arg(long = "signing_key")]
         signing_key: Option<PathBuf>,
 
-        /// Path to the UUID file (default: ../uuid.txt)
-        #[arg(long = "uuid_path", default_value = "../uuid.txt")]
-        uuid_path: PathBuf,
-
-        /// Build in debug mode (default is release)
-        #[arg(long = "debug")]
-        debug: bool,
+        #[command(flatten)]
+        common: BuildTypeCommonOptions,
     },
+    /// Build a Client Application (Host)
+    CA {
+        /// Path to the OP-TEE client export directory (mandatory)
+        #[arg(long = "optee_client_export", required = true)]
+        optee_client_export: PathBuf,
+
+        #[command(flatten)]
+        common: BuildTypeCommonOptions,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+enum Command {
+    /// Build OP-TEE components
+    #[clap(name = "build")]
+    #[command(subcommand)]
+    Build(BuildCommand),
 }
 
 fn main() {
@@ -102,37 +123,36 @@ fn main() {
 
 fn execute_command(cmd: Command) -> anyhow::Result<()> {
     match cmd {
-        Command::Build {
-            build_type,
-            path,
-            arch,
-            std,
-            ta_dev_kit_dir,
-            signing_key,
-            uuid_path,
-            debug,
-        } => {
-            // Validate build type
-            if build_type != "ta" {
-                bail!(
-                    "Invalid build type '{}'. Only 'ta' is supported.",
-                    build_type
-                );
-            }
-
-            // Determine signing key path
-            let signing_key_path =
-                signing_key.unwrap_or_else(|| ta_dev_kit_dir.join("keys").join("default_ta.pem"));
-
-            ta_builder::build_ta(ta_builder::TaBuildConfig {
-                arch,
+        Command::Build(build_cmd) => match build_cmd {
+            BuildCommand::TA {
                 std,
                 ta_dev_kit_dir,
-                signing_key: signing_key_path,
-                uuid_path,
-                debug,
-                path,
-            })
-        }
+                signing_key,
+                common,
+            } => {
+                // Determine signing key path
+                let signing_key_path = signing_key
+                    .unwrap_or_else(|| ta_dev_kit_dir.join("keys").join("default_ta.pem"));
+
+                ta_builder::build_ta(ta_builder::TaBuildConfig {
+                    arch: common.arch,
+                    std,
+                    ta_dev_kit_dir,
+                    signing_key: signing_key_path,
+                    uuid_path: common.uuid_path,
+                    debug: common.debug,
+                    path: common.path,
+                })
+            }
+            BuildCommand::CA {
+                optee_client_export,
+                common,
+            } => ca_builder::build_ca(ca_builder::CaBuildConfig {
+                arch: common.arch,
+                optee_client_export,
+                debug: common.debug,
+                path: common.path,
+            }),
+        },
     }
 }
