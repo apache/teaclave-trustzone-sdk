@@ -84,7 +84,7 @@ jobs:
 
       - name: Install OP-TEE dependencies
         run: |
-          ./setup_optee_dependencies.sh
+          sudo ./setup_optee_dependencies.sh
           
       - name: Checkout OP-TEE repository
         run: |
