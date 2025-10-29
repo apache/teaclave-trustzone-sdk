@@ -19,3 +19,6 @@ permalink: /trustzone-sdk-docs
 * [Expanding TA Secure Memory on QEMUv8](expanding-ta-secure-memory-on-qemuv8.md)
 * [Migrating to New Building Environment](migrating-to-new-building-env.md)
 * [Debugging OP-TEE TA](debugging-optee-ta.md)
+
+## Maintenance
+* [Operation Guide for Integration with Each OP-TEE Release](operation-guide-for-integration-with-each-optee-release.md)
