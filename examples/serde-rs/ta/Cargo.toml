@@ -31,6 +31,11 @@ optee-utee = { path = "../../../optee-utee", features = ["std"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
+[features]
+# std feature is required for this TA - it uses std-only dependencies
+# Build will fail without this feature enabled
+std = []
+
 [build-dependencies]
 proto = { path = "../proto" }
 optee-utee-build = { path = "../../../optee-utee-build" }
