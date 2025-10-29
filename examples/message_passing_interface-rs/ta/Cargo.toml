@@ -34,6 +34,11 @@ optee-utee-sys = { path = "../../../optee-utee/optee-utee-sys" }
 optee-utee = { path = "../../../optee-utee" }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
+[features]
+# std feature is required for this TA - it uses std-only dependencies
+# Build will fail without this feature enabled
+std = []
+
 [build-dependencies]
 proto = { path = "../proto" }
 optee-utee-build = { path = "../../../optee-utee-build" }

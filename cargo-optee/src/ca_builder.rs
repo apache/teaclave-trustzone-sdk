@@ -28,6 +28,8 @@ pub struct CaBuildConfig {
     pub optee_client_export: PathBuf, // Path to OP-TEE client export
     pub debug: bool,                  // Debug mode (default false = release)
     pub path: PathBuf,                // Path to CA directory
+    pub plugin: bool,                 // Build as plugin (shared library)
+    pub uuid_path: Option<PathBuf>,   // Path to UUID file (for plugins)
 }
 
 // Main function to build the CA
@@ -35,7 +37,11 @@ pub fn build_ca(config: CaBuildConfig) -> Result<()> {
     // Change to the CA directory
     let _guard = ChangeDirectoryGuard::new(&config.path)?;
 
-    println!("Building CA in directory: {:?}", config.path);
+    let component_type = if config.plugin { "Plugin" } else { "CA" };
+    println!(
+        "Building {} in directory: {:?}",
+        component_type, config.path
+    );
 
     // Step 1: Run clippy for code quality checks
     run_clippy(&config)?;
@@ -43,10 +49,10 @@ pub fn build_ca(config: CaBuildConfig) -> Result<()> {
     // Step 2: Build the CA
     build_binary(&config)?;
 
-    // Step 3: Strip the binary
-    strip_binary(&config)?;
+    // Step 3: Post-build processing (strip for binaries, copy for plugins)
+    post_build(&config)?;
 
-    println!("CA build completed successfully!");
+    println!("{} build completed successfully!", component_type);
 
     Ok(())
 }
@@ -87,7 +93,8 @@ fn run_clippy(config: &CaBuildConfig) -> Result<()> {
 }
 
 fn build_binary(config: &CaBuildConfig) -> Result<()> {
-    println!("Building CA binary...");
+    let component_type = if config.plugin { "Plugin" } else { "CA" };
+    println!("Building {} binary...", component_type);
 
     // Determine target and cross-compile based on arch
     let (target, cross_compile) = get_target_and_cross_compile(config.arch);
@@ -113,6 +120,55 @@ fn build_binary(config: &CaBuildConfig) -> Result<()> {
     if !build_output.status.success() {
         print_output_and_bail("build", &build_output)?;
     }
+
+    Ok(())
+}
+
+fn post_build(config: &CaBuildConfig) -> Result<()> {
+    if config.plugin {
+        copy_plugin(config)
+    } else {
+        strip_binary(config).map(|_| ())
+    }
+}
+
+fn copy_plugin(config: &CaBuildConfig) -> Result<()> {
+    println!("Processing plugin...");
+
+    // Determine target based on arch
+    let (target, _cross_compile) = get_target_and_cross_compile(config.arch);
+
+    let profile = if config.debug { "debug" } else { "release" };
+    let target_dir = PathBuf::from("target").join(target).join(profile);
+
+    // Get the library name from Cargo.toml
+    let cargo_toml = std::fs::read_to_string("Cargo.toml")?;
+    let lib_name = cargo_toml
+        .lines()
+        .find(|line| line.trim().starts_with("name"))
+        .and_then(|line| line.split('=').nth(1))
+        .map(|s| s.trim().trim_matches('"'))
+        .ok_or_else(|| anyhow::anyhow!("Could not find package name in Cargo.toml"))?;
+
+    // Plugin is built as a shared library (lib<name>.so)
+    let plugin_src = target_dir.join(format!("lib{}.so", lib_name));
+
+    if !plugin_src.exists() {
+        bail!("Plugin library not found at {:?}", plugin_src);
+    }
+
+    // Read UUID if provided
+    let uuid = if let Some(uuid_path) = &config.uuid_path {
+        std::fs::read_to_string(uuid_path)?.trim().to_string()
+    } else {
+        bail!("UUID path required for plugin build");
+    };
+
+    // Copy to <uuid>.plugin.so
+    let plugin_dest = target_dir.join(format!("{}.plugin.so", uuid));
+    std::fs::copy(&plugin_src, &plugin_dest)?;
+
+    println!("Plugin copied to: {:?}", plugin_dest);
 
     Ok(())
 }

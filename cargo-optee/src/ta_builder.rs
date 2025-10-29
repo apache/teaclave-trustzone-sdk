@@ -22,6 +22,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 use tempfile::TempDir;
+use toml::Value;
 
 use crate::common::{print_output_and_bail, Arch, ChangeDirectoryGuard};
 
@@ -146,10 +147,10 @@ pub fn build_ta(config: TaBuildConfig) -> Result<()> {
     build_binary(&config)?;
 
     // Step 3: Strip the binary
-    let stripped_path = strip_binary(&config)?;
+    let (stripped_path, target_dir) = strip_binary(&config)?;
 
     // Step 4: Sign the TA
-    sign_ta(&config, &stripped_path)?;
+    sign_ta(&config, &stripped_path, &target_dir)?;
 
     println!("TA build completed successfully!");
 
@@ -211,17 +212,56 @@ fn build_binary(config: &TaBuildConfig) -> Result<()> {
     Ok(())
 }
 
-fn strip_binary(config: &TaBuildConfig) -> Result<PathBuf> {
+fn get_package_name() -> Result<String> {
+    let cargo_toml_path = PathBuf::from("Cargo.toml");
+    if !cargo_toml_path.exists() {
+        bail!("Cargo.toml not found in current directory");
+    }
+
+    let cargo_toml_content = fs::read_to_string(&cargo_toml_path)?;
+    let cargo_toml: Value = toml::from_str(&cargo_toml_content)?;
+
+    let package_name = cargo_toml
+        .get("package")
+        .and_then(|p| p.get("name"))
+        .and_then(|n| n.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Could not find package name in Cargo.toml"))?;
+
+    Ok(package_name.to_string())
+}
+
+fn strip_binary(config: &TaBuildConfig) -> Result<(PathBuf, PathBuf)> {
     println!("Stripping binary...");
 
     // Determine target based on arch
     let (target, cross_compile) = get_target_and_cross_compile(config.arch, config.std);
 
     let profile = if config.debug { "debug" } else { "release" };
-    let target_dir = PathBuf::from("target").join(target).join(profile);
 
-    let binary_path = target_dir.join("ta");
-    let stripped_path = target_dir.join("stripped_ta");
+    // Get the actual package name from Cargo.toml
+    let package_name = get_package_name()?;
+
+    // Check for target directory - could be in current dir or parent (workspace)
+    let mut target_dir = PathBuf::from("target").join(&target).join(profile);
+    let binary_path = if target_dir.join(&package_name).exists() {
+        target_dir.join(&package_name)
+    } else {
+        // Try parent directory (workspace case: mnist-rs/ta)
+        target_dir = PathBuf::from("../target").join(&target).join(profile);
+        if !target_dir.join(&package_name).exists() {
+            bail!(
+                "Binary not found at {:?} or {:?}",
+                PathBuf::from("target")
+                    .join(&target)
+                    .join(profile)
+                    .join(&package_name),
+                target_dir.join(&package_name)
+            );
+        }
+        target_dir.join(&package_name)
+    };
+
+    let stripped_path = target_dir.join(format!("stripped_{}", package_name));
 
     if !binary_path.exists() {
         bail!("Binary not found at {:?}", binary_path);
@@ -239,10 +279,10 @@ fn strip_binary(config: &TaBuildConfig) -> Result<PathBuf> {
         print_output_and_bail(&objcopy, &strip_output)?;
     }
 
-    Ok(stripped_path)
+    Ok((stripped_path, target_dir))
 }
 
-fn sign_ta(config: &TaBuildConfig, stripped_path: &Path) -> Result<()> {
+fn sign_ta(config: &TaBuildConfig, stripped_path: &Path, target_dir: &Path) -> Result<()> {
     println!("Signing TA...");
 
     // Read UUID from the specified path
@@ -262,15 +302,8 @@ fn sign_ta(config: &TaBuildConfig, stripped_path: &Path) -> Result<()> {
         bail!("Sign script not found at {:?}", sign_script);
     }
 
-    // Determine target based on arch
-    let (target, _) = get_target_and_cross_compile(config.arch, config.std);
-
-    // Output path
-    let profile = if config.debug { "debug" } else { "release" };
-    let output_path = PathBuf::from("target")
-        .join(target)
-        .join(profile)
-        .join(format!("{}.ta", uuid));
+    // Output path - use the actual target_dir
+    let output_path = target_dir.join(format!("{}.ta", uuid));
 
     let sign_output = Command::new("python3")
         .arg(&sign_script)

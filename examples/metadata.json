@@ -1,0 +1,192 @@
+{
+  "examples": {
+    "message_passing_interface-rs": {
+      "category": "std-only",
+      "tas": [
+        { "path": "message_passing_interface-rs/ta", "uuid": "message_passing_interface-rs/uuid.txt" }
+      ],
+      "cas": ["message_passing_interface-rs/host"]
+    },
+    "serde-rs": {
+      "category": "std-only",
+      "tas": [
+        { "path": "serde-rs/ta", "uuid": "serde-rs/uuid.txt" }
+      ],
+      "cas": ["serde-rs/host"]
+    },
+    "tls_client-rs": {
+      "category": "std-only",
+      "tas": [
+        { "path": "tls_client-rs/ta", "uuid": "tls_client-rs/uuid.txt" }
+      ],
+      "cas": ["tls_client-rs/host"]
+    },
+    "tls_server-rs": {
+      "category": "std-only",
+      "tas": [
+        { "path": "tls_server-rs/ta", "uuid": "tls_server-rs/uuid.txt" }
+      ],
+      "cas": ["tls_server-rs/host"]
+    },
+    "secure_db_abstraction-rs": {
+      "category": "std-only",
+      "tas": [
+        { "path": "secure_db_abstraction-rs/ta", "uuid": "secure_db_abstraction-rs/uuid.txt" }
+      ],
+      "cas": ["secure_db_abstraction-rs/host"]
+    },
+    "mnist-rs": {
+      "category": "no-std-only",
+      "tas": [
+        { "path": "mnist-rs/ta/inference", "uuid": "mnist-rs/ta/inference/uuid.txt" },
+        { "path": "mnist-rs/ta/train", "uuid": "mnist-rs/ta/train/uuid.txt" }
+      ],
+      "cas": ["mnist-rs/host"]
+    },
+    "build_with_optee_utee_sys-rs": {
+      "category": "no-std-only",
+      "tas": [
+        { "path": "build_with_optee_utee_sys-rs/ta", "uuid": "build_with_optee_utee_sys-rs/uuid.txt" }
+      ],
+      "cas": ["build_with_optee_utee_sys-rs/host"]
+    },
+    "acipher-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "acipher-rs/ta", "uuid": "acipher-rs/uuid.txt" }
+      ],
+      "cas": ["acipher-rs/host"]
+    },
+    "aes-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "aes-rs/ta", "uuid": "aes-rs/uuid.txt" }
+      ],
+      "cas": ["aes-rs/host"]
+    },
+    "authentication-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "authentication-rs/ta", "uuid": "authentication-rs/uuid.txt" }
+      ],
+      "cas": ["authentication-rs/host"]
+    },
+    "big_int-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "big_int-rs/ta", "uuid": "big_int-rs/uuid.txt" }
+      ],
+      "cas": ["big_int-rs/host"]
+    },
+    "diffie_hellman-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "diffie_hellman-rs/ta", "uuid": "diffie_hellman-rs/uuid.txt" }
+      ],
+      "cas": ["diffie_hellman-rs/host"]
+    },
+    "digest-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "digest-rs/ta", "uuid": "digest-rs/uuid.txt" }
+      ],
+      "cas": ["digest-rs/host"]
+    },
+    "error_handling-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "error_handling-rs/ta", "uuid": "error_handling-rs/uuid.txt" }
+      ],
+      "cas": ["error_handling-rs/host"]
+    },
+    "hello_world-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "hello_world-rs/ta", "uuid": "hello_world-rs/uuid.txt" }
+      ],
+      "cas": ["hello_world-rs/host"]
+    },
+    "hotp-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "hotp-rs/ta", "uuid": "hotp-rs/uuid.txt" }
+      ],
+      "cas": ["hotp-rs/host"]
+    },
+    "inter_ta-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "inter_ta-rs/ta", "uuid": "inter_ta-rs/uuid.txt" }
+      ],
+      "cas": ["inter_ta-rs/host"]
+    },
+    "property-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "property-rs/ta", "uuid": "property-rs/uuid.txt" }
+      ],
+      "cas": ["property-rs/host"]
+    },
+    "random-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "random-rs/ta", "uuid": "random-rs/uuid.txt" }
+      ],
+      "cas": ["random-rs/host"]
+    },
+    "secure_storage-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "secure_storage-rs/ta", "uuid": "secure_storage-rs/uuid.txt" }
+      ],
+      "cas": ["secure_storage-rs/host"]
+    },
+    "supp_plugin-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "supp_plugin-rs/ta", "uuid": "supp_plugin-rs/ta_uuid.txt" }
+      ],
+      "cas": [
+        "supp_plugin-rs/host"
+      ],
+      "plugins": [
+        { "path": "supp_plugin-rs/plugin", "uuid": "supp_plugin-rs/plugin_uuid.txt" }
+      ]
+    },
+    "tcp_client-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "tcp_client-rs/ta", "uuid": "tcp_client-rs/uuid.txt" }
+      ],
+      "cas": ["tcp_client-rs/host"]
+    },
+    "time-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "time-rs/ta", "uuid": "time-rs/uuid.txt" }
+      ],
+      "cas": ["time-rs/host"]
+    },
+    "udp_socket-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "udp_socket-rs/ta", "uuid": "udp_socket-rs/uuid.txt" }
+      ],
+      "cas": ["udp_socket-rs/host"]
+    },
+    "signature_verification-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "signature_verification-rs/ta", "uuid": "signature_verification-rs/uuid.txt" }
+      ],
+      "cas": ["signature_verification-rs/host"]
+    },
+    "client_pool-rs": {
+      "category": "common",
+      "tas": [
+        { "path": "client_pool-rs/ta", "uuid": "client_pool-rs/uuid.txt" }
+      ],
+      "cas": ["client_pool-rs/host"]
+    }
+  }
+}

@@ -81,6 +81,15 @@ enum BuildCommand {
         #[command(flatten)]
         common: BuildTypeCommonOptions,
     },
+    /// Build a Plugin (Shared Library)
+    Plugin {
+        /// Path to the OP-TEE client export directory (mandatory)
+        #[arg(long = "optee_client_export", required = true)]
+        optee_client_export: PathBuf,
+
+        #[command(flatten)]
+        common: BuildTypeCommonOptions,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -152,6 +161,19 @@ fn execute_command(cmd: Command) -> anyhow::Result<()> {
                 optee_client_export,
                 debug: common.debug,
                 path: common.path,
+                plugin: false,
+                uuid_path: None, // this should be TA's uuid, currently defined in proto, but need polish
+            }),
+            BuildCommand::Plugin {
+                optee_client_export,
+                common,
+            } => ca_builder::build_ca(ca_builder::CaBuildConfig {
+                arch: common.arch,
+                optee_client_export,
+                debug: common.debug,
+                path: common.path,
+                plugin: true,
+                uuid_path: Some(common.uuid_path),
             }),
         },
     }
