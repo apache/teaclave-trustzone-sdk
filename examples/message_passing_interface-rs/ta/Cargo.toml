@@ -29,6 +29,11 @@ proto = { path = "../proto" }
 optee-utee-sys = { path = "../../../optee-utee/optee-utee-sys", features = ["std"] }
 optee-utee = { path = "../../../optee-utee", features = ["std"] }
 
+[features]
+# std feature is required for this TA - it uses std-only dependencies
+# Build will fail without this feature enabled
+std = []
+
 [build-dependencies]
 proto = { path = "../proto" }
 optee-utee-build = { path = "../../../optee-utee-build" }

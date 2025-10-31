@@ -16,31 +16,24 @@
 # under the License.
 
 [package]
-name = "ta"
-version = "0.4.0"
+name = "cargo-optee"
+version = "0.1.0"
 authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
 license = "Apache-2.0"
 repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
-description = "An example of Rust OP-TEE TrustZone SDK."
-edition = "2018"
+description = "A cargo subcommand for building OP-TEE Trusted Applications"
+edition = "2021"
+
+[[bin]]
+name = "cargo-optee"
+path = "src/main.rs"
 
 [dependencies]
-proto = { path = "../proto" }
-optee-utee-sys = { path = "../../../optee-utee/optee-utee-sys", features = ["std"] }
-optee-utee = { path = "../../../optee-utee", features = ["std"] }
+clap = { version = "4.5", features = ["derive"] }
+anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-[features]
-# std feature is required for this TA - it uses std-only dependencies
-# Build will fail without this feature enabled
-std = []
-
-[build-dependencies]
-proto = { path = "../proto" }
-optee-utee-build = { path = "../../../optee-utee-build" }
-
-[profile.release]
-panic = "abort"
-lto = false
-opt-level = 1
+toml = "0.8"
+indexmap = "=2.11.4"
+env_logger = "0.11"
+log = "0.4"
+tempfile = "3.8"
