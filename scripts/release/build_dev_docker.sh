@@ -38,15 +38,23 @@ docker build \
   -f "$DOCKERFILE" \
   --build-arg OPTEE_VERSION="$OPTEE_VER" \
   --target no-std-build-env \
-  -t teaclave/teaclave-trustzone-emulator-nostd-optee-${OPTEE_VER}-expand-memory:latest \
+  -t teaclave/teaclave-trustzone-emulator-nostd-expand-memory:optee-${OPTEE_VER} \
+  -t teaclave/teaclave-trustzone-emulator-nostd-expand-memory:latest \
   .
 
 # Build std Docker image
 docker build \
   -f "$DOCKERFILE" \
   --build-arg OPTEE_VERSION="$OPTEE_VER" \
-  -t teaclave/teaclave-trustzone-emulator-std-optee-${OPTEE_VER}-expand-memory:latest \
+  -t teaclave/teaclave-trustzone-emulator-std-expand-memory:optee-${OPTEE_VER} \
+  -t teaclave/teaclave-trustzone-emulator-std-expand-memory:latest \
   .
 
 echo "Docker images built successfully!"
+echo ""
+echo "To push the images to Docker Hub, run:"
+echo "docker push teaclave/teaclave-trustzone-emulator-nostd-expand-memory:optee-${OPTEE_VER}"
+echo "docker push teaclave/teaclave-trustzone-emulator-nostd-expand-memory:latest"
+echo "docker push teaclave/teaclave-trustzone-emulator-std-expand-memory:optee-${OPTEE_VER}"
+echo "docker push teaclave/teaclave-trustzone-emulator-std-expand-memory:latest"
 

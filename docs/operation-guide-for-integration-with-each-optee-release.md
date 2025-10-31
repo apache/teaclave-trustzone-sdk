@@ -100,15 +100,3 @@ After step 3 PR is merged, rebuild the development Docker image.
    
    This operation requires access to the Teaclave Docker Hub organization. Please 
    contact project maintainers for assistance.
-
-### 5. Update CI Configuration for Development Docker
-
-Following the Docker image publication, update the CI workflow to reference the new 
-OP-TEE version.
-
-**Configuration Location:** 
-https://github.com/apache/teaclave-trustzone-sdk/blob/main/.github/workflows/ci.yml#L72
-
-**Affected Jobs:**
-- `test-nostd-build-on-dev-docker`
-- `test-std-build-on-dev-docker`

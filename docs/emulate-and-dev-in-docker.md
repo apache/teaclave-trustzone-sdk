@@ -17,7 +17,7 @@ both the Normal World and Secure World environments.
 **Terminal A** (Main development terminal):
 ```bash
 # Pull the pre-built development environment
-$ docker pull teaclave/teaclave-trustzone-emulator-nostd-optee-4.5.0-expand-memory:latest
+$ docker pull teaclave/teaclave-trustzone-emulator-nostd-expand-memory:latest
 
 # Clone the repository
 $ git clone https://github.com/apache/teaclave-trustzone-sdk.git && \
@@ -28,7 +28,7 @@ $ docker run -it --rm \
   --name teaclave_dev_env \
   -v $(pwd):/root/teaclave_sdk_src \
   -w /root/teaclave_sdk_src \
-  teaclave/teaclave-trustzone-emulator-nostd-optee-4.5.0-expand-memory:latest
+  teaclave/teaclave-trustzone-emulator-nostd-expand-memory:latest
 ```
 
 ## 2. Build the Hello World Example
