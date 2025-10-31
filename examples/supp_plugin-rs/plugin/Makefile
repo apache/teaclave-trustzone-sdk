@@ -15,25 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-NAME := syslog_plugin
-PLUGIN_UUID := `cat ../plugin_uuid.txt`
+# Plugin specific configuration
+IS_PLUGIN := true
+PLUGIN_UUID := $(shell cat ../plugin_uuid.txt)
 
-TARGET ?= aarch64-unknown-linux-gnu
-CROSS_COMPILE ?= aarch64-linux-gnu-
-OBJCOPY := $(CROSS_COMPILE)objcopy
-LINKER_CFG := target.$(TARGET).linker=\"$(CROSS_COMPILE)gcc\"
-
-OUT_DIR := $(CURDIR)/target/$(TARGET)/release
-
-all: clippy host
-
-clippy:
-	@cargo fmt
-	@cargo clippy --target $(TARGET) -- -D warnings -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
-
-host: clippy
-	@cargo build --target $(TARGET) --release --config $(LINKER_CFG)
-	cp $(CURDIR)/target/$(TARGET)/release/lib$(NAME).so $(CURDIR)/target/$(TARGET)/release/$(PLUGIN_UUID).plugin.so 
-
-clean:
-	@cargo clean
+include ../../mk/host.mk
