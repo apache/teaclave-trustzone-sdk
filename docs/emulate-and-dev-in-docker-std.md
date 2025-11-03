@@ -24,14 +24,14 @@ The **dev-env with std support** enables **developing TA using Rust std** by pro
 ### Pull the Docker Image
 ```bash
 # Pull the dev-env with std support for developing TA using Rust std
-$ docker pull teaclave/teaclave-trustzone-emulator-std-optee-4.5.0-expand-memory:latest
+$ docker pull teaclave/teaclave-trustzone-emulator-std-expand-memory:latest
 
 # Launch the dev-env container
 $ docker run -it --rm \
   --name teaclave_dev_env \
   -v $(pwd):/root/teaclave_sdk_src \
   -w /root/teaclave_sdk_src \
-  teaclave/teaclave-trustzone-emulator-std-optee-4.5.0-expand-memory:latest
+  teaclave/teaclave-trustzone-emulator-std-expand-memory:latest
 ```
 
 ### One-Time Setup Inside Container

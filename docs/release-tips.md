@@ -104,7 +104,7 @@ $ cd apache-teaclave-trustzone-sdk-$VERSION
 $ docker run -it --rm \
   -v $(pwd):/root/teaclave_sdk_src \
   -w /root/teaclave_sdk_src \
-  teaclave/teaclave-trustzone-emulator-nostd-optee-$OPTEE_VERSION-expand-memory:latest
+  teaclave/teaclave-trustzone-emulator-nostd-expand-memory:optee-$OPTEE_VERSION
 # Inside the docker container:
 root@xxxx:~/teaclave_sdk_src# make
 ```
