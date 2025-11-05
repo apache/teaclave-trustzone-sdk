@@ -54,7 +54,7 @@ Prerequisites](https://optee.readthedocs.io/en/latest/building/prerequisites.htm
    ```
 
    Alternatively, you can use a docker container built with our
-   [Dockerfile](Dockerfile).
+   [Dockerfile](../Dockerfile).
 
 2. After installing dependencies or building the Docker image, fetch the source
    code from the official GitHub repository:
