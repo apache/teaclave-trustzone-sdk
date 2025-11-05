@@ -18,16 +18,30 @@
 use anyhow::{bail, Result};
 use clap::ValueEnum;
 use std::env;
+use std::fs;
 use std::path::PathBuf;
-use std::process::Output;
+use std::process::{Command, Output};
+use toml::Value;
 
 /// Target architecture for building
-#[derive(Debug, Clone, Copy, ValueEnum)]
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq)]
 pub enum Arch {
     /// ARM 64-bit architecture
     Aarch64,
     /// ARM 32-bit architecture
     Arm,
+}
+
+impl std::str::FromStr for Arch {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "aarch64" | "arm64" => Ok(Arch::Aarch64),
+            "arm" | "arm32" => Ok(Arch::Arm),
+            _ => Err(format!("Invalid architecture: {}", s)),
+        }
+    }
 }
 
 /// Helper function to print command output and return error
@@ -80,4 +94,82 @@ impl Drop for ChangeDirectoryGuard {
     fn drop(&mut self) {
         let _ = env::set_current_dir(&self.original);
     }
+}
+
+/// Print cargo command for debugging
+pub fn print_cargo_command(cmd: &Command, description: &str) {
+    println!("{}...", description);
+
+    // Extract program and args
+    let program = cmd.get_program();
+    let args: Vec<_> = cmd.get_args().collect();
+
+    // Extract all environment variables
+    let envs: Vec<String> = cmd
+        .get_envs()
+        .filter_map(|(k, v)| match (k.to_str(), v.and_then(|v| v.to_str())) {
+            (Some(key), Some(value)) => Some(format!("{}={}", key, value)),
+            _ => None,
+        })
+        .collect();
+
+    // Print environment variables
+    if !envs.is_empty() {
+        println!("  Environment: {}", envs.join(" "));
+    }
+
+    // Print command
+    println!(
+        "  Command: {} {}",
+        program.to_string_lossy(),
+        args.into_iter()
+            .map(|s| s.to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(" ")
+    );
+}
+
+/// Find the target directory using Cargo's workspace discovery strategy
+/// Start from current directory and walk up looking for workspace root
+pub fn find_target_directory() -> Result<PathBuf> {
+    let mut current_dir = env::current_dir()?;
+
+    loop {
+        // Check if current directory has a Cargo.toml that declares a workspace
+        let cargo_toml_path = current_dir.join("Cargo.toml");
+        if cargo_toml_path.exists() {
+            let cargo_toml_content = fs::read_to_string(&cargo_toml_path)?;
+            if let Ok(cargo_toml) = toml::from_str::<Value>(&cargo_toml_content) {
+                // If this Cargo.toml has a [workspace] section, this is the workspace root
+                if cargo_toml.get("workspace").is_some() {
+                    return Ok(current_dir.join("target"));
+                }
+            }
+        }
+
+        // Move to parent directory
+        if let Some(parent) = current_dir.parent() {
+            current_dir = parent.to_path_buf();
+        } else {
+            // Reached filesystem root, no workspace found
+            // Use target directory in the original crate directory
+            return Ok(env::current_dir()?.join("target"));
+        }
+    }
+}
+
+/// Read UUID from a file (e.g., uuid.txt)
+pub fn read_uuid_from_file(uuid_path: &std::path::Path) -> Result<String> {
+    if !uuid_path.exists() {
+        bail!("UUID file not found: {}", uuid_path.display());
+    }
+
+    let uuid_content = fs::read_to_string(uuid_path)?;
+    let uuid = uuid_content.trim().to_string();
+
+    if uuid.is_empty() {
+        bail!("UUID file is empty: {}", uuid_path.display());
+    }
+
+    Ok(uuid)
 }

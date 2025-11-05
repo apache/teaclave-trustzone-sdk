@@ -25,6 +25,9 @@ license.workspace = true
 repository.workspace = true
 edition.workspace = true
 
+[package.metadata.optee.ta]
+uuid-path = "uuid.txt"
+
 [dependencies]
 common = { path = "../common" }
 proto = { workspace = true }

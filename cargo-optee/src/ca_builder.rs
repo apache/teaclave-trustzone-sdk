@@ -20,7 +20,8 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use crate::common::{
-    get_target_and_cross_compile, print_output_and_bail, Arch, ChangeDirectoryGuard,
+    find_target_directory, get_target_and_cross_compile, print_cargo_command,
+    print_output_and_bail, read_uuid_from_file, Arch, ChangeDirectoryGuard,
 };
 
 pub struct CaBuildConfig {
@@ -30,6 +31,10 @@ pub struct CaBuildConfig {
     pub path: PathBuf,                // Path to CA directory
     pub plugin: bool,                 // Build as plugin (shared library)
     pub uuid_path: Option<PathBuf>,   // Path to UUID file (for plugins)
+    // Customized variables
+    pub env: Vec<(String, String)>, // Custom environment variables for cargo build
+    pub no_default_features: bool,  // Disable default features
+    pub features: Option<String>,   // Additional features to enable
 }
 
 // Main function to build the CA
@@ -38,9 +43,12 @@ pub fn build_ca(config: CaBuildConfig) -> Result<()> {
     let _guard = ChangeDirectoryGuard::new(&config.path)?;
 
     let component_type = if config.plugin { "Plugin" } else { "CA" };
+    // Get the absolute path for better clarity
+    let absolute_path = std::fs::canonicalize(&config.path).unwrap_or_else(|_| config.path.clone());
     println!(
-        "Building {} in directory: {:?}",
-        component_type, config.path
+        "Building {} in directory: {}",
+        component_type,
+        absolute_path.display()
     );
 
     // Step 1: Run clippy for code quality checks
@@ -50,9 +58,20 @@ pub fn build_ca(config: CaBuildConfig) -> Result<()> {
     build_binary(&config)?;
 
     // Step 3: Post-build processing (strip for binaries, copy for plugins)
-    post_build(&config)?;
+    let final_binary = post_build(&config)?;
 
-    println!("{} build completed successfully!", component_type);
+    // Print the final binary path with descriptive prompt
+    let absolute_final_binary = final_binary.canonicalize().unwrap_or(final_binary);
+    if config.plugin {
+        println!("Plugin copied to: {}", absolute_final_binary.display());
+    } else {
+        println!(
+            "CA binary stripped and saved to: {}",
+            absolute_final_binary.display()
+        );
+    }
+
+    println!("{} build successfully!", component_type);
 
     Ok(())
 }
@@ -103,6 +122,16 @@ fn build_binary(config: &CaBuildConfig) -> Result<()> {
     build_cmd.arg("build");
     build_cmd.arg("--target").arg(&target);
 
+    // Add --no-default-features if specified
+    if config.no_default_features {
+        build_cmd.arg("--no-default-features");
+    }
+
+    // Add additional features if specified
+    if let Some(ref features) = config.features {
+        build_cmd.arg("--features").arg(features);
+    }
+
     if !config.debug {
         build_cmd.arg("--release");
     }
@@ -115,6 +144,14 @@ fn build_binary(config: &CaBuildConfig) -> Result<()> {
     // Set OPTEE_CLIENT_EXPORT environment variable
     build_cmd.env("OPTEE_CLIENT_EXPORT", &config.optee_client_export);
 
+    // Apply custom environment variables
+    for (key, value) in &config.env {
+        build_cmd.env(key, value);
+    }
+
+    // Print the full cargo build command for debugging
+    print_cargo_command(&build_cmd, "Building CA binary");
+
     let build_output = build_cmd.output()?;
 
     if !build_output.status.success() {
@@ -124,22 +161,25 @@ fn build_binary(config: &CaBuildConfig) -> Result<()> {
     Ok(())
 }
 
-fn post_build(config: &CaBuildConfig) -> Result<()> {
+fn post_build(config: &CaBuildConfig) -> Result<PathBuf> {
     if config.plugin {
         copy_plugin(config)
     } else {
-        strip_binary(config).map(|_| ())
+        strip_binary(config)
     }
 }
 
-fn copy_plugin(config: &CaBuildConfig) -> Result<()> {
+fn copy_plugin(config: &CaBuildConfig) -> Result<PathBuf> {
     println!("Processing plugin...");
 
     // Determine target based on arch
     let (target, _cross_compile) = get_target_and_cross_compile(config.arch);
 
     let profile = if config.debug { "debug" } else { "release" };
-    let target_dir = PathBuf::from("target").join(target).join(profile);
+
+    // Use Cargo's workspace discovery strategy to find target directory
+    let workspace_target_dir = find_target_directory()?;
+    let target_dir = workspace_target_dir.join(target).join(profile);
 
     // Get the library name from Cargo.toml
     let cargo_toml = std::fs::read_to_string("Cargo.toml")?;
@@ -157,20 +197,19 @@ fn copy_plugin(config: &CaBuildConfig) -> Result<()> {
         bail!("Plugin library not found at {:?}", plugin_src);
     }
 
-    // Read UUID if provided
-    let uuid = if let Some(uuid_path) = &config.uuid_path {
-        std::fs::read_to_string(uuid_path)?.trim().to_string()
-    } else {
-        bail!("UUID path required for plugin build");
-    };
+    // Read UUID from specified file
+    let uuid = read_uuid_from_file(
+        config
+            .uuid_path
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("UUID path is required for plugin builds"))?,
+    )?;
 
     // Copy to <uuid>.plugin.so
     let plugin_dest = target_dir.join(format!("{}.plugin.so", uuid));
     std::fs::copy(&plugin_src, &plugin_dest)?;
 
-    println!("Plugin copied to: {:?}", plugin_dest);
-
-    Ok(())
+    Ok(plugin_dest)
 }
 
 fn strip_binary(config: &CaBuildConfig) -> Result<PathBuf> {
@@ -208,8 +247,6 @@ fn strip_binary(config: &CaBuildConfig) -> Result<PathBuf> {
     if !strip_output.status.success() {
         print_output_and_bail(&objcopy, &strip_output)?;
     }
-
-    println!("CA binary stripped and saved to: {:?}", binary_path);
 
     Ok(binary_path)
 }

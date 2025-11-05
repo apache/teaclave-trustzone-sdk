@@ -24,6 +24,14 @@ repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
 description = "An example of Rust OP-TEE TrustZone SDK."
 edition = "2018"
 
+[package.metadata.optee.ta]
+arch = "aarch64"
+debug = false
+std = false
+uuid-path = "../ta_uuid.txt"
+ta-dev-kit-dir = { aarch64 = "../../../optee/optee_os/out/arm-plat-vexpress/export-ta_arm64" }
+signing-key = ""
+
 [features]
 default = []
 std = ["optee-utee/std", "optee-utee-sys/std"]

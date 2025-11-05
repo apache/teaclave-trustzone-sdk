@@ -232,7 +232,7 @@ for EXAMPLE_NAME in "${ALL_EXAMPLES[@]}"; do
     echo "[$CURRENT] Building: $EXAMPLE_NAME ($CATEGORY)"
     echo "=========================================="
     
-    # Get TA, CA, and Plugin paths from metadata
+    # Get TA, CA, and Plugin directories from metadata
     TAS_JSON=$(jq -c ".examples[\"$EXAMPLE_NAME\"].tas" "$METADATA_JSON")
     CAS_JSON=$(jq -c ".examples[\"$EXAMPLE_NAME\"].cas" "$METADATA_JSON")
     PLUGINS_JSON=$(jq -c ".examples[\"$EXAMPLE_NAME\"].plugins // []" "$METADATA_JSON")
@@ -246,41 +246,49 @@ for EXAMPLE_NAME in "${ALL_EXAMPLES[@]}"; do
     
     if [ "$TA_COUNT" -gt 0 ]; then
         for ((i=0; i<$TA_COUNT; i++)); do
-            TA_PATH=$(echo "$TAS_JSON" | jq -r ".[$i].path")
-            TA_UUID=$(echo "$TAS_JSON" | jq -r ".[$i].uuid")
+            TA_DIR=$(echo "$TAS_JSON" | jq -r ".[$i]")
+            TA_DIR_FULL_PATH="$EXAMPLES_DIR/$TA_DIR"
             
-            TA_FULL_PATH="$EXAMPLES_DIR/$TA_PATH"
-            UUID_FULL_PATH="$EXAMPLES_DIR/$TA_UUID"
+            if [ ! -d "$TA_DIR_FULL_PATH" ]; then
+                echo "ERROR: TA directory not found: $TA_DIR_FULL_PATH"
+                FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($TA_DIR)"
+                continue
+            fi
             
-            if [ ! -d "$TA_FULL_PATH" ]; then
-                echo "ERROR: TA directory not found: $TA_FULL_PATH"
-                FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($TA_PATH)"
+            if [ ! -f "$TA_DIR_FULL_PATH/Cargo.toml" ]; then
+                echo "ERROR: Cargo.toml not found in TA directory: $TA_DIR_FULL_PATH"
+                FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($TA_DIR)"
                 continue
             fi
             
             echo ""
-            echo "→ Building TA [$((i+1))/$TA_COUNT]: $TA_PATH"
+            echo "→ Building TA [$((i+1))/$TA_COUNT]: $TA_DIR"
             
             # Determine STD_FLAG for TA
             TA_STD_FLAG=""
             if [ -n "$STD" ]; then
                 # In std mode: always pass --std flag to cargo-optee
-                # cargo-optee uses --no-default-features so std-only TAs won't fail
                 TA_STD_FLAG="--std"
             fi
             
+            # Change to TA directory and run cargo-optee without --manifest-path
+            cd "$TA_DIR_FULL_PATH"
+            
+            # Run cargo-optee and capture both stdout and stderr
             if $CARGO_OPTEE build ta \
-                --path "$TA_FULL_PATH" \
-                --ta_dev_kit_dir "$TA_DEV_KIT_DIR" \
+                --ta-dev-kit-dir "$TA_DEV_KIT_DIR" \
                 --arch "$ARCH_TA" \
-                --uuid_path "$UUID_FULL_PATH" \
-                $TA_STD_FLAG 2>&1 | grep -E "(Building TA|Running cargo|Building TA binary|Stripping|Signing|SIGN|TA build completed|Error|error:)"; then
+                $TA_STD_FLAG; then
                 echo "  ✓ TA built successfully"
             else
-                echo "  ✗ ERROR: Failed to build TA: $TA_PATH"
-                FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($TA_PATH)"
+                echo "  ✗ ERROR: Failed to build TA: $TA_DIR"
+                FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($TA_DIR)"
+                cd "$EXAMPLES_DIR"  # Return to examples directory
                 continue
             fi
+            
+            # Return to examples directory
+            cd "$EXAMPLES_DIR"
         done
     else
         echo "WARNING: No TAs defined for $EXAMPLE_NAME"
@@ -289,55 +297,86 @@ for EXAMPLE_NAME in "${ALL_EXAMPLES[@]}"; do
     # Build each CA
     CA_INDEX=0
     while [[ "$CA_INDEX" -lt "$CA_COUNT" ]]; do
-        CA_ENTRY=$(echo "$CAS_JSON" | jq -r ".[$CA_INDEX]")
-        
-        # CAs should be plain strings (not objects)
-        CA_PATH="$CA_ENTRY"
-        CA_FULL_PATH="$EXAMPLES_DIR/$CA_PATH"
+        CA_DIR=$(echo "$CAS_JSON" | jq -r ".[$CA_INDEX]")
+        CA_DIR_FULL_PATH="$EXAMPLES_DIR/$CA_DIR"
         
         echo ""
-        echo "→ Building CA [$((CA_INDEX+1))/$CA_COUNT]: $CA_PATH"
+        echo "→ Building CA [$((CA_INDEX+1))/$CA_COUNT]: $CA_DIR"
         
-        if $CARGO_OPTEE build ca \
-            --path "$CA_FULL_PATH" \
-            --optee_client_export "$OPTEE_CLIENT_EXPORT" \
-            --arch "$ARCH_CA" 2>&1 | grep -E "(Building CA|Running cargo|Building CA binary|CA build completed|Error|error:)"; then
-            echo "  ✓ CA built successfully"
-        else
-            echo "  ✗ ERROR: Failed to build CA: $CA_PATH"
-            FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($CA_PATH)"
+        if [ ! -d "$CA_DIR_FULL_PATH" ]; then
+            echo "ERROR: CA directory not found: $CA_DIR_FULL_PATH"
+            FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($CA_DIR)"
             CA_INDEX=$((CA_INDEX + 1))
             continue
         fi
         
+        if [ ! -f "$CA_DIR_FULL_PATH/Cargo.toml" ]; then
+            echo "ERROR: Cargo.toml not found in CA directory: $CA_DIR_FULL_PATH"
+            FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($CA_DIR)"
+            CA_INDEX=$((CA_INDEX + 1))
+            continue
+        fi
+        
+        # Change to CA directory and run cargo-optee without --manifest-path
+        cd "$CA_DIR_FULL_PATH"
+        
+        if $CARGO_OPTEE build ca \
+            --optee-client-export "$OPTEE_CLIENT_EXPORT" \
+            --arch "$ARCH_CA"; then
+            echo "  ✓ CA built successfully"
+        else
+            echo "  ✗ ERROR: Failed to build CA: $CA_DIR"
+            FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($CA_DIR)"
+            cd "$EXAMPLES_DIR"  # Return to examples directory
+            CA_INDEX=$((CA_INDEX + 1))
+            continue
+        fi
+        
+        # Return to examples directory
+        cd "$EXAMPLES_DIR"
         CA_INDEX=$((CA_INDEX + 1))
     done
     
-    # Build each Plugin (PLUGINS_JSON already defined at top)
+    # Build each Plugin
     PLUGIN_INDEX=0
     while [[ "$PLUGIN_INDEX" -lt "$PLUGIN_COUNT" ]]; do
-        PLUGIN_PATH=$(echo "$PLUGINS_JSON" | jq -r ".[$PLUGIN_INDEX].path")
-        PLUGIN_UUID_PATH=$(echo "$PLUGINS_JSON" | jq -r ".[$PLUGIN_INDEX].uuid")
-        
-        PLUGIN_FULL_PATH="$EXAMPLES_DIR/$PLUGIN_PATH"
-        PLUGIN_UUID_FULL_PATH="$EXAMPLES_DIR/$PLUGIN_UUID_PATH"
+        PLUGIN_DIR=$(echo "$PLUGINS_JSON" | jq -r ".[$PLUGIN_INDEX]")
+        PLUGIN_DIR_FULL_PATH="$EXAMPLES_DIR/$PLUGIN_DIR"
         
         echo ""
-        echo "→ Building Plugin [$((PLUGIN_INDEX+1))/$PLUGIN_COUNT]: $PLUGIN_PATH"
+        echo "→ Building Plugin [$((PLUGIN_INDEX+1))/$PLUGIN_COUNT]: $PLUGIN_DIR"
         
-        if $CARGO_OPTEE build plugin \
-            --path "$PLUGIN_FULL_PATH" \
-            --optee_client_export "$OPTEE_CLIENT_EXPORT" \
-            --arch "$ARCH_CA" \
-            --uuid_path "$PLUGIN_UUID_FULL_PATH" 2>&1 | grep -E "(Building Plugin|Running cargo|Building.*binary|Processing plugin|Plugin.*completed|Error|error:)"; then
-            echo "  ✓ Plugin built successfully"
-        else
-            echo "  ✗ ERROR: Failed to build Plugin: $PLUGIN_PATH"
-            FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($PLUGIN_PATH)"
+        if [ ! -d "$PLUGIN_DIR_FULL_PATH" ]; then
+            echo "ERROR: Plugin directory not found: $PLUGIN_DIR_FULL_PATH"
+            FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($PLUGIN_DIR)"
             PLUGIN_INDEX=$((PLUGIN_INDEX + 1))
             continue
         fi
         
+        if [ ! -f "$PLUGIN_DIR_FULL_PATH/Cargo.toml" ]; then
+            echo "ERROR: Cargo.toml not found in Plugin directory: $PLUGIN_DIR_FULL_PATH"
+            FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($PLUGIN_DIR)"
+            PLUGIN_INDEX=$((PLUGIN_INDEX + 1))
+            continue
+        fi
+        
+        # Change to Plugin directory and run cargo-optee without --manifest-path
+        cd "$PLUGIN_DIR_FULL_PATH"
+        
+        if $CARGO_OPTEE build plugin \
+            --optee-client-export "$OPTEE_CLIENT_EXPORT" \
+            --arch "$ARCH_CA"; then
+            echo "  ✓ Plugin built successfully"
+        else
+            echo "  ✗ ERROR: Failed to build Plugin: $PLUGIN_DIR"
+            FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($PLUGIN_DIR)"
+            cd "$EXAMPLES_DIR"  # Return to examples directory
+            PLUGIN_INDEX=$((PLUGIN_INDEX + 1))
+            continue
+        fi
+        
+        # Return to examples directory
+        cd "$EXAMPLES_DIR"
         PLUGIN_INDEX=$((PLUGIN_INDEX + 1))
     done
     
