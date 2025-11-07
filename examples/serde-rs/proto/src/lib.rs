@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#![no_std]
+
 use num_enum::{FromPrimitive, IntoPrimitive};
 use serde::{Deserialize, Serialize};
 
