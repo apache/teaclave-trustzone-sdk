@@ -68,7 +68,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
 
             // Ensure the buffer is large enough to hold the serialized data.
             if bytes.len() > buffer.len() {
-                trace_println!("Buffer too small, Cannot copy all bytes");
+                trace_println!("Buffer too small, cannot copy all bytes");
                 return Err(ErrorKind::BadParameters.into());
             }
 
