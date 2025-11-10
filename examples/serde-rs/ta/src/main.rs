@@ -74,7 +74,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
 
             // Copy the serialized JSON string into the buffer.
             let len = bytes.len();
-            buffer[..len].copy_from_slice(&bytes[..len]);
+            buffer[..len].copy_from_slice(bytes);
 
             // update size of output buffer
             unsafe { (*p.raw()).size = len };
