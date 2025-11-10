@@ -67,17 +67,17 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
             let bytes = serialized.as_bytes();
 
             // Ensure the buffer is large enough to hold the serialized data.
-            if bytes.len() > buffer.len() {
+            let len = bytes.len();
+            if len > buffer.len() {
                 trace_println!("Buffer too small, cannot copy all bytes");
                 return Err(ErrorKind::BadParameters.into());
             }
 
             // Copy the serialized JSON string into the buffer.
-            let len = bytes.len();
             buffer[..len].copy_from_slice(bytes);
 
             // update size of output buffer
-            unsafe { (*p.raw()).size = len };
+            p.set_updated_size(len);
 
             // Prints serialized = {"x":1,"y":2}
             trace_println!("serialized = {}", serialized);
