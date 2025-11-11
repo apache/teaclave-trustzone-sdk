@@ -15,14 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#![cfg_attr(not(feature = "std"), no_std)]
 #![no_main]
 
+extern crate alloc;
+
+use alloc::string::String;
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
 use optee_utee::{ErrorKind, Parameters, Result};
 use proto::{Command, Point};
-use std::io::Write;
 
 #[ta_create]
 fn create() -> Result<()> {
@@ -52,21 +55,29 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
     match Command::from(cmd_id) {
         Command::DefaultOp => {
             let mut p = unsafe { params.0.as_memref()? };
-            let mut buffer = p.buffer();
+            let buffer = p.buffer();
             let point = Point { x: 1, y: 2 };
 
             // Convert the Point to a JSON string.
-            let serialized = serde_json::to_string(&point).map_err(|e| {
+            let serialized: String = serde_json::to_string(&point).map_err(|e| {
                 trace_println!("Failed to serialize point: {}", e);
                 ErrorKind::BadParameters
             })?;
-            let len = buffer.write(serialized.as_bytes()).map_err(|e| {
-                trace_println!("Failed to write to buffer: {}", e);
-                ErrorKind::BadParameters
-            })?;
+
+            let bytes = serialized.as_bytes();
+
+            // Ensure the buffer is large enough to hold the serialized data.
+            let len = bytes.len();
+            if len > buffer.len() {
+                trace_println!("Buffer too small, cannot copy all bytes");
+                return Err(ErrorKind::BadParameters.into());
+            }
+
+            // Copy the serialized JSON string into the buffer.
+            buffer[..len].copy_from_slice(bytes);
 
             // update size of output buffer
-            unsafe { (*p.raw()).size = len };
+            p.set_updated_size(len);
 
             // Prints serialized = {"x":1,"y":2}
             trace_println!("serialized = {}", serialized);
