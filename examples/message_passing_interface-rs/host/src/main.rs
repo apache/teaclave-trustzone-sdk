@@ -15,9 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use optee_teec::{
-    Context, ErrorKind, Operation, ParamNone, ParamTmpRef, ParamType, ParamValue, Uuid,
-};
+use optee_teec::{Context, ErrorKind, Operation, ParamNone, ParamTmpRef, Uuid};
 
 type Result<T> = optee_teec::Result<T>;
 
@@ -60,14 +58,13 @@ impl EnclaveClient {
 
         let p0 = ParamTmpRef::new_input(serialized_input.as_mut_slice());
         let p1 = ParamTmpRef::new_output(&mut self.buffer);
-        let p2 = ParamValue::new(0, 0, ParamType::ValueInout);
 
-        let mut operation = Operation::new(0, p0, p1, p2, ParamNone);
+        let mut operation = Operation::new(0, p0, p1, ParamNone, ParamNone);
 
         let uuid = Uuid::parse_str(&self.uuid)?;
         let mut session = self.context.open_session(uuid)?;
         session.invoke_command(command_id, &mut operation)?;
-        let len = operation.parameters().2.a() as usize;
+        let len = operation.parameters().1.updated_size();
 
         let output: proto::EnclaveOutput =
             serde_json::from_slice(&self.buffer[0..len]).map_err(|e| {

@@ -72,7 +72,6 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
     trace_println!("[+] TA invoke command");
     let mut p0 = unsafe { params.0.as_memref()? };
     let mut p1 = unsafe { params.1.as_memref()? };
-    let mut p2 = unsafe { params.2.as_value()? };
 
     let input: proto::EnclaveInput = serde_json::from_slice(p0.buffer()).map_err(|e| {
         trace_println!("Failed to deserialize input: {}", e);
@@ -93,8 +92,6 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
 
     p1.buffer()[..len].copy_from_slice(&output_vec);
     p1.set_updated_size(len);
-
-    p2.set_a(len as u32);
 
     Ok(())
 }
