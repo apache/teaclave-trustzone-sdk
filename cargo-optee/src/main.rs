@@ -153,25 +153,60 @@ enum Command {
     Build(BuildCommand),
 }
 
+/// Source cargo environment from a given path
+fn source_cargo_env(env_path: &str) -> bool {
+    if std::path::Path::new(env_path).exists() {
+        std::process::Command::new("bash")
+            .arg("-c")
+            .arg(format!("source {}", env_path))
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false)
+    } else {
+        false
+    }
+}
+
+/// Setup cargo environment by checking availability and sourcing environment if needed
+fn setup_cargo_environment() -> anyhow::Result<()> {
+    // Check if cargo is available
+    let cargo_available = std::process::Command::new("which")
+        .arg("cargo")
+        .output()
+        .map(|output| output.status.success())
+        .unwrap_or(false);
+
+    if cargo_available {
+        return Ok(());
+    }
+
+    // Try to source .cargo/env from ~/.cargo/env or $CARGO_HOME/env
+    let mut sourced = false;
+    if let Ok(home) = env::var("HOME") {
+        sourced = source_cargo_env(&format!("{}/.cargo/env", home));
+    }
+    if !sourced {
+        if let Ok(cargo_home) = env::var("CARGO_HOME") {
+            sourced = source_cargo_env(&format!("{}/env", cargo_home));
+        }
+    }
+
+    if !sourced {
+        anyhow::bail!("cargo command not found. Please install Rust: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh");
+    }
+
+    Ok(())
+}
+
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
         .format_timestamp_millis()
         .init();
 
-    // Setup cargo environment if needed
-    if let Ok(home) = env::var("HOME") {
-        let cargo_env = format!("{}/.cargo/env", home);
-        if std::path::Path::new(&cargo_env).exists() {
-            // Add cargo bin to PATH
-            let cargo_bin = format!("{}/.cargo/bin", home);
-            if let Ok(current_path) = env::var("PATH") {
-                let new_path = format!("{}:{}", cargo_bin, current_path);
-                env::set_var("PATH", new_path);
-            }
-        } else {
-            eprintln!("Error: Cargo environment file not found at: {}. Please ensure Rust and Cargo are installed.", cargo_env);
-            process::exit(1);
-        }
+    // Setup cargo environment
+    if let Err(e) = setup_cargo_environment() {
+        eprintln!("Error: {}", e);
+        process::exit(1);
     }
 
     let cli = Cli::parse();

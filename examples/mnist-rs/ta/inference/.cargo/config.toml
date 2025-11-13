@@ -1,3 +1,0 @@
-[unstable]
-build-std = ["core", "alloc"]
-build-std-features = ["panic_immediate_abort"]

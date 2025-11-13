@@ -196,6 +196,12 @@ fn setup_build_command(
         cmd.arg("--features").arg(features.join(","));
     }
 
+    // Add no-std specific flags to avoid the linking error of _Unwind_Resume
+    if !config.std {
+        cmd.arg("-Z").arg("build-std=core,alloc");
+        cmd.arg("-Z").arg("build-std-features=panic_immediate_abort");
+    }
+
     // Set RUSTFLAGS - preserve existing ones and add panic=abort
     let mut rustflags = env::var("RUSTFLAGS").unwrap_or_default();
     if !rustflags.is_empty() {

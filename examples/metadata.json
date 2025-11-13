@@ -1,12 +1,12 @@
 {
   "examples": {
     "message_passing_interface-rs": {
-      "category": "std-only",
+      "category": "common",
       "tas": ["message_passing_interface-rs/ta"],
       "cas": ["message_passing_interface-rs/host"]
     },
     "serde-rs": {
-      "category": "std-only",
+      "category": "common",
       "tas": ["serde-rs/ta"],
       "cas": ["serde-rs/host"]
     },
