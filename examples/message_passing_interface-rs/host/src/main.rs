@@ -53,7 +53,7 @@ impl EnclaveClient {
 
     pub fn invoke(&mut self, input: &proto::EnclaveInput) -> Result<proto::EnclaveOutput> {
         let command_id = input.command as u32;
-        let mut serialized_input = proto::serde_json::to_vec(input).map_err(|e| {
+        let mut serialized_input = serde_json::to_vec(input).map_err(|e| {
             eprintln!("Failed to serialize input: {}", e);
             ErrorKind::BadParameters
         })?;
@@ -69,8 +69,8 @@ impl EnclaveClient {
         session.invoke_command(command_id, &mut operation)?;
         let len = operation.parameters().2.a() as usize;
 
-        let output: proto::EnclaveOutput = proto::serde_json::from_slice(&self.buffer[0..len])
-            .map_err(|e| {
+        let output: proto::EnclaveOutput =
+            serde_json::from_slice(&self.buffer[0..len]).map_err(|e| {
                 eprintln!("Failed to deserialize output: {}", e);
                 ErrorKind::BadParameters
             })?;

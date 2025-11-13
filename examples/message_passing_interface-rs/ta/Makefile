@@ -15,28 +15,38 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# STD-ONLY example
-
 UUID ?= $(shell cat "../uuid.txt")
 
-TARGET ?= aarch64-unknown-optee
+TARGET ?= aarch64-unknown-linux-gnu
 CROSS_COMPILE ?= aarch64-linux-gnu-
 OBJCOPY := $(CROSS_COMPILE)objcopy
 # Configure the linker to use GCC, which works on both cross-compilation and ARM machines
 LINKER_CFG := target.$(TARGET).linker=\"$(CROSS_COMPILE)gcc\"
 
+# fix for the error: "unwinding panics are not supported without std" reported by clippy
+# Set panic=abort for std and no-std
+RUSTFLAGS := -C panic=abort
+ifeq ($(BUILDER),xargo)
+EXTRA_FLAGS =
+else
+EXTRA_FLAGS = -Z build-std=core,alloc -Z build-std-features=panic_immediate_abort
+endif
+
 TA_SIGN_KEY ?= $(TA_DEV_KIT_DIR)/keys/default_ta.pem
 SIGN := $(TA_DEV_KIT_DIR)/scripts/sign_encrypt.py
 OUT_DIR := $(CURDIR)/target/$(TARGET)/release
+
+BUILDER ?= cargo
+FEATURES ?= 
 
 all: clippy ta strip sign
 
 clippy:
 	@cargo fmt
-	@xargo clippy --target $(TARGET) -- -D warnings -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
+	@RUSTFLAGS="$(RUSTFLAGS)" $(BUILDER) clippy --target $(TARGET) $(EXTRA_FLAGS) $(FEATURES) -- -D warnings -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
 
 ta: clippy
-	@xargo build --target $(TARGET) --release --config $(LINKER_CFG)
+	@RUSTFLAGS="$(RUSTFLAGS)" $(BUILDER) build --target $(TARGET) --release $(FEATURES) --config $(LINKER_CFG) $(EXTRA_FLAGS)
 
 strip: ta
 	@$(OBJCOPY) --strip-unneeded $(OUT_DIR)/ta $(OUT_DIR)/stripped_ta
@@ -47,3 +57,5 @@ sign: strip
 
 clean:
 	@cargo clean
+
+

@@ -15,9 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#![no_std]
+
+extern crate alloc;
+
+use alloc::string::String;
 use num_enum::FromPrimitive;
 use serde::{Serialize, Deserialize};
-pub use serde_json;
 
 #[derive(Serialize, Deserialize, FromPrimitive, Debug, Copy, Clone)]
 #[repr(u32)]

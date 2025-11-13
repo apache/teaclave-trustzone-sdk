@@ -15,14 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#![cfg_attr(not(feature = "std"), no_std)]
 #![no_main]
 
+extern crate alloc;
+
+use alloc::format;
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
 use optee_utee::{ErrorKind, Parameters, Result};
 use proto::{self, Command};
-use std::io::Write;
 
 fn handle_invoke(command: Command, input: proto::EnclaveInput) -> Result<proto::EnclaveOutput> {
     match command {
@@ -71,21 +74,27 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
     let mut p1 = unsafe { params.1.as_memref()? };
     let mut p2 = unsafe { params.2.as_value()? };
 
-    let input: proto::EnclaveInput = proto::serde_json::from_slice(p0.buffer()).map_err(|e| {
+    let input: proto::EnclaveInput = serde_json::from_slice(p0.buffer()).map_err(|e| {
         trace_println!("Failed to deserialize input: {}", e);
         ErrorKind::BadFormat
     })?;
     let output = handle_invoke(Command::from(cmd_id), input)?;
 
-    let output_vec = proto::serde_json::to_vec(&output).map_err(|e| {
+    let output_vec = serde_json::to_vec(&output).map_err(|e| {
         trace_println!("Failed to serialize output: {}", e);
         ErrorKind::BadFormat
     })?;
-    p1.buffer().write_all(&output_vec).map_err(|e| {
-        trace_println!("Failed to write output: {}", e);
-        ErrorKind::BadParameters
-    })?;
-    p2.set_a(output_vec.len() as u32);
+
+    let len = output_vec.len();
+    if len > p1.buffer().len() {
+        trace_println!("Buffer too small, cannot copy all bytes");
+        return Err(ErrorKind::BadParameters.into());
+    }
+
+    p1.buffer()[..len].copy_from_slice(&output_vec);
+    p1.set_updated_size(len);
+
+    p2.set_a(len as u32);
 
     Ok(())
 }
