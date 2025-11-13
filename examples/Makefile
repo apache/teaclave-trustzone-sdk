@@ -28,7 +28,6 @@ FEATURES ?=
 # Define example categories based on std/no-std support
 # STD-only examples (require STD=y to build)
 STD_ONLY_EXAMPLES = \
-	message_passing_interface-rs \
 	tls_client-rs \
 	tls_server-rs \
 	secure_db_abstraction-rs
@@ -50,6 +49,7 @@ COMMON_EXAMPLES = \
 	hello_world-rs \
 	hotp-rs \
 	inter_ta-rs \
+	message_passing_interface-rs \
 	property-rs \
 	random-rs \
 	secure_storage-rs \

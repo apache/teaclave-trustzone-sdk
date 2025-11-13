@@ -38,4 +38,3 @@ strip: host
 
 clean:
 	@cargo clean
-

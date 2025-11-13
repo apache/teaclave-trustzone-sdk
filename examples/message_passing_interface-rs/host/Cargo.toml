@@ -30,6 +30,7 @@ edition = "2018"
 url = "=2.5.0"
 proto = { path = "../proto" }
 optee-teec = { path = "../../../optee-teec" }
+serde_json = "1.0"
 
 [profile.release]
 lto = true
