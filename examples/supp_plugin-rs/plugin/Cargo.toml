@@ -34,6 +34,10 @@ uuid = { version = "0.8" }
 proto = { path = "../proto" }
 anyhow = "1.0"
 
+[package.metadata.optee.plugin]
+uuid-path = "../plugin_uuid.txt"
+optee-client-export = { aarch64 = "../../../optee/optee_client/export_arm64" }
+
 [profile.release]
 lto = true
 

@@ -37,6 +37,11 @@ anyhow = "1.0"
 # Add getrandom and enable its custom feature, see more details in main.rs
 getrandom = { version = "0.2", default-features = false, features = ["custom"] }
 
+[features]
+# std feature is required for this TA - it uses std-only dependencies
+# Build will fail without this feature enabled
+std = []
+
 [build-dependencies]
 proto = { path = "../proto" }
 optee-utee-build = { path = "../../../optee-utee-build" }

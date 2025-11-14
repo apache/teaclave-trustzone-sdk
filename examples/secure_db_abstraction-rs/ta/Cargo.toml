@@ -33,6 +33,11 @@ secure_db = { path = "../../../crates/secure_db" }
 anyhow = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 
+[features]
+# std feature is required for this TA - it uses std-only dependencies
+# Build will fail without this feature enabled
+std = []
+
 [build-dependencies]
 proto = { path = "../proto" }
 optee-utee-build = { path = "../../../optee-utee-build" }
