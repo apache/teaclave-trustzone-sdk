@@ -97,8 +97,13 @@ fn encrypt(rsa: &mut RsaCipher, params: &mut Parameters) -> Result<()> {
             match cipher.encrypt(&[], plain_text) {
                 Err(e) => Err(e),
                 Ok(cipher_text) => {
-                    p1.buffer().clone_from_slice(&cipher_text);
-                    Ok(())
+                    if cipher_text.len() > p1.buffer().len() {
+                        p1.set_updated_size(cipher_text.len());
+                        Err(ErrorKind::ShortBuffer.into())
+                    } else {
+                        p1.buffer().clone_from_slice(&cipher_text);
+                        Ok(())
+                    }
                 }
             }
         }

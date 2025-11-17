@@ -22,9 +22,9 @@ use num_enum::{FromPrimitive, IntoPrimitive};
 #[repr(u32)]
 pub enum Command {
     GenKey,
-    GetSize,
     Encrypt,
     Decrypt,
+    GetSize,
     #[default]
     Unknown,
 }
