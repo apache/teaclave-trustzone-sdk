@@ -173,3 +173,27 @@ pub fn read_uuid_from_file(uuid_path: &std::path::Path) -> Result<String> {
 
     Ok(uuid)
 }
+
+/// Clean build artifacts for any OP-TEE component (TA, CA, Plugin)
+pub fn clean_project(project_path: &std::path::Path) -> Result<()> {
+    println!("Cleaning build artifacts in: {:?}", project_path);
+
+    let output = Command::new("cargo")
+        .arg("clean")
+        .current_dir(project_path)
+        .output()?;
+
+    if !output.status.success() {
+        print_output_and_bail("cargo clean", &output)?;
+    }
+
+    // Also clean the intermediate cargo-optee directory if it exists
+    let intermediate_dir = project_path.join("target").join("cargo-optee");
+    if intermediate_dir.exists() {
+        fs::remove_dir_all(&intermediate_dir)?;
+        println!("Removed intermediate directory: {:?}", intermediate_dir);
+    }
+
+    println!("Build artifacts cleaned successfully");
+    Ok(())
+}

@@ -31,19 +31,17 @@ Required environment variables:
 Options:
   --ta <arch>             TA architecture: aarch64 or arm (default: aarch64)
   --ca <arch>             CA architecture: aarch64 or arm (default: aarch64)
-  --std                   Build with std support (default: no-std)
-  --clean                 Clean build artifacts before building
+  --std                   Install with std support (default: no-std)
   --help                  Show this help message
 
 Examples:
-  # Build for aarch64 in no-std mode
+  # Install for aarch64 in no-std mode
   TA_DEV_KIT_DIR=/path/to/export-ta_arm64 OPTEE_CLIENT_EXPORT=/path/to/export ./build.sh
 
-  # Build for ARM32 in std mode
+  # Install for ARM32 in std mode
   TA_DEV_KIT_DIR=/path/to/export-ta_arm32 OPTEE_CLIENT_EXPORT=/path/to/export ./build.sh --ta arm --ca arm --std
 
-  # Clean build
-  TA_DEV_KIT_DIR=/path/to/export-ta_arm64 OPTEE_CLIENT_EXPORT=/path/to/export ./build.sh --clean
+Note: Binaries are installed to './tests/shared' directory for use by test scripts.
 EOF
 }
 
@@ -51,7 +49,6 @@ EOF
 ARCH_TA="aarch64"  # Default: aarch64
 ARCH_CA="aarch64"  # Default: aarch64
 STD=""             # Default: empty (no-std)
-CLEAN=false        # Default: no clean
 
 # Parse arguments (support both positional and flag-style)
 while [[ $# -gt 0 ]]; do
@@ -72,10 +69,6 @@ while [[ $# -gt 0 ]]; do
             STD="std"
             shift
             ;;
-        --clean)
-            CLEAN=true
-            shift
-            ;;
         *)
             # Positional arguments (backward compatibility)
             if [[ -z "${ARCH_TA_SET:-}" ]]; then
@@ -86,8 +79,6 @@ while [[ $# -gt 0 ]]; do
                 ARCH_CA_SET=1
             elif [[ "$1" == "std" ]]; then
                 STD="std"
-            elif [[ "$1" == "clean" ]]; then
-                CLEAN=true
             fi
             shift
             ;;
@@ -117,7 +108,7 @@ if [ -z "$OPTEE_CLIENT_EXPORT" ]; then
 fi
 
 echo "==========================================="
-echo "Building with configuration:"
+echo "Installing with configuration:"
 echo "  ARCH_TA: $ARCH_TA"
 echo "  ARCH_CA: $ARCH_CA"
 echo "  STD: ${STD:-no-std}"
@@ -140,32 +131,20 @@ fi
 
 echo "cargo-optee built successfully: $CARGO_OPTEE"
 
-# Clean build artifacts if requested
-if [ "$CLEAN" = true ]; then
-    echo ""
-    echo "Cleaning build artifacts..."
-    cd optee-teec
-    cargo clean
-    cd ../optee-utee
-    cargo clean
-    cd ../optee-utee-build
-    cargo clean
-    cd ..
-    
-    # Clean all example directories
-    find examples -name "target" -type d -exec rm -rf {} + 2>/dev/null || true
-    echo "Build artifacts cleaned"
-fi
-
 # Prepare std flag for cargo-optee
 STD_FLAG=""
 if [ -n "$STD" ]; then
     STD_FLAG="--std"
 fi
 
-# Step 2: Build all examples
+# Step 2: Install all examples to shared directory
 echo ""
-echo "Step 2: Building all examples..."
+echo "Step 2: Installing all examples..."
+
+# Create shared directory for binaries (used by tests)
+SHARED_DIR="$(pwd)/tests/shared"
+mkdir -p "$SHARED_DIR"
+echo "Installing binaries to: $SHARED_DIR"
 
 EXAMPLES_DIR="$(pwd)/examples"
 METADATA_JSON="$EXAMPLES_DIR/metadata.json"
@@ -274,14 +253,17 @@ for EXAMPLE_NAME in "${ALL_EXAMPLES[@]}"; do
             # Change to TA directory and run cargo-optee without --manifest-path
             cd "$TA_DIR_FULL_PATH"
             
-            # Run cargo-optee and capture both stdout and stderr
-            if $CARGO_OPTEE build ta \
+            # Run cargo-optee install and capture both stdout and stderr
+            if $CARGO_OPTEE install ta \
+                --target-dir "$SHARED_DIR" \
                 --ta-dev-kit-dir "$TA_DEV_KIT_DIR" \
                 --arch "$ARCH_TA" \
                 $TA_STD_FLAG; then
-                echo "  ✓ TA built successfully"
+                echo "  ✓ TA installed successfully"
+                # Clean up build artifacts
+                $CARGO_OPTEE clean
             else
-                echo "  ✗ ERROR: Failed to build TA: $TA_DIR"
+                echo "  ✗ ERROR: Failed to install TA: $TA_DIR"
                 FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($TA_DIR)"
                 cd "$EXAMPLES_DIR"  # Return to examples directory
                 continue
@@ -320,12 +302,15 @@ for EXAMPLE_NAME in "${ALL_EXAMPLES[@]}"; do
         # Change to CA directory and run cargo-optee without --manifest-path
         cd "$CA_DIR_FULL_PATH"
         
-        if $CARGO_OPTEE build ca \
+        if $CARGO_OPTEE install ca \
+            --target-dir "$SHARED_DIR" \
             --optee-client-export "$OPTEE_CLIENT_EXPORT" \
             --arch "$ARCH_CA"; then
-            echo "  ✓ CA built successfully"
+            echo "  ✓ CA installed successfully"
+            # Clean up build artifacts
+            $CARGO_OPTEE clean
         else
-            echo "  ✗ ERROR: Failed to build CA: $CA_DIR"
+            echo "  ✗ ERROR: Failed to install CA: $CA_DIR"
             FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($CA_DIR)"
             cd "$EXAMPLES_DIR"  # Return to examples directory
             CA_INDEX=$((CA_INDEX + 1))
@@ -363,12 +348,15 @@ for EXAMPLE_NAME in "${ALL_EXAMPLES[@]}"; do
         # Change to Plugin directory and run cargo-optee without --manifest-path
         cd "$PLUGIN_DIR_FULL_PATH"
         
-        if $CARGO_OPTEE build plugin \
+        if $CARGO_OPTEE install plugin \
+            --target-dir "$SHARED_DIR" \
             --optee-client-export "$OPTEE_CLIENT_EXPORT" \
             --arch "$ARCH_CA"; then
-            echo "  ✓ Plugin built successfully"
+            echo "  ✓ Plugin installed successfully"
+            # Clean up build artifacts
+            $CARGO_OPTEE clean
         else
-            echo "  ✗ ERROR: Failed to build Plugin: $PLUGIN_DIR"
+            echo "  ✗ ERROR: Failed to install Plugin: $PLUGIN_DIR"
             FAILED_EXAMPLES="$FAILED_EXAMPLES\n  - $EXAMPLE_NAME ($PLUGIN_DIR)"
             cd "$EXAMPLES_DIR"  # Return to examples directory
             PLUGIN_INDEX=$((PLUGIN_INDEX + 1))
@@ -387,23 +375,24 @@ done
 # Summary
 echo ""
 echo "==========================================="
-echo "           BUILD SUMMARY"
+echo "         INSTALL SUMMARY"
 echo "==========================================="
 echo ""
 echo "Mode:          ${STD:-no-std}"
 echo "Architecture:  TA=$ARCH_TA, CA=$ARCH_CA"
-echo "Examples:      $CURRENT built"
+echo "Examples:      $CURRENT installed"
+echo "Target dir:    $SHARED_DIR"
 echo ""
 
 if [ -n "$FAILED_EXAMPLES" ]; then
-    echo "❌ BUILD FAILED"
+    echo "❌ INSTALL FAILED"
     echo ""
     echo "Failed components:"
     echo -e "$FAILED_EXAMPLES"
     echo ""
     exit 1
 else
-    echo "✅ ALL EXAMPLES BUILT SUCCESSFULLY!"
+    echo "✅ ALL EXAMPLES INSTALLED SUCCESSFULLY!"
     echo ""
 fi
 

@@ -16,7 +16,6 @@
 // under the License.
 
 use anyhow::{bail, Result};
-use serde_json;
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -105,6 +104,7 @@ fn check_toolchain_exists(cross_compile_prefix: &str) -> Result<()> {
     Ok(())
 }
 
+#[derive(Clone)]
 pub struct TaBuildConfig {
     pub arch: Arch,              // Architecture
     pub std: bool,               // Enable std feature
@@ -199,7 +199,8 @@ fn setup_build_command(
     // Add no-std specific flags to avoid the linking error of _Unwind_Resume
     if !config.std {
         cmd.arg("-Z").arg("build-std=core,alloc");
-        cmd.arg("-Z").arg("build-std-features=panic_immediate_abort");
+        cmd.arg("-Z")
+            .arg("build-std-features=panic_immediate_abort");
     }
 
     // Set RUSTFLAGS - preserve existing ones and add panic=abort
@@ -230,8 +231,8 @@ fn setup_build_command(
     Ok((cmd, temp_dir))
 }
 
-// Main function to build the TA
-pub fn build_ta(config: TaBuildConfig) -> Result<()> {
+// Main function to build the TA, optionally installing to a target directory
+pub fn build_ta(config: TaBuildConfig, install_dir: Option<&Path>) -> Result<()> {
     // Check if required cross-compile toolchain is available
     let (_, cross_compile_prefix) = get_target_and_cross_compile(config.arch, config.std)?;
     check_toolchain_exists(&cross_compile_prefix)?;
@@ -260,6 +261,29 @@ pub fn build_ta(config: TaBuildConfig) -> Result<()> {
 
     // Step 4: Sign the TA
     sign_ta(&config, &stripped_path, &target_dir)?;
+
+    // Step 5: Install if requested
+    if let Some(install_dir) = install_dir {
+        // Check if install directory exists
+        if !install_dir.exists() {
+            bail!("Install directory does not exist: {:?}", install_dir);
+        }
+
+        let uuid = read_uuid_from_file(&config.uuid_path)?;
+        let ta_file = target_dir.join(format!("{}.ta", uuid));
+
+        if !ta_file.exists() {
+            bail!("Signed TA file not found at {:?}", ta_file);
+        }
+
+        let dest_path = install_dir.join(format!("{}.ta", uuid));
+        fs::copy(&ta_file, &dest_path)?;
+
+        println!(
+            "TA installed to: {:?}",
+            dest_path.canonicalize().unwrap_or(dest_path)
+        );
+    }
 
     println!("TA build successfully!");
 
@@ -347,7 +371,7 @@ fn build_binary(config: &TaBuildConfig, manifest_path: &Path) -> Result<()> {
     let build_output = build_cmd.output();
 
     // Restore original directory before checking results
-    std::env::set_current_dir(&original_dir)?;
+    std::env::set_current_dir(original_dir)?;
 
     let build_output = build_output?;
     if !build_output.status.success() {
@@ -435,7 +459,7 @@ fn strip_binary(config: &TaBuildConfig, manifest_path: &Path) -> Result<(PathBuf
 }
 
 fn sign_ta(config: &TaBuildConfig, stripped_path: &Path, target_dir: &Path) -> Result<()> {
-    println!("Signing TA...");
+    println!("Signing TA with signing key {:?}...", config.signing_key);
 
     // Read UUID from specified file
     let uuid = read_uuid_from_file(&config.uuid_path)?;

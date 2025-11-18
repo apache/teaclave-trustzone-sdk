@@ -24,6 +24,7 @@ use crate::common::{
     print_output_and_bail, read_uuid_from_file, Arch, ChangeDirectoryGuard,
 };
 
+#[derive(Clone)]
 pub struct CaBuildConfig {
     pub arch: Arch,                   // Architecture
     pub optee_client_export: PathBuf, // Path to OP-TEE client export
@@ -37,8 +38,8 @@ pub struct CaBuildConfig {
     pub features: Option<String>,   // Additional features to enable
 }
 
-// Main function to build the CA
-pub fn build_ca(config: CaBuildConfig) -> Result<()> {
+// Main function to build the CA, optionally installing to a target directory
+pub fn build_ca(config: CaBuildConfig, install_dir: Option<&std::path::Path>) -> Result<()> {
     // Change to the CA directory
     let _guard = ChangeDirectoryGuard::new(&config.path)?;
 
@@ -61,13 +62,41 @@ pub fn build_ca(config: CaBuildConfig) -> Result<()> {
     let final_binary = post_build(&config)?;
 
     // Print the final binary path with descriptive prompt
-    let absolute_final_binary = final_binary.canonicalize().unwrap_or(final_binary);
+    let absolute_final_binary = final_binary
+        .canonicalize()
+        .unwrap_or_else(|_| final_binary.clone());
     if config.plugin {
         println!("Plugin copied to: {}", absolute_final_binary.display());
     } else {
         println!(
             "CA binary stripped and saved to: {}",
             absolute_final_binary.display()
+        );
+    }
+
+    // Step 4: Install if requested
+    if let Some(install_dir) = install_dir {
+        use std::fs;
+
+        // Check if install directory exists
+        if !install_dir.exists() {
+            bail!("Install directory does not exist: {:?}", install_dir);
+        }
+
+        // Get package name from the final binary path
+        let package_name = final_binary
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or_else(|| anyhow::anyhow!("Could not get binary name"))?;
+
+        // Copy binary to install directory
+        let dest_path = install_dir.join(package_name);
+        fs::copy(&final_binary, &dest_path)?;
+
+        println!(
+            "{} installed to: {:?}",
+            component_type,
+            dest_path.canonicalize().unwrap_or(dest_path)
         );
     }
 
