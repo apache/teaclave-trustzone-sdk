@@ -18,6 +18,10 @@
 use optee_utee_build::{Error, RustEdition, TaConfig};
 
 fn main() -> Result<(), Error> {
+    // Enforce that the std feature must be enabled for this TA
+    #[cfg(not(feature = "std"))]
+    compile_error!("This TA requires the 'std' feature to be enabled. Build with --features std");
+
     let ta_config = TaConfig::new_default_with_cargo_env(proto::UUID)?
         .ta_data_size(18 * 1024 * 1024)
         .ta_stack_size(2 * 1024 * 1024);
