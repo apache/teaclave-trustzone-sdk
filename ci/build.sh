@@ -30,25 +30,31 @@ Required environment variables:
 
 Options:
   --ta <arch>             TA architecture: aarch64 or arm (default: aarch64)
-  --ca <arch>             CA architecture: aarch64 or arm (default: aarch64)
+  --host <arch>           Host architecture for CA and plugins: aarch64 or arm (default: aarch64)
   --std                   Install with std support (default: no-std)
+  --ta-install-dir <path> TA installation directory (default: ./tests/shared)
+  --ca-install-dir <path> CA installation directory (default: ./tests/shared)
+  --plugin-install-dir <path> Plugin installation directory (default: ./tests/shared)
   --help                  Show this help message
 
 Examples:
   # Install for aarch64 in no-std mode
   TA_DEV_KIT_DIR=/path/to/export-ta_arm64 OPTEE_CLIENT_EXPORT=/path/to/export ./build.sh
 
-  # Install for ARM32 in std mode
-  TA_DEV_KIT_DIR=/path/to/export-ta_arm32 OPTEE_CLIENT_EXPORT=/path/to/export ./build.sh --ta arm --ca arm --std
+  # Install for ARM32 in std mode with custom directories
+  TA_DEV_KIT_DIR=/path/to/export-ta_arm32 OPTEE_CLIENT_EXPORT=/path/to/export ./build.sh --ta arm --host arm --std --ta-install-dir /target/lib/optee_armtz --ca-install-dir /target/usr/bin
 
-Note: Binaries are installed to './tests/shared' directory for use by test scripts.
+Note: Binaries are installed to './tests/shared' directory by default.
 EOF
 }
 
 # Parse command line arguments
 ARCH_TA="aarch64"  # Default: aarch64
-ARCH_CA="aarch64"  # Default: aarch64
+ARCH_HOST="aarch64"  # Default: aarch64
 STD=""             # Default: empty (no-std)
+TA_INSTALL_DIR=""  # Default: will be set to ./tests/shared if not specified
+CA_INSTALL_DIR=""  # Default: will be set to ./tests/shared if not specified
+PLUGIN_INSTALL_DIR=""  # Default: will be set to ./tests/shared if not specified
 
 # Parse arguments (support both positional and flag-style)
 while [[ $# -gt 0 ]]; do
@@ -61,22 +67,34 @@ while [[ $# -gt 0 ]]; do
             ARCH_TA="$2"
             shift 2
             ;;
-        --ca)
-            ARCH_CA="$2"
+        --host)
+            ARCH_HOST="$2"
             shift 2
             ;;
         --std)
             STD="std"
             shift
             ;;
+        --ta-install-dir)
+            TA_INSTALL_DIR="$2"
+            shift 2
+            ;;
+        --ca-install-dir)
+            CA_INSTALL_DIR="$2"
+            shift 2
+            ;;
+        --plugin-install-dir)
+            PLUGIN_INSTALL_DIR="$2"
+            shift 2
+            ;;
         *)
             # Positional arguments (backward compatibility)
             if [[ -z "${ARCH_TA_SET:-}" ]]; then
                 ARCH_TA="$1"
                 ARCH_TA_SET=1
-            elif [[ -z "${ARCH_CA_SET:-}" ]]; then
-                ARCH_CA="$1"
-                ARCH_CA_SET=1
+            elif [[ -z "${ARCH_HOST_SET:-}" ]]; then
+                ARCH_HOST="$1"
+                ARCH_HOST_SET=1
             elif [[ "$1" == "std" ]]; then
                 STD="std"
             fi
@@ -91,8 +109,8 @@ if [[ "$ARCH_TA" != "aarch64" && "$ARCH_TA" != "arm" ]]; then
     exit 1
 fi
 
-if [[ "$ARCH_CA" != "aarch64" && "$ARCH_CA" != "arm" ]]; then
-    echo "Error: ARCH_CA must be 'aarch64' or 'arm'"
+if [[ "$ARCH_HOST" != "aarch64" && "$ARCH_HOST" != "arm" ]]; then
+    echo "Error: ARCH_HOST must be 'aarch64' or 'arm'"
     exit 1
 fi
 
@@ -110,7 +128,7 @@ fi
 echo "==========================================="
 echo "Installing with configuration:"
 echo "  ARCH_TA: $ARCH_TA"
-echo "  ARCH_CA: $ARCH_CA"
+echo "  ARCH_HOST: $ARCH_HOST"
 echo "  STD: ${STD:-no-std}"
 echo "  TA_DEV_KIT_DIR: $TA_DEV_KIT_DIR"
 echo "  OPTEE_CLIENT_EXPORT: $OPTEE_CLIENT_EXPORT"
@@ -141,10 +159,29 @@ fi
 echo ""
 echo "Step 2: Installing all examples..."
 
-# Create shared directory for binaries (used by tests)
-SHARED_DIR="$(pwd)/tests/shared"
-mkdir -p "$SHARED_DIR"
-echo "Installing binaries to: $SHARED_DIR"
+# Set up installation directories
+# Each directory defaults to ./tests/shared if not specified
+if [ -z "$TA_INSTALL_DIR" ]; then
+    TA_INSTALL_DIR="$(pwd)/tests/shared"
+fi
+
+if [ -z "$CA_INSTALL_DIR" ]; then
+    CA_INSTALL_DIR="$(pwd)/tests/shared"
+fi
+
+if [ -z "$PLUGIN_INSTALL_DIR" ]; then
+    PLUGIN_INSTALL_DIR="$(pwd)/tests/shared"
+fi
+
+# Create all directories
+mkdir -p "$TA_INSTALL_DIR"
+mkdir -p "$CA_INSTALL_DIR"
+mkdir -p "$PLUGIN_INSTALL_DIR"
+
+echo "Installing binaries to:"
+echo "  TAs: $TA_INSTALL_DIR"
+echo "  CAs: $CA_INSTALL_DIR"
+echo "  Plugins: $PLUGIN_INSTALL_DIR"
 
 EXAMPLES_DIR="$(pwd)/examples"
 METADATA_JSON="$EXAMPLES_DIR/metadata.json"
@@ -255,7 +292,7 @@ for EXAMPLE_NAME in "${ALL_EXAMPLES[@]}"; do
             
             # Run cargo-optee install and capture both stdout and stderr
             if $CARGO_OPTEE install ta \
-                --target-dir "$SHARED_DIR" \
+                --target-dir "$TA_INSTALL_DIR" \
                 --ta-dev-kit-dir "$TA_DEV_KIT_DIR" \
                 --arch "$ARCH_TA" \
                 $TA_STD_FLAG; then
@@ -303,9 +340,9 @@ for EXAMPLE_NAME in "${ALL_EXAMPLES[@]}"; do
         cd "$CA_DIR_FULL_PATH"
         
         if $CARGO_OPTEE install ca \
-            --target-dir "$SHARED_DIR" \
+            --target-dir "$CA_INSTALL_DIR" \
             --optee-client-export "$OPTEE_CLIENT_EXPORT" \
-            --arch "$ARCH_CA"; then
+            --arch "$ARCH_HOST"; then
             echo "  ✓ CA installed successfully"
             # Clean up build artifacts
             $CARGO_OPTEE clean
@@ -349,9 +386,9 @@ for EXAMPLE_NAME in "${ALL_EXAMPLES[@]}"; do
         cd "$PLUGIN_DIR_FULL_PATH"
         
         if $CARGO_OPTEE install plugin \
-            --target-dir "$SHARED_DIR" \
+            --target-dir "$PLUGIN_INSTALL_DIR" \
             --optee-client-export "$OPTEE_CLIENT_EXPORT" \
-            --arch "$ARCH_CA"; then
+            --arch "$ARCH_HOST"; then
             echo "  ✓ Plugin installed successfully"
             # Clean up build artifacts
             $CARGO_OPTEE clean

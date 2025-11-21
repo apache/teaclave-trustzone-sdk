@@ -95,7 +95,7 @@ jobs:
           switch_config --ta no-std/arm32 && \
           switch_config --host arm32 && \
           source ${TEACLAVE_TOOLCHAIN_BASE}/environment && \
-          ./ci/build.sh --ta arm --ca arm
+          ./ci/build.sh --ta arm --host arm
 
   # Test cargo-optee build std examples - aarch64
   test-cargo-optee-std-aarch64:
@@ -145,7 +145,7 @@ jobs:
           switch_config --ta std/arm32 && \
           switch_config --host arm32 && \
           source ${TEACLAVE_TOOLCHAIN_BASE}/environment && \
-          ./ci/build.sh --ta arm --ca arm --std
+          ./ci/build.sh --ta arm --host arm --std
 
   license:
     runs-on: ubuntu-latest
