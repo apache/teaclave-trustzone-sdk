@@ -54,7 +54,7 @@ fn resolve_path_relative_to_project(path: &PathBuf, project_path: &std::path::Pa
 /// Execute TA build or install (shared logic)
 fn execute_ta_command(
     common: CommonBuildArgs,
-    std: bool,
+    std: Option<bool>,
     ta_dev_kit_dir: Option<PathBuf>,
     signing_key: Option<PathBuf>,
     uuid_path: Option<PathBuf>,
@@ -62,10 +62,20 @@ fn execute_ta_command(
 ) -> anyhow::Result<()> {
     // Resolve project path from manifest or current directory
     let project_path = if let Some(manifest) = common.manifest_path {
-        manifest
+        let parent = manifest
             .parent()
-            .ok_or_else(|| anyhow::anyhow!("Invalid manifest path"))?
-            .to_path_buf()
+            .ok_or_else(|| anyhow::anyhow!("Invalid manifest path"))?;
+
+        // Normalize: if parent is empty (e.g., manifest is just "Cargo.toml"),
+        // use current directory instead
+        if parent.as_os_str().is_empty() {
+            std::env::current_dir()?
+        } else {
+            // Canonicalize must succeed, otherwise treat as invalid manifest path
+            parent
+                .canonicalize()
+                .map_err(|_| anyhow::anyhow!("Invalid manifest path"))?
+        }
     } else {
         std::env::current_dir()?
     };
@@ -76,7 +86,7 @@ fn execute_ta_command(
         "ta", // Component type for TA
         common.arch,
         Some(common.debug),
-        Some(std),
+        std, // None means read from config, Some(true/false) means CLI override
         ta_dev_kit_dir,
         None, // optee_client_export not needed for TA
         signing_key,
@@ -147,10 +157,20 @@ fn execute_ca_command(
 ) -> anyhow::Result<()> {
     // Resolve project path from manifest or current directory
     let project_path = if let Some(manifest) = common.manifest_path {
-        manifest
+        let parent = manifest
             .parent()
-            .ok_or_else(|| anyhow::anyhow!("Invalid manifest path"))?
-            .to_path_buf()
+            .ok_or_else(|| anyhow::anyhow!("Invalid manifest path"))?;
+
+        // Normalize: if parent is empty (e.g., manifest is just "Cargo.toml"),
+        // use current directory instead
+        if parent.as_os_str().is_empty() {
+            std::env::current_dir()?
+        } else {
+            // Canonicalize must succeed, otherwise treat as invalid manifest path
+            parent
+                .canonicalize()
+                .map_err(|_| anyhow::anyhow!("Invalid manifest path"))?
+        }
     } else {
         std::env::current_dir()?
     };
@@ -329,9 +349,15 @@ struct TABuildArgs {
     #[command(flatten)]
     common: CommonBuildArgs,
 
-    /// Enable std feature for the TA (default: false)
-    #[arg(long = "std")]
+    /// Enable std feature for the TA
+    /// If neither --std nor --no-std is specified, the value will be read from Cargo.toml metadata
+    #[arg(long = "std", action = clap::ArgAction::SetTrue, conflicts_with = "no_std")]
     std: bool,
+
+    /// Disable std feature for the TA (use no-std mode)
+    /// If neither --std nor --no-std is specified, the value will be read from Cargo.toml metadata
+    #[arg(long = "no-std", action = clap::ArgAction::SetTrue, conflicts_with = "std")]
+    no_std: bool,
 
     /// OP-TEE TA development kit export directory
     #[arg(long = "ta-dev-kit-dir")]
@@ -448,14 +474,24 @@ fn main() {
 fn execute_command(cmd: Command) -> anyhow::Result<()> {
     match cmd {
         Command::Build(build_cmd) => match build_cmd {
-            BuildCommand::TA { build_cmd } => execute_ta_command(
-                build_cmd.common,
-                build_cmd.std,
-                build_cmd.ta_dev_kit_dir,
-                build_cmd.signing_key,
-                build_cmd.uuid_path,
-                None,
-            ),
+            BuildCommand::TA { build_cmd } => {
+                // Convert bool flags to Option<bool>: --std -> Some(true), --no-std -> Some(false), neither -> None
+                let std = if build_cmd.std {
+                    Some(true)
+                } else if build_cmd.no_std {
+                    Some(false)
+                } else {
+                    None
+                };
+                execute_ta_command(
+                    build_cmd.common,
+                    std,
+                    build_cmd.ta_dev_kit_dir,
+                    build_cmd.signing_key,
+                    build_cmd.uuid_path,
+                    None,
+                )
+            }
             BuildCommand::CA { build_cmd } => execute_ca_command(
                 build_cmd.common,
                 build_cmd.optee_client_export,
@@ -475,14 +511,24 @@ fn execute_command(cmd: Command) -> anyhow::Result<()> {
             InstallCommand::TA {
                 target_dir,
                 build_cmd,
-            } => execute_ta_command(
-                build_cmd.common,
-                build_cmd.std,
-                build_cmd.ta_dev_kit_dir,
-                build_cmd.signing_key,
-                build_cmd.uuid_path,
-                Some(&target_dir),
-            ),
+            } => {
+                // Convert bool flags to Option<bool>: --std -> Some(true), --no-std -> Some(false), neither -> None
+                let std = if build_cmd.std {
+                    Some(true)
+                } else if build_cmd.no_std {
+                    Some(false)
+                } else {
+                    None
+                };
+                execute_ta_command(
+                    build_cmd.common,
+                    std,
+                    build_cmd.ta_dev_kit_dir,
+                    build_cmd.signing_key,
+                    build_cmd.uuid_path,
+                    Some(&target_dir),
+                )
+            }
             InstallCommand::CA {
                 target_dir,
                 build_cmd,

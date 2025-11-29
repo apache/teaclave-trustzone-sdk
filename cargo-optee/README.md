@@ -88,10 +88,7 @@ debug = false                       # Debug build: true | false (optional, defau
 std = false                         # Use std library: true | false (optional, default: false)
 uuid-path = "../uuid.txt"           # Path to UUID file (optional, default: "../uuid.txt")
 # Architecture-specific configuration (omitted architectures default to null/unsupported)
-ta-dev-kit-dir = { 
-    aarch64 = "/opt/optee/export-ta_arm64",
-    arm = "/opt/optee/export-ta_arm32" 
-}
+ta-dev-kit-dir = { aarch64 = "/opt/optee/export-ta_arm64", arm = "/opt/optee/export-ta_arm32" }
 signing-key = "/path/to/key.pem"    # Path to signing key (optional, defaults to ta-dev-kit/keys/default_ta.pem)
 ```
 
@@ -112,9 +109,8 @@ Configure CA builds in your `Cargo.toml`:
 arch = "aarch64"                    # Target architecture: "aarch64" | "arm" (optional, default: "aarch64")
 debug = false                       # Debug build: true | false (optional, default: false)
 # Architecture-specific configuration
-optee-client-export = {
-    aarch64 = "/opt/optee/export-client_arm64" // if your CA only supports aarch64, you can omit arm
-}
+# if your CA only supports aarch64, you can omit arm
+optee-client-export = { aarch64 = "/opt/optee/export-client_arm64" } 
 ```
 
 **Allowed entries:**
@@ -132,10 +128,7 @@ arch = "aarch64"                    # Target architecture: "aarch64" | "arm" (op
 debug = false                       # Debug build: true | false (optional, default: false)
 uuid-path = "../plugin_uuid.txt"    # Path to UUID file (required for plugins)
 # Architecture-specific configuration
-optee-client-export = {
-    aarch64 = "/opt/optee/export-client_arm64",
-    arm = "/opt/optee/export-client_arm32"
-}
+optee-client-export = { aarch64 = "/opt/optee/export-client_arm64", arm = "/opt/optee/export-client_arm32" }
 ```
 
 **Allowed entries:**
@@ -179,6 +172,7 @@ cargo-optee build ta \
   [--manifest-path <PATH>] \
   [--arch aarch64|arm] \
   [--std] \
+  [--no-std] \
   [--signing-key <PATH>] \
   [--uuid-path <PATH>] \
   [--debug]
@@ -193,6 +187,7 @@ cargo-optee build ta \
   - `aarch64`: ARM 64-bit architecture
   - `arm`: ARM 32-bit architecture
 - `--std`: Build with std support (uses xargo and custom target)
+- `--no-std`: Build without std support (uses cargo, mutually exclusive with --std)
 - `--signing-key <PATH>`: Path to signing key (default: `<ta-dev-kit-dir>/keys/default_ta.pem`)
 - `--uuid-path <PATH>`: Path to UUID file (default: `../uuid.txt`)
 - `--debug`: Build in debug mode (default: release mode)
@@ -211,6 +206,12 @@ cargo-optee build ta \
   --ta-dev-kit-dir /opt/optee/export-ta_arm32 \
   --manifest-path ./ta/Cargo.toml \
   --arch arm
+  --no-std
+
+# Build TA with Cargo.toml metadata configuration
+# Note: ta-dev-kit-dir must be configured in Cargo.toml for this work
+cargo-optee build ta \
+  --manifest-path ./ta/Cargo.toml
 ```
 
 **Output:**

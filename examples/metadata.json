@@ -1,14 +1,22 @@
 {
   "examples": {
-    "message_passing_interface-rs": {
-      "category": "common",
-      "tas": ["message_passing_interface-rs/ta"],
-      "cas": ["message_passing_interface-rs/host"]
+    "build_with_optee_utee_sys-rs": {
+      "category": "no-std-only",
+      "tas": ["build_with_optee_utee_sys-rs/ta"],
+      "cas": ["build_with_optee_utee_sys-rs/host"]
     },
-    "serde-rs": {
-      "category": "common",
-      "tas": ["serde-rs/ta"],
-      "cas": ["serde-rs/host"]
+    "mnist-rs": {
+      "category": "no-std-only",
+      "tas": [
+        "mnist-rs/ta/inference",
+        "mnist-rs/ta/train"
+      ],
+      "cas": ["mnist-rs/host"]
+    },
+    "secure_db_abstraction-rs": {
+      "category": "std-only",
+      "tas": ["secure_db_abstraction-rs/ta"],
+      "cas": ["secure_db_abstraction-rs/host"]
     },
     "tls_client-rs": {
       "category": "std-only",
@@ -19,24 +27,6 @@
       "category": "std-only",
       "tas": ["tls_server-rs/ta"],
       "cas": ["tls_server-rs/host"]
-    },
-    "secure_db_abstraction-rs": {
-      "category": "std-only",
-      "tas": ["secure_db_abstraction-rs/ta"],
-      "cas": ["secure_db_abstraction-rs/host"]
-    },
-    "mnist-rs": {
-      "category": "no-std-only",
-      "tas": [
-        "mnist-rs/ta/inference",
-        "mnist-rs/ta/train"
-      ],
-      "cas": ["mnist-rs/host"]
-    },
-    "build_with_optee_utee_sys-rs": {
-      "category": "no-std-only",
-      "tas": ["build_with_optee_utee_sys-rs/ta"],
-      "cas": ["build_with_optee_utee_sys-rs/host"]
     },
     "acipher-rs": {
       "category": "common",
@@ -57,6 +47,11 @@
       "category": "common",
       "tas": ["big_int-rs/ta"],
       "cas": ["big_int-rs/host"]
+    },
+    "client_pool-rs": {
+      "category": "common",
+      "tas": ["client_pool-rs/ta"],
+      "cas": ["client_pool-rs/host"]
     },
     "diffie_hellman-rs": {
       "category": "common",
@@ -88,6 +83,11 @@
       "tas": ["inter_ta-rs/ta"],
       "cas": ["inter_ta-rs/host"]
     },
+    "message_passing_interface-rs": {
+      "category": "common",
+      "tas": ["message_passing_interface-rs/ta"],
+      "cas": ["message_passing_interface-rs/host"]
+    },
     "property-rs": {
       "category": "common",
       "tas": ["property-rs/ta"],
@@ -102,6 +102,16 @@
       "category": "common",
       "tas": ["secure_storage-rs/ta"],
       "cas": ["secure_storage-rs/host"]
+    },
+    "serde-rs": {
+      "category": "common",
+      "tas": ["serde-rs/ta"],
+      "cas": ["serde-rs/host"]
+    },
+    "signature_verification-rs": {
+      "category": "common",
+      "tas": ["signature_verification-rs/ta"],
+      "cas": ["signature_verification-rs/host"]
     },
     "supp_plugin-rs": {
       "category": "common",
@@ -123,16 +133,6 @@
       "category": "common",
       "tas": ["udp_socket-rs/ta"],
       "cas": ["udp_socket-rs/host"]
-    },
-    "signature_verification-rs": {
-      "category": "common",
-      "tas": ["signature_verification-rs/ta"],
-      "cas": ["signature_verification-rs/host"]
-    },
-    "client_pool-rs": {
-      "category": "common",
-      "tas": ["client_pool-rs/ta"],
-      "cas": ["client_pool-rs/host"]
     }
   }
 }
