@@ -16,28 +16,27 @@
 # under the License.
 
 [package]
-name = "train"
-description = "An training TA of MNIST model."
-publish = false
-version.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
-edition.workspace = true
+name = "cargo-optee"
+version = "0.1.0"
+authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
+license = "Apache-2.0"
+repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
+description = "A cargo subcommand for building OP-TEE Trusted Applications"
+edition = "2021"
 
-[package.metadata.optee.ta]
-uuid-path = "uuid.txt"
+[[bin]]
+name = "cargo-optee"
+path = "src/main.rs"
 
 [dependencies]
-common = { path = "../common" }
-proto = { workspace = true }
-optee-utee-sys = { workspace = true }
-optee-utee = { workspace = true }
-burn = { workspace = true }
-spin = { workspace = true }
-serde_json = { workspace = true }
-bytemuck = { workspace = true, features = ["min_const_generics"] }
-
-[build-dependencies]
-proto = { workspace = true }
-optee-utee-build = { workspace = true }
+clap = { version = "4.5", features = ["derive"] }
+anyhow = "1.0"
+cargo_metadata = "0.18"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+indexmap = "=2.11.4"
+env_logger = "0.11"
+log = "0.4"
+tempfile = "3.8"
+dirs = "5.0"

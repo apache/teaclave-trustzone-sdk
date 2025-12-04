@@ -24,6 +24,11 @@ repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
 description = "An example of Rust OP-TEE TrustZone SDK."
 edition = "2018"
 
+[package.metadata.optee.ca]
+arch = "aarch64"
+debug = false
+optee-client-export = { aarch64 = "../../../optee/optee_client/export_arm64", arm = "../../../optee/optee_client/export_arm32" }
+
 [dependencies]
 libc = "0.2.48"
 proto = { path = "../proto" }
