@@ -16,7 +16,20 @@
 // under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(not(feature = "std"), feature(error_in_core))]
+
+#[allow(unused_macros)]
+/// Cargo will complain if your source file contains `#![features = ..]` even
+/// whe the current cfg wouldn't enable the attribute. To get around this, we
+/// `include!()` a source file with the offending attr *only* present when the compiler
+/// is too old.
+macro_rules! enable_feat {
+    ($feature:literal) => {
+        include!(concat!(env!("OUT_DIR"), "/", $feature, ".rs"));
+    }
+}
+
+#[cfg(not(feature = "std"))]
+enable_feat!("error_in_core");
 
 // Requires `alloc`.
 #[macro_use]

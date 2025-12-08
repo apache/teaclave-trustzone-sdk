@@ -42,6 +42,9 @@ serde_json = { version = "1.0.133" }
 optee-utee-sys = { version = "0.7.0", path = "optee-utee-sys", features = ["no_link"] }
 optee-utee-mock = { version = "0.7.0", path = "optee-utee-mock" }
 
+[build-dependencies]
+version_check = "0.9.5"
+
 [features]
 default = []
 std = ["optee-utee-sys/std", "optee-utee-macros/std"]
