@@ -54,7 +54,7 @@ fn enumerate_vars_for_target() -> Vec<String> {
     };
 
     suffixes
-        .into_iter()
+        .iter()
         .map(|s| format!("{prefix}{s}"))
         .collect()
 }
