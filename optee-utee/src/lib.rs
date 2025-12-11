@@ -16,7 +16,13 @@
 // under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(not(feature = "std"), feature(error_in_core))]
+#![cfg_attr(all(
+    not(feature = "std"),
+    // A temporary workaround to let optee-utee build on stable Rust. We should
+    // remove it once we upgrade to a newer toolchain, though that’s currently
+    // blocked by our patched STD.
+    not(optee_utee_rustc_has_stable_error_in_core),
+), feature(error_in_core))]
 
 // Requires `alloc`.
 #[macro_use]
