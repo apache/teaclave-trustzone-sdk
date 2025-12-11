@@ -18,6 +18,47 @@
 use std::env::{self, VarError};
 use std::path::PathBuf;
 
+const ENV_OPTEE_CLIENT_EXPORT: &str = "OPTEE_CLIENT_EXPORT";
+const AARCH64: &str = "aarch64-unknown-linux-gnu";
+const X86_64: &str = "x86_64-unknown-linux-gnu";
+
+#[derive(Debug, Clone, Copy)]
+enum Target {
+    Aarch64,
+    X86_64,
+}
+
+impl Target {
+    fn get() -> Result<Target, String> {
+        let var = env::var("TARGET").expect("infallible");
+        match var.as_str() {
+            AARCH64 => Ok(Target::Aarch64),
+            X86_64 => Ok(Target::X86_64),
+            _ => Err(var),
+        }
+    }
+}
+
+/// Lists out env vars to check in order of priority
+fn enumerate_vars_for_target() -> Vec<String> {
+    let prefix = ENV_OPTEE_CLIENT_EXPORT.to_owned();
+    let Ok(target) = Target::get() else {
+        // Unknown targets should not try using the suffixed variants.
+        return vec![prefix];
+    };
+    let aarch64 = format!("_{AARCH64}");
+    let x86 = format!("_{X86_64}");
+    let suffixes = match target {
+        Target::Aarch64 => &[&aarch64, &aarch64.replace("-", "_"), ""],
+        Target::X86_64 => &[&x86, &x86.replace("-", "_"), ""],
+    };
+
+    suffixes
+        .iter()
+        .map(|s| format!("{prefix}{s}"))
+        .collect()
+}
+
 fn main() -> Result<(), VarError> {
     if !is_feature_enable("no_link")? {
         link();
@@ -38,15 +79,33 @@ fn is_feature_enable(feature: &str) -> Result<bool, VarError> {
 }
 
 fn link() {
-    const ENV_OPTEE_CLIENT_EXPORT: &str = "OPTEE_CLIENT_EXPORT";
-    println!("cargo:rerun-if-env-changed={}", ENV_OPTEE_CLIENT_EXPORT);
+    let vars_to_check = enumerate_vars_for_target();
+    for var in vars_to_check.iter() {
+        println!("cargo:rerun-if-env-changed={var}");
+    }
 
-    let optee_client_dir =
-        env::var(ENV_OPTEE_CLIENT_EXPORT).expect("OPTEE_CLIENT_EXPORT is not set");
+    let mut selected_env_var = None;
+    for var in vars_to_check {
+        match env::var(&var) {
+            Ok(value) => {
+                if value.trim().is_empty() {
+                    continue;
+                }
+                selected_env_var = Some((var, value));
+                break;
+            }
+            Err(VarError::NotUnicode(_)) => panic!("could not parse {} as unicode", var),
+            Err(VarError::NotPresent) => continue,
+        }
+    }
+    let (selected_env_var, optee_client_dir) = selected_env_var
+        .expect("Neither OPTEE_CLIENT_EXPORT nor a target specific variant were set");
+
     let library_path = PathBuf::from(optee_client_dir).join("usr/lib");
     if !library_path.exists() {
         panic!(
-            "OPTEE_CLIENT_EXPORT usr/lib path {} does not exist",
+            "{} usr/lib path {} does not exist",
+            selected_env_var,
             library_path.display()
         );
     }
