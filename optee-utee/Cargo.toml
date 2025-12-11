@@ -50,3 +50,6 @@ no_panic_handler = []
 [workspace]
 resolver = "2"
 members = ['systest']
+
+[build-dependencies]
+rustc_version = "0.4.1"
