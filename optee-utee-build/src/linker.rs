@@ -126,10 +126,11 @@ impl Linker {
         out_dir: PathBuf,
         ta_dev_kit_dir: PathBuf,
     ) -> Result<(), Error> {
-        const ENV_TARGET_TA: &str = "TARGET_TA";
-        println!("cargo:rerun-if-env-changed={}", ENV_TARGET_TA);
+        // cargo passes TARGET as env to the build scripts
+        const ENV_TARGET: &str = "TARGET";
+        println!("cargo:rerun-if-env-changed={}", ENV_TARGET);
         let mut aarch64_flag = true;
-        match env::var(ENV_TARGET_TA) {
+        match env::var(ENV_TARGET) {
             Ok(ref v) if v == "arm-unknown-linux-gnueabihf" || v == "arm-unknown-optee" => {
                 match self.linker_type {
                     LinkerType::Cc => println!("cargo:rustc-link-arg=-Wl,--no-warn-mismatch"),

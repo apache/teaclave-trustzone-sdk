@@ -1,0 +1,138 @@
+{
+  "examples": {
+    "build_with_optee_utee_sys-rs": {
+      "category": "no-std-only",
+      "tas": ["build_with_optee_utee_sys-rs/ta"],
+      "cas": ["build_with_optee_utee_sys-rs/host"]
+    },
+    "mnist-rs": {
+      "category": "no-std-only",
+      "tas": [
+        "mnist-rs/ta/inference",
+        "mnist-rs/ta/train"
+      ],
+      "cas": ["mnist-rs/host"]
+    },
+    "secure_db_abstraction-rs": {
+      "category": "std-only",
+      "tas": ["secure_db_abstraction-rs/ta"],
+      "cas": ["secure_db_abstraction-rs/host"]
+    },
+    "tls_client-rs": {
+      "category": "std-only",
+      "tas": ["tls_client-rs/ta"],
+      "cas": ["tls_client-rs/host"]
+    },
+    "tls_server-rs": {
+      "category": "std-only",
+      "tas": ["tls_server-rs/ta"],
+      "cas": ["tls_server-rs/host"]
+    },
+    "acipher-rs": {
+      "category": "common",
+      "tas": ["acipher-rs/ta"],
+      "cas": ["acipher-rs/host"]
+    },
+    "aes-rs": {
+      "category": "common",
+      "tas": ["aes-rs/ta"],
+      "cas": ["aes-rs/host"]
+    },
+    "authentication-rs": {
+      "category": "common",
+      "tas": ["authentication-rs/ta"],
+      "cas": ["authentication-rs/host"]
+    },
+    "big_int-rs": {
+      "category": "common",
+      "tas": ["big_int-rs/ta"],
+      "cas": ["big_int-rs/host"]
+    },
+    "client_pool-rs": {
+      "category": "common",
+      "tas": ["client_pool-rs/ta"],
+      "cas": ["client_pool-rs/host"]
+    },
+    "diffie_hellman-rs": {
+      "category": "common",
+      "tas": ["diffie_hellman-rs/ta"],
+      "cas": ["diffie_hellman-rs/host"]
+    },
+    "digest-rs": {
+      "category": "common",
+      "tas": ["digest-rs/ta"],
+      "cas": ["digest-rs/host"]
+    },
+    "error_handling-rs": {
+      "category": "common",
+      "tas": ["error_handling-rs/ta"],
+      "cas": ["error_handling-rs/host"]
+    },
+    "hello_world-rs": {
+      "category": "common",
+      "tas": ["hello_world-rs/ta"],
+      "cas": ["hello_world-rs/host"]
+    },
+    "hotp-rs": {
+      "category": "common",
+      "tas": ["hotp-rs/ta"],
+      "cas": ["hotp-rs/host"]
+    },
+    "inter_ta-rs": {
+      "category": "common",
+      "tas": ["inter_ta-rs/ta"],
+      "cas": ["inter_ta-rs/host"]
+    },
+    "message_passing_interface-rs": {
+      "category": "common",
+      "tas": ["message_passing_interface-rs/ta"],
+      "cas": ["message_passing_interface-rs/host"]
+    },
+    "property-rs": {
+      "category": "common",
+      "tas": ["property-rs/ta"],
+      "cas": ["property-rs/host"]
+    },
+    "random-rs": {
+      "category": "common",
+      "tas": ["random-rs/ta"],
+      "cas": ["random-rs/host"]
+    },
+    "secure_storage-rs": {
+      "category": "common",
+      "tas": ["secure_storage-rs/ta"],
+      "cas": ["secure_storage-rs/host"]
+    },
+    "serde-rs": {
+      "category": "common",
+      "tas": ["serde-rs/ta"],
+      "cas": ["serde-rs/host"]
+    },
+    "signature_verification-rs": {
+      "category": "common",
+      "tas": ["signature_verification-rs/ta"],
+      "cas": ["signature_verification-rs/host"]
+    },
+    "supp_plugin-rs": {
+      "category": "common",
+      "tas": ["supp_plugin-rs/ta"],
+      "cas": ["supp_plugin-rs/host"],
+      "plugins": ["supp_plugin-rs/plugin"]
+    },
+    "tcp_client-rs": {
+      "category": "common",
+      "tas": ["tcp_client-rs/ta"],
+      "cas": ["tcp_client-rs/host"]
+    },
+    "time-rs": {
+      "category": "common",
+      "tas": ["time-rs/ta"],
+      "cas": ["time-rs/host"]
+    },
+    "udp_socket-rs": {
+      "category": "common",
+      "tas": ["udp_socket-rs/ta"],
+      "cas": ["udp_socket-rs/host"]
+    }
+  }
+}
