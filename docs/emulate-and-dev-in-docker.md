@@ -33,6 +33,11 @@ $ docker run -it --rm \
 
 ## 2. Build the Hello World Example
 
+Update: cargo-optee is available as an alternative to the original Makefile system. 
+See the [cargo-optee documentation](../cargo-optee/README.md) for details.
+
+### If you use Makefile:
+
 **Still in Terminal A** (inside the Docker container):
 ```bash
 # Build the Hello World example (both CA and TA)
@@ -46,6 +51,10 @@ TA=ta/target/aarch64-unknown-linux-gnu/release/133af0ca-bdab-11eb-9130-43bf7873b
 HOST_APP=host/target/aarch64-unknown-linux-gnu/release/hello_world-rs
 ```
 
+### If you use cargo-optee:
+
+You can see the [cargo-optee build commands](../cargo-optee/README.md#build-commands) for details.
+
 ## 3. Make the Artifacts Accessible to the Emulator
 After building the Hello World example, the next step is to make the compiled
 artifacts accessible to the emulator.
@@ -53,7 +62,7 @@ artifacts accessible to the emulator.
 There are **two approaches** to do this. You can choose either based on your
 preference:
 - 📦 **Manual sync**: Explicitly sync host and TA binaries to the emulator
-- ⚙️ **Makefile integration**: Use `make emulate` to build and sync in one step
+- ⚙️ **Makefile integration**: Use `make emulate` to build and sync in one step (only when you use Makefile for building)
 
 #### Option 1: Manual Sync via `sync_to_emulator`
 We provide a helper command called `sync_to_emulator`, which simplifies the
