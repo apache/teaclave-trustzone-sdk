@@ -28,6 +28,20 @@ defaults:
     shell: bash
 
 jobs:
+  # Run test on AMD64 host
+  test-on-amd64-host:
+    uses: ./.github/workflows/reuse_test.yml
+    with:
+      runs-on: ubuntu-latest
+      container: ghcr.io/ivila/teaclave-trustzone-sdk-ci-runner:ubuntu-24.04
+
+  # Run test on ARM64 host
+  test-on-arm64-host:
+    uses: ./.github/workflows/reuse_test.yml
+    with:
+      runs-on: ubuntu-24.04-arm
+      container: ghcr.io/ivila/teaclave-trustzone-sdk-ci-runner:ubuntu-24.04
+
   # Run systest of optee_teec and build systest of optee_utee on ARM64
   systest:
     runs-on: ubuntu-24.04-arm
@@ -50,6 +64,41 @@ jobs:
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OPTEE_DIR/optee_client/export_arm64/usr/lib
           (cd optee-teec && cargo run -p systest)
           (cd optee-utee && cargo build -p systest)
+
+  # Test build no-std examples on dev docker container
+  test-nostd-build-on-dev-docker:
+    runs-on: ubuntu-latest
+    container: 
+      image: teaclave/teaclave-trustzone-emulator-nostd-expand-memory:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup environment
+        run: |
+          # Run entrypoint.sh to set up the bash profile
+          /entrypoint.sh true
+      - name: Build no-std and common examples
+        shell: bash -l {0}  # Use login shell to load the profile
+        run: |
+          make
+
+  # Test build std examples on dev docker container
+  test-std-build-on-dev-docker:
+    runs-on: ubuntu-latest
+    container:
+      image: teaclave/teaclave-trustzone-emulator-std-expand-memory:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup environment
+        run: |
+          # Run entrypoint.sh to set up the bash profile
+          /entrypoint.sh true
+      - name: Build no-std and common examples
+        shell: bash -l {0}  # Use login shell to load the profile
+        run: |
+          ln -s $RUST_STD_DIR rust
+          make std-examples
 
   # Test cargo-optee build no-std examples - aarch64
   test-cargo-optee-nostd-aarch64:

@@ -38,3 +38,6 @@ bytemuck = { workspace = true, features = ["min_const_generics"] }
 [build-dependencies]
 proto = { workspace = true }
 optee-utee-build = { workspace = true }
+
+[package.metadata.optee.ta]
+uuid-path = "uuid.txt"
