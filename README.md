@@ -35,6 +35,12 @@ The Docker image automates the entire setup process for TrustZone emulation
 in QEMU, enabling you to focus on writing and testing your applications 
 efficiently, without the hassle of manual configuration.
 
+**UPDATES:** We have introduced a more convenient build tool, [cargo-optee](./cargo-optee/README.md), 
+which provides better abstraction and a more ergonomic developer experience. In the long term, 
+we plan to gradually move away from the Makefile + Cargo workflow and adopt a more idiomatic Rust-based 
+development approach. To ensure a smooth transition, the existing Makefile-based build components are 
+still retained and supported.
+
 **Choose your development mode in Emulator:**
 - 🚀 [Quick Emulation And Development in Docker](docs/emulate-and-dev-in-docker.md) 
 - 🚀 [Developing TAs with Rust Standard Library](docs/emulate-and-dev-in-docker-std.md)
