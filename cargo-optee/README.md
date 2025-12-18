@@ -361,10 +361,9 @@ cargo-optee clean --all
 | `build ta` | ✅ Implemented | Supports aarch64/arm, std/no-std |
 | `build ca` | ✅ Implemented | Supports aarch64/arm |
 | `build plugin` | ✅ Implemented | Supports aarch64/arm, builds shared library plugins |
+| `clean` | ✅ Implemented | Remove build artifacts |
 | `new` | ⏳ Planned | Project scaffolding |
 | `install` | ⏳ Planned | Deploy to target filesystem |
-| `clean` | ⏳ Planned | Remove build artifacts |
-| `clean` | ⏳ Planned | Remove build artifacts |
 
 -----
 ## Appendix
