@@ -41,3 +41,6 @@ optee-utee-build = { path = "../../../optee-utee-build" }
 panic = "abort"
 lto = true
 opt-level = 1
+
+[package.metadata.optee.ta]
+uuid-path = "../ta_uuid.txt"

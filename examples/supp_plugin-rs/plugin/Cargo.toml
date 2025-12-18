@@ -40,3 +40,6 @@ lto = true
 [lib]
 crate-type = ["cdylib"]
 name = "syslog_plugin"
+
+[package.metadata.optee.plugin]
+uuid-path = "../plugin_uuid.txt"
