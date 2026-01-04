@@ -13,11 +13,14 @@ This documentation highlights items that are specific to the `TrustZone SDK`.
 
 Apache TrustZone SDK follows a quarterly release cycle, aligned with [OP-TEE releases](https://optee.readthedocs.io/en/latest/general/releases.html).
 
-The upcoming release in 2025 is as follows:
+The upcoming release in 2026 is as follows:
 
 | Apache Teaclave SDK Release Version | optee-* Rust crate Release version | OP-TEE Version | OP-TEE Release Date | Teaclave SDK Pre-release on Github (approximately) | Teaclave SDK Finalized Release on Apache and `crates.io` (approximately) |
 |-------------------------------------|-------------------------------------|----------------|--------------------|----------------------------------------------------|--------------------------------------------------------------------------|
-| v0.7.0 | v0.7.0 | OP-TEE 4.8.0 | 17/Oct/25 | 14/Nov/25 | 30/Nov/25 |
+| v0.8.0  | v0.8.0  | OP-TEE 4.9.0  | 16/Jan/26 | 30/Jan/26 | 13/Feb/26 |
+| v0.9.0  | v0.9.0  | OP-TEE 4.10.0 | 17/Apr/26 | 1/May/26  | 15/May/26 |
+| v0.10.0 | v0.10.0 | OP-TEE 4.11.0 | 17/Jul/26 | 31/Jul/26 | 14/Aug/26 |
+| v0.11.0 | v0.11.0 | OP-TEE 4.12.0 | 16/Oct/26 | 30/Oct/26 | 13/Nov/26 |
 
 **Note:** The table outlines the planned release schedule under normal circumstances. However, if there are no updates to the optee-* crates in the SDK during a given quarter, the release will be skipped and deferred to the following quarter.
 
