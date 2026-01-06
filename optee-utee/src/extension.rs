@@ -16,14 +16,12 @@
 // under the License.
 
 use crate::{Error, ErrorKind, Result, Uuid};
+#[cfg(not(feature = "std"))]
+use alloc::{borrow::ToOwned, vec::Vec};
 use optee_utee_sys as raw;
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
-#[cfg(not(feature = "std"))]
-use alloc::borrow::ToOwned;
 
 pub struct LoadablePlugin {
-    uuid: Uuid
+    uuid: Uuid,
 }
 
 pub struct LoadablePluginCommand<'a> {
@@ -35,7 +33,9 @@ pub struct LoadablePluginCommand<'a> {
 
 impl LoadablePlugin {
     pub fn new(uuid: &Uuid) -> Self {
-        Self { uuid: uuid.to_owned() }
+        Self {
+            uuid: uuid.to_owned(),
+        }
     }
     /// Invoke plugin with given request data, use when you want to post something into REE.
     /// ``` rust,no_run
@@ -50,7 +50,7 @@ impl LoadablePlugin {
     /// # Ok(())
     /// # }
     /// ```
-    /// Caution: the size of the shared buffer is set to the len of data, you could get a 
+    /// Caution: the size of the shared buffer is set to the len of data, you could get a
     ///          ShortBuffer error if Plugin return more data than shared buffer, in that case,
     ///          use invoke_with_capacity and set the capacity manually.
     pub fn invoke(&self, command_id: u32, subcommand_id: u32, data: &[u8]) -> Result<Vec<u8>> {
@@ -79,7 +79,7 @@ impl LoadablePlugin {
     /// ```no_run
     /// # use optee_utee::{LoadablePluginCommand, Uuid, LoadablePlugin, trace_println};
     /// # use optee_utee::ErrorKind;
-    /// # fn main() -> optee_utee::Result<()> { 
+    /// # fn main() -> optee_utee::Result<()> {
     /// # let command_id = 0;
     /// # let subcommand_id = 0;
     /// # let capacity = 0;
@@ -178,44 +178,10 @@ impl<'a> LoadablePluginCommand<'a> {
 pub mod test_loadable_plugin {
     extern crate std;
     use super::*;
-    use core::ffi::c_char;
-    use once_cell::sync::Lazy;
-    use optee_utee_sys::{TEE_Result, TEE_UUID};
+    use alloc::string::ToString;
+    use optee_utee_sys::{mock_api, mock_utils::SERIAL_TEST_LOCK};
     use rand::distributions::Alphanumeric;
     use rand::Rng;
-    use std::collections::HashMap;
-    use std::sync::RwLock;
-
-    static REE_RETURN_VALUES: RwLock<Lazy<HashMap<(u32, u32), Vec<u8>>>> =
-        RwLock::new(Lazy::new(|| HashMap::new()));
-    static REE_EXPECTED_VALUES: RwLock<Lazy<HashMap<(u32, u32), Vec<u8>>>> =
-        RwLock::new(Lazy::new(|| HashMap::new()));
-
-    fn set_ree_return_value(cmd: u32, sub_cmd: u32, value: Vec<u8>) {
-        let mut values = REE_RETURN_VALUES.write().unwrap();
-        let key = (cmd, sub_cmd);
-        assert!(!values.contains_key(&key));
-        values.insert(key, value);
-    }
-
-    fn set_ree_expected_value(cmd: u32, sub_cmd: u32, value: Vec<u8>) {
-        let mut values = REE_EXPECTED_VALUES.write().unwrap();
-        let key = (cmd, sub_cmd);
-        assert!(!values.contains_key(&key));
-        values.insert(key, value);
-    }
-
-    fn get_ree_return_value(cmd: u32, sub_cmd: u32) -> Vec<u8> {
-        let values = REE_RETURN_VALUES.read().unwrap();
-        let key = (cmd, sub_cmd);
-        values.get(&key).unwrap().to_owned()
-    }
-
-    fn get_ree_expected_value(cmd: u32, sub_cmd: u32) -> Vec<u8> {
-        let values = REE_EXPECTED_VALUES.read().unwrap();
-        let key = (cmd, sub_cmd);
-        values.get(&key).unwrap().to_owned()
-    }
 
     fn generate_random_bytes(len: usize) -> Vec<u8> {
         rand::thread_rng()
@@ -228,119 +194,129 @@ pub mod test_loadable_plugin {
         request_size: usize,
         response_size: usize,
     ) -> (u32, u32, Vec<u8>, Vec<u8>) {
-        let cmd: u32 = rand::thread_rng().r#gen();
-        let sub_cmd: u32 = rand::thread_rng().r#gen();
+        let cmd: u32 = rand::random();
+        let sub_cmd: u32 = rand::random();
         let random_request: Vec<u8> = generate_random_bytes(request_size);
         let random_response: Vec<u8> = generate_random_bytes(response_size);
         (cmd, sub_cmd, random_request, random_response)
     }
 
-    #[no_mangle]
-    extern "C" fn tee_invoke_supp_plugin(
-        _uuid: *const TEE_UUID,
-        cmd: u32,
-        sub_cmd: u32,
-        buf: *mut c_char,
-        len: usize,
-        outlen: *mut usize,
-    ) -> TEE_Result {
-        // must convert buf to u8, for in some platform c_char was treated as i8
-        let inbuf = unsafe { core::slice::from_raw_parts_mut(buf as *mut u8, len) };
-        std::println!(
-            "*plugin*: receive value: {:?} length {:?}",
-            inbuf,
-            inbuf.len()
-        );
-        let expected_value = get_ree_expected_value(cmd, sub_cmd);
-        assert_eq!(inbuf, expected_value.as_slice());
+    fn random_uuid() -> Uuid {
+        Uuid::new_raw(
+            rand::random(),
+            rand::random(),
+            rand::random(),
+            rand::random(),
+        )
+    }
 
-        let return_value = get_ree_return_value(cmd, sub_cmd);
-        assert!(return_value.len() <= len);
-        std::println!("*plugin*: write value '{:?}' to buffer", return_value);
-
-        inbuf[0..return_value.len()].copy_from_slice(&return_value);
-        unsafe {
-            *outlen = return_value.len();
-        }
-        return raw::TEE_SUCCESS;
+    fn expect_success_request(
+        ctx: &mock_api::extension::__tee_invoke_supp_plugin::Context,
+        exp_uuid: &Uuid,
+        exp_cmd: u32,
+        exp_sub_cmd: u32,
+        exp_request: &[u8],
+        exp_response: &[u8],
+    ) {
+        let exp_request = exp_request.to_vec();
+        let exp_response = exp_response.to_vec();
+        let exp_uuid = exp_uuid.to_string();
+        ctx.expect()
+            .return_once_st(move |uuid, cmd, sub_cmd, buf, len, outlen| {
+                let request_uuid = Uuid::from(unsafe { *uuid }).to_string();
+                debug_assert_eq!(exp_uuid, request_uuid);
+                debug_assert_eq!(cmd, exp_cmd);
+                debug_assert_eq!(sub_cmd, exp_sub_cmd);
+                debug_assert_eq!(
+                    unsafe { core::slice::from_raw_parts(buf as *mut u8, exp_request.len()) },
+                    exp_request.as_slice()
+                );
+                debug_assert!(len >= exp_response.len());
+                let buffer: &mut [u8] =
+                    unsafe { core::slice::from_raw_parts_mut(buf as *mut u8, len) };
+                buffer[0..exp_response.len()].copy_from_slice(&exp_response);
+                unsafe { *outlen = exp_response.len() };
+                raw::TEE_SUCCESS
+            });
     }
 
     #[test]
     fn test_invoke() {
-        let plugin = LoadablePlugin {
-            uuid: Uuid::parse_str("7dd54ee6-a705-4e4d-8b6b-aa5024dfcd10").unwrap(),
-        };
+        let _lock = SERIAL_TEST_LOCK.lock().expect("should get the lock");
+
+        let uuid: Uuid = random_uuid();
+        let plugin = LoadablePlugin::new(&uuid);
         const REQUEST_LEN: usize = 32;
+        let run_test = |request_size: usize, response_size: usize| {
+            let (cmd, sub_cmd, request, exp_response) =
+                generate_test_pairs(request_size, response_size);
+            let fn1 = mock_api::extension::tee_invoke_supp_plugin_context();
+            expect_success_request(&fn1, &uuid, cmd, sub_cmd, &request, &exp_response);
+            let response = plugin.invoke(cmd, sub_cmd, &request).expect("should be ok");
+            std::println!("*TA*: response is {:?}", response);
+            debug_assert_eq!(response, exp_response);
+        };
 
         // test calling with output size less than input
-        let (cmd, sub_cmd, request, exp_response) =
-            generate_test_pairs(REQUEST_LEN, REQUEST_LEN / 2);
-        set_ree_expected_value(cmd, sub_cmd, request.clone());
-        set_ree_return_value(cmd, sub_cmd, exp_response.clone());
-        let response = plugin.invoke(cmd, sub_cmd, &request).unwrap();
-        std::println!("*TA*: response is {:?}", response);
-        assert_eq!(response, exp_response);
-
+        run_test(REQUEST_LEN, REQUEST_LEN / 2);
         // test calling with output size equals to input
-        let (cmd, sub_cmd, request, exp_response) = generate_test_pairs(REQUEST_LEN, REQUEST_LEN);
-        set_ree_expected_value(cmd, sub_cmd, request.clone());
-        set_ree_return_value(cmd, sub_cmd, exp_response.clone());
-        let response = plugin.invoke(cmd, sub_cmd, &request).unwrap();
-        std::println!("*TA*: response is {:?}", response);
-        assert_eq!(response, exp_response);
+        run_test(REQUEST_LEN, REQUEST_LEN);
+        // test calling with output size greater than input.
+        // Mark: Without explicitly setting the response size, this function
+        // must not be called with a response size larger than the request size.
+        {
+            let (cmd, sub_cmd, request, exp_response) =
+                generate_test_pairs(REQUEST_LEN, 2 * REQUEST_LEN);
+            let fn1 = mock_api::extension::tee_invoke_supp_plugin_context();
+            fn1.expect().return_once_st(move |_, _, _, _, _, outlen| {
+                unsafe { *outlen = exp_response.len() };
+                raw::TEE_SUCCESS
+            });
+            let err = plugin
+                .invoke(cmd, sub_cmd, &request)
+                .expect_err("should be err");
+            debug_assert_eq!(err.kind(), ErrorKind::ShortBuffer);
+        }
     }
 
+    // This test is equivalent to test_invoke, with the added verification that
+    // capacity permits the response size to be larger than the request.
     #[test]
     fn test_invoke_with_capacity() {
-        let plugin = LoadablePlugin {
-            uuid: Uuid::parse_str("7dd54ee6-a705-4e4d-8b6b-aa5024dfcd10").unwrap(),
-        };
+        let _lock = SERIAL_TEST_LOCK.lock().expect("should get the lock");
+        let uuid: Uuid = random_uuid();
+        let plugin = LoadablePlugin::new(&uuid);
         const RESPONSE_LEN: usize = 32;
 
+        let run_test = |request_size: usize, response_size: usize| {
+            let (cmd, sub_cmd, request, exp_response) =
+                generate_test_pairs(request_size, response_size);
+            let fn1 = mock_api::extension::tee_invoke_supp_plugin_context();
+            expect_success_request(&fn1, &uuid, cmd, sub_cmd, &request, &exp_response);
+
+            let response = plugin
+                .invoke_with_capacity(cmd, sub_cmd, exp_response.len())
+                .chain_write_body(&request)
+                .call()
+                .unwrap();
+            std::println!("*TA*: response is {:?}", response);
+            debug_assert_eq!(response, exp_response);
+        };
+
         // test calling with output size less than input
-        let (cmd, sub_cmd, request, exp_response) =
-            generate_test_pairs(2 * RESPONSE_LEN, RESPONSE_LEN);
-        set_ree_expected_value(cmd, sub_cmd, request.clone());
-        set_ree_return_value(cmd, sub_cmd, exp_response.clone());
-        let response = plugin
-            .invoke_with_capacity(cmd, sub_cmd, exp_response.len())
-            .chain_write_body(&request)
-            .call()
-            .unwrap();
-        std::println!("*TA*: response is {:?}", response);
-        assert_eq!(response, exp_response);
-
+        run_test(2 * RESPONSE_LEN, RESPONSE_LEN);
         // test calling with output size equals to input
-        let (cmd, sub_cmd, request, exp_response) = generate_test_pairs(RESPONSE_LEN, RESPONSE_LEN);
-        set_ree_expected_value(cmd, sub_cmd, request.clone());
-        set_ree_return_value(cmd, sub_cmd, exp_response.clone());
-        let response = plugin
-            .invoke_with_capacity(cmd, sub_cmd, exp_response.len())
-            .chain_write_body(&request)
-            .call()
-            .unwrap();
-        std::println!("*TA*: response is {:?}", response);
-        assert_eq!(response, exp_response);
-
+        run_test(RESPONSE_LEN, RESPONSE_LEN);
         // test calling with output size greater than input
-        let (cmd, sub_cmd, mut request, exp_response) =
-            generate_test_pairs(RESPONSE_LEN / 2, RESPONSE_LEN);
-        request.resize(exp_response.len(), 0);
-        set_ree_expected_value(cmd, sub_cmd, request.clone());
-        set_ree_return_value(cmd, sub_cmd, exp_response.clone());
-        let response = plugin
-            .invoke_with_capacity(cmd, sub_cmd, exp_response.len())
-            .chain_write_body(&request)
-            .call()
-            .unwrap();
-        std::println!("*TA*: response is {:?}", response);
-        assert_eq!(response, exp_response);
+        run_test(RESPONSE_LEN / 2, RESPONSE_LEN);
     }
+
     #[test]
     fn test_invoke_with_writer() {
-        let plugin = LoadablePlugin {
-            uuid: Uuid::parse_str("7dd54ee6-a705-4e4d-8b6b-aa5024dfcd10").unwrap(),
-        };
+        let _lock = SERIAL_TEST_LOCK.lock().expect("should get the lock");
+        let uuid: Uuid = random_uuid();
+        let plugin = LoadablePlugin::new(&uuid);
+        let fn1 = mock_api::extension::tee_invoke_supp_plugin_context();
         // impl a writer for Command
         struct Wrapper<'a, 'b>(&'b mut LoadablePluginCommand<'a>);
         impl<'a, 'b> std::io::Write for Wrapper<'a, 'b> {
@@ -362,28 +338,30 @@ pub mod test_loadable_plugin {
         let (cmd, sub_cmd, _, exp_response) = generate_test_pairs(0, buffer_len);
         let mut plugin_cmd = plugin.invoke_with_capacity(cmd, sub_cmd, buffer_len);
         exp_request.resize(exp_response.len(), 0);
-        set_ree_expected_value(cmd, sub_cmd, exp_request);
-        set_ree_return_value(cmd, sub_cmd, exp_response.clone());
+
+        expect_success_request(&fn1, &uuid, cmd, sub_cmd, &exp_request, &exp_response);
         serde_json::to_writer(Wrapper(&mut plugin_cmd), &test_data).unwrap();
         let response = plugin_cmd.call().unwrap();
         std::println!("*TA*: response is {:?}", response);
-        assert_eq!(response, exp_response);
+        debug_assert_eq!(response, exp_response);
     }
+
     #[test]
     fn test_invoke_with_no_data() {
-        let plugin = LoadablePlugin {
-            uuid: Uuid::parse_str("7dd54ee6-a705-4e4d-8b6b-aa5024dfcd10").unwrap(),
-        };
+        let _lock = SERIAL_TEST_LOCK.lock().expect("should get the lock");
+
+        let uuid: Uuid = random_uuid();
+        let plugin = LoadablePlugin::new(&uuid);
+        let fn1 = mock_api::extension::tee_invoke_supp_plugin_context();
         const OUTPUT_LEN: usize = 50;
-        let (cmd, sub_cmd, _, exp_response) = generate_test_pairs(0, OUTPUT_LEN);
-        let exp_request = vec![0_u8; OUTPUT_LEN];
-        set_ree_expected_value(cmd, sub_cmd, exp_request);
-        set_ree_return_value(cmd, sub_cmd, exp_response.clone());
+        let (cmd, sub_cmd, request, exp_response) = generate_test_pairs(0, OUTPUT_LEN);
+        expect_success_request(&fn1, &uuid, cmd, sub_cmd, &request, &exp_response);
+
         let response = plugin
             .invoke_with_capacity(cmd, sub_cmd, OUTPUT_LEN)
             .call()
             .unwrap();
         std::println!("*TA*: response is {:?}", response);
-        assert_eq!(response, exp_response);
+        debug_assert_eq!(response, exp_response);
     }
 }
