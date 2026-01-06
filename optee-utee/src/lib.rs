@@ -35,16 +35,11 @@ use libc_alloc::LibcAlloc;
 #[global_allocator]
 static ALLOCATOR: LibcAlloc = LibcAlloc;
 
-#[cfg(not(feature = "std"))]
-use core::panic::PanicInfo;
-#[cfg(not(feature = "std"))]
-use optee_utee_sys as raw;
-
 #[cfg(all(not(feature = "std"), not(feature = "no_panic_handler")))]
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
+fn panic(_info: &core::panic::PanicInfo) -> ! {
     unsafe {
-        raw::TEE_Panic(0);
+        optee_utee_sys::TEE_Panic(0);
     }
     loop {}
 }
