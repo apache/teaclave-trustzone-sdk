@@ -92,7 +92,10 @@ impl GenericObject for ObjectHandle {
 mod tests {
     extern crate std;
 
-    use optee_utee_mock::object::{set_global_object_mock, MockObjectController, SERIAL_TEST_LOCK};
+    use optee_utee_sys::{
+        mock_api,
+        mock_utils::{object::MockHandle, SERIAL_TEST_LOCK},
+    };
 
     use super::*;
 
@@ -100,44 +103,37 @@ mod tests {
     /// and automatically calls `TEE_CloseObject` when dropped.
     #[test]
     fn test_from_raw() {
-        let _lock = SERIAL_TEST_LOCK.lock();
+        let _lock = SERIAL_TEST_LOCK.lock().expect("should get the lock");
 
-        let mut mock = MockObjectController::new();
-        let mut handle_struct = MockObjectController::new_valid_test_handle_struct();
-        let handle = MockObjectController::new_valid_test_handle(&mut handle_struct);
+        let mut raw_handle = MockHandle::new();
+        let handle = raw_handle.as_handle();
+        let fn1 = mock_api::TEE_CloseObject_context();
 
-        mock.expect_TEE_CloseObject_once(handle.clone());
-        set_global_object_mock(mock);
+        fn1.expect().return_once_st(move |obj| {
+            debug_assert_eq!(obj, handle.clone());
+        });
 
-        let obj = ObjectHandle::from_raw(unsafe { *handle.get() }).expect("it should be ok");
-        assert_eq!(obj.handle(), unsafe { *handle.get() });
+        let obj = ObjectHandle::from_raw(handle.clone()).expect("it should be ok");
+        assert_eq!(obj.handle(), handle);
     }
 
     /// Ensures `ObjectHandle` can call `forget` to prevent automatically
     /// calls `TEE_CloseObject` when dropped.
     #[test]
     fn test_forget() {
-        let _lock = SERIAL_TEST_LOCK.lock();
+        let _lock = SERIAL_TEST_LOCK.lock().expect("should get the lock");
 
-        let mut handle_struct = MockObjectController::new_valid_test_handle_struct();
-        let handle = MockObjectController::new_valid_test_handle(&mut handle_struct);
-        // making sure nothing would be called(includes TEE_CloseObject)
-        let mock = MockObjectController::new();
-        set_global_object_mock(mock);
+        let mut raw_handle = MockHandle::new();
+        let handle = raw_handle.as_handle();
 
-        let obj = ObjectHandle::from_raw(unsafe { *handle.get() }).expect("it should be ok");
-        assert_eq!(obj.handle(), unsafe { *handle.get() });
+        let obj = ObjectHandle::from_raw(handle.clone()).expect("it should be ok");
+        assert_eq!(obj.handle(), handle);
 
         obj.forget();
     }
 
     #[test]
     fn test_new_null() {
-        let _lock = SERIAL_TEST_LOCK.lock();
-        // making sure nothing would be called(includes TEE_CloseObject)
-        let mock = MockObjectController::new();
-        set_global_object_mock(mock);
-
         let obj = ObjectHandle::new_null();
         assert!(obj.is_null());
     }
