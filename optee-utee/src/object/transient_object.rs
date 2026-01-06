@@ -382,9 +382,9 @@ impl GenericObject for TransientObject {
 
 #[cfg(test)]
 mod tests {
-    use optee_utee_mock::{
-        object::{set_global_object_mock, MockObjectController, SERIAL_TEST_LOCK},
-        raw,
+    use optee_utee_sys::{
+        mock_api,
+        mock_utils::{SERIAL_TEST_LOCK, object::MockHandle},
     };
 
     use super::*;
@@ -400,16 +400,20 @@ mod tests {
     // For transient objects, `TEE_CloseObject` is equivalent to
     // `TEE_FreeTransientObject`.
     fn test_allocate_and_drop() {
-        let _lock = SERIAL_TEST_LOCK.lock();
+        let _lock = SERIAL_TEST_LOCK.lock().expect("should get the lock");
 
-        let mut mock = MockObjectController::new();
-        let mut handle_struct = MockObjectController::new_valid_test_handle_struct();
-        let handle = MockObjectController::new_valid_test_handle(&mut handle_struct);
+        let mut raw_handle = MockHandle::new();
+        let handle = raw_handle.as_handle();
+        let fn1 = mock_api::TEE_AllocateTransientObject_context();
+        let fn2 = mock_api::TEE_CloseObject_context();
 
-        mock.expect_TEE_AllocateTransientObject_success_once(handle.clone());
-        mock.expect_TEE_CloseObject_once(handle);
-
-        set_global_object_mock(mock);
+        fn1.expect().return_once_st(move |_, _, obj| {
+            unsafe { *obj = handle.clone() };
+            raw::TEE_SUCCESS
+        });
+        fn2.expect().return_once_st(move |obj| {
+            debug_assert_eq!(obj, handle.clone());
+        });
 
         let _obj =
             TransientObject::allocate(TransientObjectType::Aes, 128).expect("it should be ok");
@@ -417,13 +421,12 @@ mod tests {
 
     #[test]
     fn test_allocate_fail() {
-        let _lock = SERIAL_TEST_LOCK.lock();
+        let _lock = SERIAL_TEST_LOCK.lock().expect("should get the lock");
 
-        let mut mock = MockObjectController::new();
         static RETURN_CODE: raw::TEE_Result = raw::TEE_ERROR_BAD_STATE;
+        let fn1 = mock_api::TEE_AllocateTransientObject_context();
 
-        mock.expect_TEE_AllocateTransientObject_fail_once(RETURN_CODE);
-        set_global_object_mock(mock);
+        fn1.expect().return_const(RETURN_CODE);
 
         let err =
             TransientObject::allocate(TransientObjectType::Aes, 128).expect_err("it should be err");
