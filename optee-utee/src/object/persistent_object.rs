@@ -534,7 +534,10 @@ impl GenericObject for PersistentObject {
 
 #[cfg(test)]
 mod tests {
-    use optee_utee_sys::{mock_api, mock_utils::{SERIAL_TEST_LOCK, object::MockHandle}};
+    use optee_utee_sys::{
+        mock_api,
+        mock_utils::{object::MockHandle, SERIAL_TEST_LOCK},
+    };
 
     use super::*;
 
@@ -549,10 +552,11 @@ mod tests {
         let fn1 = mock_api::TEE_CreatePersistentObject_context();
         let fn2 = mock_api::TEE_CloseObject_context();
 
-        fn1.expect().return_once_st(move |_, _, _, _, _, _, _, obj| {
-            unsafe { *obj = handle.clone() };
-            raw::TEE_SUCCESS
-        });
+        fn1.expect()
+            .return_once_st(move |_, _, _, _, _, _, _, obj| {
+                unsafe { *obj = handle.clone() };
+                raw::TEE_SUCCESS
+            });
         fn2.expect().return_once_st(move |obj| {
             debug_assert_eq!(obj, handle);
         });
@@ -598,11 +602,12 @@ mod tests {
         let handle = raw_handle.as_handle();
         let fn1 = mock_api::TEE_CreatePersistentObject_context();
         let fn2 = mock_api::TEE_CloseAndDeletePersistentObject1_context();
-       
-        fn1.expect().return_once_st(move |_, _, _, _, _, _, _, obj| {
-            unsafe { *obj = handle.clone() };
-            raw::TEE_SUCCESS
-        });
+
+        fn1.expect()
+            .return_once_st(move |_, _, _, _, _, _, _, obj| {
+                unsafe { *obj = handle.clone() };
+                raw::TEE_SUCCESS
+            });
         fn2.expect().return_once_st(move |obj| {
             debug_assert_eq!(obj, handle);
             raw::TEE_SUCCESS
@@ -631,10 +636,11 @@ mod tests {
         let fn1 = mock_api::TEE_CreatePersistentObject_context();
         let fn2 = mock_api::TEE_CloseAndDeletePersistentObject1_context();
 
-        fn1.expect().return_once_st(move |_, _, _, _, _, _, _, obj| {
-            unsafe { *obj = handle.clone() };
-            raw::TEE_SUCCESS
-        });
+        fn1.expect()
+            .return_once_st(move |_, _, _, _, _, _, _, obj| {
+                unsafe { *obj = handle.clone() };
+                raw::TEE_SUCCESS
+            });
         fn2.expect().return_once_st(move |obj| {
             debug_assert_eq!(obj, handle);
             raw::TEE_ERROR_BUSY

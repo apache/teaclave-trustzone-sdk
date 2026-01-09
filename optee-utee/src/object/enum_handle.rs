@@ -34,7 +34,8 @@ impl ObjectEnumHandle {
     /// Once an object enumerator has been allocated, it can be reused for
     /// multiple enumerations.
     pub fn allocate() -> Result<Self> {
-        let raw_handle: *mut raw::TEE_ObjectEnumHandle = Box::into_raw(Box::new(core::ptr::null_mut()));
+        let raw_handle: *mut raw::TEE_ObjectEnumHandle =
+            Box::into_raw(Box::new(core::ptr::null_mut()));
         match unsafe { raw::TEE_AllocatePersistentObjectEnumerator(raw_handle) } {
             raw::TEE_SUCCESS => Ok(Self { raw: raw_handle }),
             code => {

@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use optee_utee_sys as raw;
 use core::ffi::*;
-use core::fmt::{Arguments, Write, Result};
+use core::fmt::{Arguments, Result, Write};
+use optee_utee_sys as raw;
 
 pub struct Trace;
 
@@ -47,7 +47,7 @@ impl Trace {
 }
 
 impl Write for Trace {
-    fn write_str(&mut self, buf: &str) -> Result<> {
+    fn write_str(&mut self, buf: &str) -> Result {
         unsafe {
             raw::_utee_log(buf.as_ptr() as *const c_void, buf.len());
         }

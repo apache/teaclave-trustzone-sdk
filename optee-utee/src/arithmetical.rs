@@ -16,10 +16,10 @@
 // under the License.
 
 use crate::{Error, Result};
-use optee_utee_sys as raw;
-use core::{cmp::max, fmt};
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
+use core::{cmp::max, fmt};
+use optee_utee_sys as raw;
 
 pub type BigIntUnit = u32;
 pub type BigIntFMMUnit = u32;
@@ -274,9 +274,7 @@ impl BigIntFMMContext {
     pub fn new(bits: u32, modulus: BigInt) -> Result<Self> {
         let size: usize = Self::size_in_u32(bits as usize);
         let mut tmp_vec: Vec<BigIntFMMContextUnit> = vec![0; size];
-        unsafe {
-            raw::TEE_BigIntInitFMMContext(tmp_vec.as_mut_ptr(), size, modulus.data_ptr())
-        };
+        unsafe { raw::TEE_BigIntInitFMMContext(tmp_vec.as_mut_ptr(), size, modulus.data_ptr()) };
         Ok(Self(tmp_vec))
     }
 }

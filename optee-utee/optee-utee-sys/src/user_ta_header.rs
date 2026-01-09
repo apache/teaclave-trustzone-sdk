@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use core::ffi::*;
 use super::tee_api_types::*;
 use super::utee_syscalls::*;
 use super::utee_types::*;
+use core::ffi::*;
 
 pub const TA_FLAG_SINGLE_INSTANCE: u32 = 1 << 2;
 pub const TA_FLAG_MULTI_SESSION: u32 = 1 << 3;
@@ -38,7 +38,12 @@ pub struct ta_head {
 }
 
 extern "C" {
-    pub fn __utee_entry(func: c_ulong, session_id: c_ulong, up: *mut utee_params, cmd_id: c_ulong) -> TEE_Result;
+    pub fn __utee_entry(
+        func: c_ulong,
+        session_id: c_ulong,
+        up: *mut utee_params,
+        cmd_id: c_ulong,
+    ) -> TEE_Result;
 }
 
 /// # Safety
@@ -48,7 +53,12 @@ extern "C" {
 /// by the OP-TEE runtime environment. This function should never be called directly
 /// from user code - it is only exported for the OP-TEE OS loader.
 #[no_mangle]
-unsafe fn __ta_entry(func: c_ulong, session_id: c_ulong, up: *mut utee_params, cmd_id: c_ulong) -> ! {
+unsafe fn __ta_entry(
+    func: c_ulong,
+    session_id: c_ulong,
+    up: *mut utee_params,
+    cmd_id: c_ulong,
+) -> ! {
     let res: u32 = __utee_entry(func, session_id, up, cmd_id);
 
     _utee_return(res.into());

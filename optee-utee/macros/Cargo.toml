@@ -28,8 +28,8 @@ edition = "2018"
 proc-macro = true
 
 [dependencies]
-quote = "0.6"
-syn = { version = "0.15", features = ["full"] }
+quote = "1.0"
+syn = { version = "2.0", features = ["full"] }
 # The newer versions of these crates require rustc 1.81, while our custom
 # patched STD version is 1.80, causing compatibility issues. To resolve this,
 # we have to set the crates to an exact compatible version.
