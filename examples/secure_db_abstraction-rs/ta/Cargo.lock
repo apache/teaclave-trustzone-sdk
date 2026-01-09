@@ -105,20 +105,21 @@ dependencies = [
 
 [[package]]
 name = "optee-utee"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "bitflags",
  "hex",
  "libc_alloc",
  "optee-utee-macros",
  "optee-utee-sys",
+ "rustc_version",
  "strum_macros",
  "uuid 0.8.2",
 ]
 
 [[package]]
 name = "optee-utee-build"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "litemap",
  "prettyplease",
@@ -131,7 +132,7 @@ dependencies = [
 
 [[package]]
 name = "optee-utee-macros"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "litemap",
  "quote 0.6.13",
@@ -141,7 +142,7 @@ dependencies = [
 
 [[package]]
 name = "optee-utee-sys"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "libc",
 ]
@@ -200,6 +201,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustc_version"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
+dependencies = [
+ "semver",
+]
+
+[[package]]
 name = "rustversion"
 version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -216,6 +226,12 @@ dependencies = [
  "optee-utee-sys",
  "serde",
 ]
+
+[[package]]
+name = "semver"
+version = "1.0.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d767eb0aabc880b29956c35734170f26ed551a859dbd361d140cdbeca61ab1e2"
 
 [[package]]
 name = "serde"

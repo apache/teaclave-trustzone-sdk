@@ -22,6 +22,49 @@ use std::path::{Path, PathBuf};
 
 use crate::common::Arch;
 
+/// Component type for OP-TEE builds
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ComponentType {
+    /// Trusted Application (TA)
+    Ta,
+    /// Client Application (CA)
+    Ca,
+    /// Plugin (Shared Library)
+    Plugin,
+}
+
+impl ComponentType {
+    /// Convert to string for metadata lookup in Cargo.toml
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ComponentType::Ta => "ta",
+            ComponentType::Ca => "ca",
+            ComponentType::Plugin => "plugin",
+        }
+    }
+
+    /// Convert to display name (capitalized)
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            ComponentType::Ta => "TA",
+            ComponentType::Ca => "CA",
+            ComponentType::Plugin => "Plugin",
+        }
+    }
+
+    /// Parse from string (for metadata reading)
+    /// This may be useful for future extensions or dynamic component type parsing
+    #[allow(dead_code)]
+    pub fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "ta" => Ok(ComponentType::Ta),
+            "ca" => Ok(ComponentType::Ca),
+            "plugin" => Ok(ComponentType::Plugin),
+            _ => Err(anyhow::anyhow!("Invalid component type: {}", s)),
+        }
+    }
+}
+
 /// Build configuration that can be discovered from proto metadata
 #[derive(Debug, Clone)]
 pub struct BuildConfig {
@@ -45,7 +88,7 @@ impl BuildConfig {
     #[allow(clippy::too_many_arguments)]
     pub fn resolve(
         project_path: &Path,
-        component_type: &str, // "ta", "ca", or "plugin"
+        component_type: ComponentType,
         cmd_arch: Option<Arch>,
         cmd_debug: Option<bool>,
         cmd_std: Option<bool>,
@@ -132,12 +175,12 @@ impl BuildConfig {
     }
 
     /// Print the final configuration parameters being used
-    pub fn print_config(&self, component_type: &str, project_path: &Path) {
-        println!("Building {} with:", component_type.to_uppercase());
+    pub fn print_config(&self, component_type: ComponentType, project_path: &Path) {
+        println!("Building {} with:", component_type.display_name());
         println!("  Arch: {:?}", self.arch);
         println!("  Debug: {}", self.debug);
 
-        if component_type == "ta" {
+        if component_type == ComponentType::Ta {
             println!("  Std: {}", self.std);
             if let Some(ref ta_dev_kit_dir) = self.ta_dev_kit_dir {
                 let absolute_ta_dev_kit_dir = if ta_dev_kit_dir.is_absolute() {
@@ -164,7 +207,7 @@ impl BuildConfig {
             }
         }
 
-        if component_type == "ca" || component_type == "plugin" {
+        if component_type == ComponentType::Ca || component_type == ComponentType::Plugin {
             if let Some(ref optee_client_export) = self.optee_client_export {
                 let absolute_optee_client_export = if optee_client_export.is_absolute() {
                     optee_client_export.clone()
@@ -173,7 +216,7 @@ impl BuildConfig {
                 };
                 println!("  OP-TEE client export: {:?}", absolute_optee_client_export);
             }
-            if component_type == "plugin" {
+            if component_type == ComponentType::Plugin {
                 if let Some(ref uuid_path) = self.uuid_path {
                     let absolute_uuid_path = project_path
                         .join(uuid_path)
@@ -241,31 +284,6 @@ impl BuildConfig {
     }
 }
 
-/// Extract UUID path from package metadata
-fn extract_uuid_path_from_metadata(metadata: &Value) -> Result<PathBuf> {
-    // Try to get optee.ta.uuid-path from metadata
-    if let Some(optee_metadata) = metadata.get("optee") {
-        if let Some(ta_section) = optee_metadata.get("ta") {
-            if let Some(uuid_path_value) = ta_section.get("uuid-path") {
-                if let Some(uuid_path_str) = uuid_path_value.as_str() {
-                    return Ok(PathBuf::from(uuid_path_str));
-                }
-            }
-        }
-        // Also try plugin section for plugin builds
-        if let Some(plugin_section) = optee_metadata.get("plugin") {
-            if let Some(uuid_path_value) = plugin_section.get("uuid-path") {
-                if let Some(uuid_path_str) = uuid_path_value.as_str() {
-                    return Ok(PathBuf::from(uuid_path_str));
-                }
-            }
-        }
-    }
-
-    // Default fallback
-    Err(anyhow::anyhow!("No uuid_path found in metadata"))
-}
-
 /// Discover application metadata from the current project
 fn discover_app_metadata(project_path: &Path) -> Result<Value> {
     let cargo_toml_path = project_path.join("Cargo.toml");
@@ -311,15 +329,18 @@ fn discover_app_metadata(project_path: &Path) -> Result<Value> {
 /// Extract build configuration from application package metadata
 fn extract_build_config_from_metadata(
     metadata: &Value,
-    component_type: &str,
+    component_type: ComponentType,
 ) -> Result<BuildConfig> {
     let optee_metadata = metadata
         .get("optee")
         .ok_or_else(|| anyhow::anyhow!("No optee metadata found in application package"))?;
 
-    let component_metadata = optee_metadata
-        .get(component_type)
-        .ok_or_else(|| anyhow::anyhow!("No {} metadata found in optee section", component_type))?;
+    let component_metadata = optee_metadata.get(component_type.as_str()).ok_or_else(|| {
+        anyhow::anyhow!(
+            "No {} metadata found in optee section",
+            component_type.as_str()
+        )
+    })?;
 
     // Parse arch with fallback to default
     let arch = component_metadata
@@ -336,15 +357,18 @@ fn extract_build_config_from_metadata(
 fn extract_build_config_with_arch(
     metadata: &Value,
     arch: Arch,
-    component_type: &str,
+    component_type: ComponentType,
 ) -> Result<BuildConfig> {
     let optee_metadata = metadata
         .get("optee")
         .ok_or_else(|| anyhow::anyhow!("No optee metadata found in application package"))?;
 
-    let component_metadata = optee_metadata
-        .get(component_type)
-        .ok_or_else(|| anyhow::anyhow!("No {} metadata found in optee section", component_type))?;
+    let component_metadata = optee_metadata.get(component_type.as_str()).ok_or_else(|| {
+        anyhow::anyhow!(
+            "No {} metadata found in optee section",
+            component_type.as_str()
+        )
+    })?;
 
     // Parse debug with fallback to false
     let debug = component_metadata
@@ -365,7 +389,7 @@ fn extract_build_config_with_arch(
     };
 
     // Parse architecture-specific ta_dev_kit_dir (for TA only)
-    let ta_dev_kit_dir = if component_type == "ta" {
+    let ta_dev_kit_dir = if component_type == ComponentType::Ta {
         component_metadata
             .get("ta-dev-kit-dir")
             .and_then(|v| {
@@ -389,31 +413,32 @@ fn extract_build_config_with_arch(
     };
 
     // Parse architecture-specific optee_client_export (for CA and Plugin)
-    let optee_client_export = if component_type == "ca" || component_type == "plugin" {
-        component_metadata
-            .get("optee-client-export")
-            .and_then(|v| {
-                // Try architecture-specific first
-                if let Some(arch_value) = v.get(arch_key) {
-                    // Only accept string values, no null support
-                    arch_value.as_str()
-                } else {
-                    // Architecture key missing, try fallback to non-specific
-                    if v.is_string() {
-                        v.as_str()
+    let optee_client_export =
+        if component_type == ComponentType::Ca || component_type == ComponentType::Plugin {
+            component_metadata
+                .get("optee-client-export")
+                .and_then(|v| {
+                    // Try architecture-specific first
+                    if let Some(arch_value) = v.get(arch_key) {
+                        // Only accept string values, no null support
+                        arch_value.as_str()
                     } else {
-                        None
+                        // Architecture key missing, try fallback to non-specific
+                        if v.is_string() {
+                            v.as_str()
+                        } else {
+                            None
+                        }
                     }
-                }
-            })
-            .filter(|s| !s.is_empty())
-            .map(PathBuf::from)
-    } else {
-        None
-    };
+                })
+                .filter(|s| !s.is_empty())
+                .map(PathBuf::from)
+        } else {
+            None
+        };
 
     // Parse signing key (for TA only)
-    let signing_key = if component_type == "ta" {
+    let signing_key = if component_type == ComponentType::Ta {
         component_metadata
             .get("signing-key")
             .and_then(|v| v.as_str())
@@ -456,6 +481,31 @@ fn extract_build_config_with_arch(
     })
 }
 
+/// Extract UUID path from package metadata
+fn extract_uuid_path_from_metadata(metadata: &Value) -> Result<PathBuf> {
+    // Try to get optee.ta.uuid-path from metadata
+    if let Some(optee_metadata) = metadata.get("optee") {
+        if let Some(ta_section) = optee_metadata.get("ta") {
+            if let Some(uuid_path_value) = ta_section.get("uuid-path") {
+                if let Some(uuid_path_str) = uuid_path_value.as_str() {
+                    return Ok(PathBuf::from(uuid_path_str));
+                }
+            }
+        }
+        // Also try plugin section for plugin builds
+        if let Some(plugin_section) = optee_metadata.get("plugin") {
+            if let Some(uuid_path_value) = plugin_section.get("uuid-path") {
+                if let Some(uuid_path_str) = uuid_path_value.as_str() {
+                    return Ok(PathBuf::from(uuid_path_str));
+                }
+            }
+        }
+    }
+
+    // Default fallback
+    Err(anyhow::anyhow!("No uuid_path found in metadata"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -482,7 +532,7 @@ mod tests {
             }
         });
 
-        let config = extract_build_config_from_metadata(&metadata, "ta").unwrap();
+        let config = extract_build_config_from_metadata(&metadata, ComponentType::Ta).unwrap();
         assert!(matches!(config.arch, Arch::Arm));
         assert!(config.debug);
         assert!(config.std);
@@ -520,7 +570,8 @@ mod tests {
             }
         });
 
-        let config = extract_build_config_with_arch(&metadata, Arch::Aarch64, "ca").unwrap();
+        let config =
+            extract_build_config_with_arch(&metadata, Arch::Aarch64, ComponentType::Ca).unwrap();
         assert!(matches!(config.arch, Arch::Aarch64));
         assert!(!config.debug);
         assert!(!config.std);
@@ -544,7 +595,7 @@ mod tests {
             }
         });
 
-        let config = extract_build_config_from_metadata(&metadata, "plugin").unwrap();
+        let config = extract_build_config_from_metadata(&metadata, ComponentType::Plugin).unwrap();
         assert!(matches!(config.arch, Arch::Aarch64));
         assert!(!config.debug);
         assert!(!config.std);
@@ -568,7 +619,7 @@ mod tests {
             }
         });
 
-        let config = extract_build_config_from_metadata(&metadata, "ta").unwrap();
+        let config = extract_build_config_from_metadata(&metadata, ComponentType::Ta).unwrap();
         assert_eq!(config.env.len(), 3);
         assert!(config
             .env
@@ -595,7 +646,7 @@ mod tests {
             }
         });
 
-        let config = extract_build_config_from_metadata(&metadata, "ca").unwrap();
+        let config = extract_build_config_from_metadata(&metadata, ComponentType::Ca).unwrap();
         // Should only contain the valid environment variables
         assert_eq!(config.env.len(), 2);
         assert!(config
@@ -624,14 +675,16 @@ mod tests {
         });
 
         // Test with aarch64 - should get the path
-        let config = extract_build_config_with_arch(&metadata, Arch::Aarch64, "ta").unwrap();
+        let config =
+            extract_build_config_with_arch(&metadata, Arch::Aarch64, ComponentType::Ta).unwrap();
         assert_eq!(
             config.ta_dev_kit_dir,
             Some(PathBuf::from("/opt/ta_dev_kit_arm64"))
         );
 
         // Test with arm - should get None due to missing key (treated as null)
-        let config_arm = extract_build_config_with_arch(&metadata, Arch::Arm, "ta").unwrap();
+        let config_arm =
+            extract_build_config_with_arch(&metadata, Arch::Arm, ComponentType::Ta).unwrap();
         assert_eq!(config_arm.ta_dev_kit_dir, None);
     }
 }
