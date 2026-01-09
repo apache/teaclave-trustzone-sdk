@@ -621,9 +621,7 @@ impl Cipher {
                 &mut dest_size,
             )
         } {
-            raw::TEE_SUCCESS => {
-                Ok(dest_size)
-            }
+            raw::TEE_SUCCESS => Ok(dest_size),
             code => Err(Error::from_raw_error(code)),
         }
     }
@@ -742,7 +740,11 @@ impl Cipher {
     /// 6) If operation is not in initial state.
     /// 7) Hardware or cryptographic algorithm failure.
     /// 8) If the Implementation detects any other error.
-    pub fn set_key_2<T: GenericObject, D: GenericObject>(&self, object1: &T, object2: &D) -> Result<()> {
+    pub fn set_key_2<T: GenericObject, D: GenericObject>(
+        &self,
+        object1: &T,
+        object2: &D,
+    ) -> Result<()> {
         match unsafe {
             raw::TEE_SetOperationKey2(self.handle(), object1.handle(), object2.handle())
         } {
@@ -1067,9 +1069,7 @@ impl AE {
                 &mut dest_size,
             )
         } {
-            raw::TEE_SUCCESS => {
-                Ok(dest_size)
-            }
+            raw::TEE_SUCCESS => Ok(dest_size),
             code => Err(Error::from_raw_error(code)),
         }
     }
@@ -1155,9 +1155,7 @@ impl AE {
                 &mut tag_size,
             )
         } {
-            raw::TEE_SUCCESS => {
-                Ok((dest_size, tag_size))
-            }
+            raw::TEE_SUCCESS => Ok((dest_size, tag_size)),
             code => Err(Error::from_raw_error(code)),
         }
     }
@@ -1198,9 +1196,7 @@ impl AE {
                 tag.len(),
             )
         } {
-            raw::TEE_SUCCESS => {
-                Ok(dest_size)
-            }
+            raw::TEE_SUCCESS => Ok(dest_size),
             code => Err(Error::from_raw_error(code)),
         }
     }
@@ -1417,9 +1413,7 @@ impl Asymmetric {
                 &mut signature_size,
             )
         } {
-            raw::TEE_SUCCESS => {
-                Ok(signature_size)
-            }
+            raw::TEE_SUCCESS => Ok(signature_size),
             code => Err(Error::from_raw_error(code)),
         }
     }

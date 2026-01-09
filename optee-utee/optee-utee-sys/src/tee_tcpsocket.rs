@@ -30,7 +30,6 @@ extern "C" {
     pub static TEE_tcpSocket: *const TEE_iSocket;
 }
 
-
 pub const TEE_ISOCKET_PROTOCOLID_TCP: u32 = 0x65;
 pub const TEE_ISOCKET_TCP_WARNING_UNKNOWN_OUT_OF_BAND: u32 = 0xF1010002;
 

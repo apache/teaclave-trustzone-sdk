@@ -20,7 +20,7 @@ use optee_utee_sys as raw;
 use super::SocketError;
 use core::time::Duration;
 
-/// A trait designed to accommodate various implementations of GP TEE Sockets 
+/// A trait designed to accommodate various implementations of GP TEE Sockets
 /// API.
 ///
 /// An implementation of this trait is responsible for handling all
@@ -62,16 +62,16 @@ impl<T: SocketAdapter> Socket<T> {
     pub fn set_send_timeout_in_milli(&mut self, milliseconds: u32) {
         self.send_timeout = milliseconds;
     }
-    /// a wrapper of `set_recv_timeout_in_milli`, similar to `set_read_timeout` 
-    /// in std::net::TcpStream, it will set timeout to `TEE_TIMEOUT_INFINITE` 
+    /// a wrapper of `set_recv_timeout_in_milli`, similar to `set_read_timeout`
+    /// in std::net::TcpStream, it will set timeout to `TEE_TIMEOUT_INFINITE`
     /// if `Option::None` is provided.
     pub fn set_recv_timeout(&mut self, dur: Option<Duration>) -> crate::Result<()> {
         let milliseconds = convert_duration_option_to_timeout(dur)?;
         self.set_recv_timeout_in_milli(milliseconds);
         Ok(())
     }
-    /// a wrapper of `set_send_timeout_in_milli`, similar to 
-    /// `set_write_timeout` in std::net::TcpStream, it will set timeout to 
+    /// a wrapper of `set_send_timeout_in_milli`, similar to
+    /// `set_write_timeout` in std::net::TcpStream, it will set timeout to
     /// `TEE_TIMEOUT_INFINITE` if `Option::None` is provided.
     pub fn set_send_timeout(&mut self, dur: Option<Duration>) -> crate::Result<()> {
         let milliseconds = convert_duration_option_to_timeout(dur)?;

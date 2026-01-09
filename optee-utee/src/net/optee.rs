@@ -41,25 +41,25 @@ impl Setup {
         })
     }
     /// Construct a new IPv4 target parameter using the address and port. It
-    /// will return `BadParameters` if the address contains a `\0` character in 
+    /// will return `BadParameters` if the address contains a `\0` character in
     /// the middle.
     pub fn new_v4(addr: &str, port: u16) -> crate::Result<Self> {
         Self::new(addr, port, raw::TEE_ipSocket_ipVersion::TEE_IP_VERSION_4)
     }
     /// Construct a new IPv6 target parameter using the address and port. It
-    /// will return `BadParameters` if the address contains a `\0` character in 
+    /// will return `BadParameters` if the address contains a `\0` character in
     /// the middle.
     pub fn new_v6(addr: &str, port: u16) -> crate::Result<Self> {
         Self::new(addr, port, raw::TEE_ipSocket_ipVersion::TEE_IP_VERSION_6)
     }
 }
 
-/// An adapter for TCP sockets in OP-TEE. Typically, it is not used directly, 
-/// but can be employed for wrapper operations, such as traffic control within 
+/// An adapter for TCP sockets in OP-TEE. Typically, it is not used directly,
+/// but can be employed for wrapper operations, such as traffic control within
 /// the TEE.
 pub struct TcpAdapter(raw::TEE_iSocketHandle);
-/// An adapter for UDP sockets in OP-TEE. Typically, it is not used directly, 
-/// but can be employed for wrapper operations, such as traffic control within 
+/// An adapter for UDP sockets in OP-TEE. Typically, it is not used directly,
+/// but can be employed for wrapper operations, such as traffic control within
 /// the TEE.
 pub struct UdpAdapter(raw::TEE_iSocketHandle);
 /// A TcpStream that is compatible with OP-TEE.
@@ -108,12 +108,7 @@ impl SocketAdapter for TcpAdapter {
     fn send(handle: &mut Self::Handle, buf: &[u8], timeout: u32) -> Result<usize, SocketError> {
         let mut length: u32 = buf.len() as _;
         let ret = unsafe {
-            ((*raw::TEE_tcpSocket).send)(
-                handle.0,
-                buf.as_ptr() as _,
-                &mut length,
-                timeout,
-            )
+            ((*raw::TEE_tcpSocket).send)(handle.0, buf.as_ptr() as _, &mut length, timeout)
         };
         match ret {
             raw::TEE_SUCCESS => Ok(length as usize),
@@ -168,12 +163,7 @@ impl SocketAdapter for UdpAdapter {
     fn send(handle: &mut Self::Handle, buf: &[u8], timeout: u32) -> Result<usize, SocketError> {
         let mut length: u32 = buf.len() as _;
         let ret = unsafe {
-            ((*raw::TEE_udpSocket).send)(
-                handle.0,
-                buf.as_ptr() as _,
-                &mut length,
-                timeout,
-            )
+            ((*raw::TEE_udpSocket).send)(handle.0, buf.as_ptr() as _, &mut length, timeout)
         };
         match ret {
             raw::TEE_SUCCESS => Ok(length as usize),

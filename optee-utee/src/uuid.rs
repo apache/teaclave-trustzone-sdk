@@ -15,11 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::{ErrorKind, Result};
 use core::fmt;
 use hex;
 use optee_utee_sys as raw;
 use uuid as uuid_crate;
-use crate::{ErrorKind, Result};
 
 /// A Universally Unique Resource Identifier (UUID) type as defined in RFC4122.
 /// The value is used to identify a trusted application.
