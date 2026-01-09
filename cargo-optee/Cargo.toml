@@ -16,35 +16,27 @@
 # under the License.
 
 [package]
-name = "ta"
-version = "0.4.0"
+name = "cargo-optee"
+version = "0.1.0"
 authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
 license = "Apache-2.0"
 repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
-description = "An example of Rust OP-TEE TrustZone SDK."
-edition = "2018"
+description = "A cargo subcommand for building OP-TEE Trusted Applications"
+edition = "2021"
 
-[features]
-default = []
-std = ["optee-utee/std", "optee-utee-sys/std"]
+[[bin]]
+name = "cargo-optee"
+path = "src/main.rs"
 
 [dependencies]
-proto = { path = "../proto" }
-optee-utee-sys = { path = "../../../optee-utee/optee-utee-sys" }
-optee-utee = { path = "../../../optee-utee" }
-
-[build-dependencies]
-proto = { path = "../proto" }
-optee-utee-build = { path = "../../../optee-utee-build" }
-
-[profile.release]
-lto = true
-opt-level = 1
-
-[package.metadata.optee.ta]
-arch = "aarch64"
-debug = false
-std = false
-uuid-path = "../uuid.txt"
-ta-dev-kit-dir = { aarch64 = "/opt/teaclave/optee/optee_os/out/arm-plat-vexpress/export-ta_arm64", arm = "/opt/teaclave/optee/optee_os/out/arm-plat-vexpress/export-ta_arm32" }
-signing-key = "/opt/teaclave/optee/optee_os/out/arm-plat-vexpress/export-ta_arm64/keys/default_ta.pem"
+clap = { version = "4.5", features = ["derive"] }
+anyhow = "1.0"
+cargo_metadata = "0.18"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+indexmap = "=2.11.4"
+env_logger = "0.11"
+log = "0.4"
+tempfile = "3.8"
+dirs = "5.0"

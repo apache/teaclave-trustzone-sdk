@@ -100,6 +100,102 @@ jobs:
           ln -s $RUST_STD_DIR rust
           make std-examples
 
+  # Test cargo-optee build no-std examples - aarch64
+  test-cargo-optee-nostd-aarch64:
+    runs-on: ubuntu-latest
+    container: 
+      image: teaclave/teaclave-trustzone-emulator-nostd-expand-memory:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup environment
+        run: |
+          # Run entrypoint.sh to set up the bash profile
+          /entrypoint.sh true
+          # Install jq for JSON parsing
+          apt-get update && apt-get install -y jq
+      - name: Test cargo-optee no-std build (aarch64)
+        shell: bash -l {0}  # Use login shell to load the profile
+        run: |
+          # Build using cargo-optee tool with default aarch64 settings
+          ./ci/build.sh
+
+  # Test cargo-optee build no-std examples - arm32
+  test-cargo-optee-nostd-arm32:
+    runs-on: ubuntu-latest
+    container: 
+      image: teaclave/teaclave-trustzone-emulator-nostd-expand-memory:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup environment
+        run: |
+          # Run entrypoint.sh to set up the bash profile
+          /entrypoint.sh true
+          # Install jq for JSON parsing
+          apt-get update && apt-get install -y jq
+      - name: Test cargo-optee no-std build (arm32)
+        shell: bash -l {0}  # Use login shell to load the profile
+        run: |
+          # Switch to ARM32 configuration and build
+          # Note: Explicit environment reload needed for GitHub Actions
+          # (wrapper function in .bashrc not working for non-interactive shells: docker exec cmd=[...])
+          # We can fix this by updating entrypoint.sh to make ~/.profile source ~/.bashrc
+          switch_config --ta no-std/arm32 && \
+          switch_config --host arm32 && \
+          source ${TEACLAVE_TOOLCHAIN_BASE}/environment && \
+          ./ci/build.sh --ta arm --host arm
+
+  # Test cargo-optee build std examples - aarch64
+  test-cargo-optee-std-aarch64:
+    runs-on: ubuntu-latest
+    container:
+      image: teaclave/teaclave-trustzone-emulator-std-expand-memory:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup environment
+        run: |
+          # Run entrypoint.sh to set up the bash profile
+          /entrypoint.sh true
+          # Install jq for JSON parsing
+          apt-get update && apt-get install -y jq
+      - name: Test cargo-optee std build (aarch64)
+        shell: bash -l {0}  # Use login shell to load the profile
+        run: |
+          # Link rust directory for std support
+          ln -s $RUST_STD_DIR rust
+          # Build using cargo-optee tool with default aarch64 std settings
+          ./ci/build.sh --std
+
+  # Test cargo-optee build std examples - arm32
+  test-cargo-optee-std-arm32:
+    runs-on: ubuntu-latest
+    container:
+      image: teaclave/teaclave-trustzone-emulator-std-expand-memory:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup environment
+        run: |
+          # Run entrypoint.sh to set up the bash profile
+          /entrypoint.sh true
+          # Install jq for JSON parsing
+          apt-get update && apt-get install -y jq
+      - name: Test cargo-optee std build (arm32)
+        shell: bash -l {0}  # Use login shell to load the profile
+        run: |
+          # Link rust directory for std support
+          ln -s $RUST_STD_DIR rust
+          # Switch to ARM32 std configuration and build
+          # Note: Explicit environment reload needed for GitHub Actions
+          # (wrapper function in .bashrc not working for non-interactive shells: docker exec cmd=[...])
+          # We can fix this by updating entrypoint.sh to make ~/.profile source ~/.bashrc
+          switch_config --ta std/arm32 && \
+          switch_config --host arm32 && \
+          source ${TEACLAVE_TOOLCHAIN_BASE}/environment && \
+          ./ci/build.sh --ta arm --host arm --std
+
   license:
     runs-on: ubuntu-latest
     steps:
