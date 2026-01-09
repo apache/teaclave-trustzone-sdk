@@ -60,6 +60,15 @@ pub union TEE_Param {
     pub value: Value,
 }
 
+#[allow(non_camel_case_types)]
+pub type TEE_ParamType = u32;
+
+#[allow(non_camel_case_types)]
+pub type TEE_ParamTypes = u32;
+
+#[allow(non_camel_case_types)]
+pub type TEE_Params = [TEE_Param; 4];
+
 #[repr(C)]
 pub struct __TEE_TASessionHandle {
     _unused: [u8; 0],
