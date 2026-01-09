@@ -40,3 +40,11 @@ optee-utee-build = { path = "../../../optee-utee-build" }
 [profile.release]
 lto = true
 opt-level = 1
+
+[package.metadata.optee.ta]
+arch = "aarch64"
+debug = false
+std = false
+uuid-path = "../uuid.txt"
+ta-dev-kit-dir = { aarch64 = "/opt/teaclave/optee/optee_os/out/arm-plat-vexpress/export-ta_arm64", arm = "/opt/teaclave/optee/optee_os/out/arm-plat-vexpress/export-ta_arm32" }
+signing-key = "/opt/teaclave/optee/optee_os/out/arm-plat-vexpress/export-ta_arm64/keys/default_ta.pem"

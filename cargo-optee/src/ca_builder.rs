@@ -19,9 +19,11 @@ use anyhow::{bail, Result};
 use std::path::PathBuf;
 use std::process::Command;
 
+use crate::common;
 use crate::common::{
-    find_target_directory, get_target_and_cross_compile, print_cargo_command,
-    print_output_and_bail, read_uuid_from_file, Arch, ChangeDirectoryGuard,
+    get_package_name, get_target_and_cross_compile, get_target_directory_from_metadata,
+    print_cargo_command, print_output_and_bail, read_uuid_from_file, Arch, BuildMode,
+    ChangeDirectoryGuard,
 };
 
 #[derive(Clone)]
@@ -115,8 +117,8 @@ fn run_clippy(config: &CaBuildConfig) -> Result<()> {
         print_output_and_bail("cargo fmt", &fmt_output)?;
     }
 
-    // Determine target based on arch
-    let (target, _cross_compile) = get_target_and_cross_compile(config.arch);
+    // Determine target based on arch (CA runs in Normal World Linux)
+    let (target, _cross_compile) = get_target_and_cross_compile(config.arch, BuildMode::Ca)?;
 
     let mut clippy_cmd = Command::new("cargo");
     clippy_cmd.arg("clippy");
@@ -144,8 +146,8 @@ fn build_binary(config: &CaBuildConfig) -> Result<()> {
     let component_type = if config.plugin { "Plugin" } else { "CA" };
     println!("Building {} binary...", component_type);
 
-    // Determine target and cross-compile based on arch
-    let (target, cross_compile) = get_target_and_cross_compile(config.arch);
+    // Determine target and cross-compile based on arch (CA runs in Normal World Linux)
+    let (target, cross_compile) = get_target_and_cross_compile(config.arch, BuildMode::Ca)?;
 
     let mut build_cmd = Command::new("cargo");
     build_cmd.arg("build");
@@ -201,30 +203,25 @@ fn post_build(config: &CaBuildConfig) -> Result<PathBuf> {
 fn copy_plugin(config: &CaBuildConfig) -> Result<PathBuf> {
     println!("Processing plugin...");
 
-    // Determine target based on arch
-    let (target, _cross_compile) = get_target_and_cross_compile(config.arch);
+    // Determine target based on arch (CA runs in Normal World Linux)
+    let (target, _cross_compile) = get_target_and_cross_compile(config.arch, BuildMode::Ca)?;
 
     let profile = if config.debug { "debug" } else { "release" };
 
-    // Use Cargo's workspace discovery strategy to find target directory
-    let workspace_target_dir = find_target_directory()?;
-    let target_dir = workspace_target_dir.join(target).join(profile);
+    // Use cargo metadata to get the target directory (supports workspace and CARGO_TARGET_DIR)
+    let target_directory = get_target_directory_from_metadata()?;
+    let target_dir = target_directory.join(target).join(profile);
 
-    // Get the library name from Cargo.toml
-    let cargo_toml = std::fs::read_to_string("Cargo.toml")?;
-    let lib_name = cargo_toml
-        .lines()
-        .find(|line| line.trim().starts_with("name"))
-        .and_then(|line| line.split('=').nth(1))
-        .map(|s| s.trim().trim_matches('"'))
-        .ok_or_else(|| anyhow::anyhow!("Could not find package name in Cargo.toml"))?;
+    // Get the library name from Cargo.toml (we're already in the project directory)
+    let lib_name = get_package_name()?;
 
     // Plugin is built as a shared library (lib<name>.so)
-    let plugin_src = target_dir.join(format!("lib{}.so", lib_name));
-
-    if !plugin_src.exists() {
-        bail!("Plugin library not found at {:?}", plugin_src);
-    }
+    let plugin_src = common::join_format_and_check::<&str>(
+        &target_dir,
+        &[],
+        &format!("lib{}.so", lib_name),
+        "Plugin library",
+    )?;
 
     // Read UUID from specified file
     let uuid = read_uuid_from_file(
@@ -245,25 +242,19 @@ fn strip_binary(config: &CaBuildConfig) -> Result<PathBuf> {
     println!("Stripping binary...");
 
     // Determine target based on arch
-    let (target, cross_compile) = get_target_and_cross_compile(config.arch);
+    // Determine target and cross-compile based on arch (CA runs in Normal World Linux)
+    let (target, cross_compile) = get_target_and_cross_compile(config.arch, BuildMode::Ca)?;
 
     let profile = if config.debug { "debug" } else { "release" };
-    let target_dir = PathBuf::from("target").join(target).join(profile);
 
-    // Get the binary name from Cargo.toml
-    let cargo_toml = std::fs::read_to_string("Cargo.toml")?;
-    let binary_name = cargo_toml
-        .lines()
-        .find(|line| line.trim().starts_with("name"))
-        .and_then(|line| line.split('=').nth(1))
-        .map(|s| s.trim().trim_matches('"'))
-        .ok_or_else(|| anyhow::anyhow!("Could not find package name in Cargo.toml"))?;
+    // Use cargo metadata to get the target directory (supports workspace and CARGO_TARGET_DIR)
+    let target_directory = get_target_directory_from_metadata()?;
+    let target_dir = target_directory.join(target).join(profile);
 
-    let binary_path = target_dir.join(binary_name);
+    // Get the binary name from Cargo.toml (we're already in the project directory)
+    let binary_name = get_package_name()?;
 
-    if !binary_path.exists() {
-        bail!("Binary not found at {:?}", binary_path);
-    }
+    let binary_path = common::join_and_check(&target_dir, &[binary_name], "Binary")?;
 
     let objcopy = format!("{}objcopy", cross_compile);
 

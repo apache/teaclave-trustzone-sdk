@@ -17,11 +17,31 @@
 
 use anyhow::{bail, Result};
 use clap::ValueEnum;
+use serde_json;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::process::{Command, Output};
 use toml::Value;
+
+/// RAII guard to ensure we return to the original directory
+pub struct ChangeDirectoryGuard {
+    original: PathBuf,
+}
+
+impl ChangeDirectoryGuard {
+    pub fn new(new_dir: &PathBuf) -> Result<Self> {
+        let original = env::current_dir()?;
+        env::set_current_dir(new_dir)?;
+        Ok(Self { original })
+    }
+}
+
+impl Drop for ChangeDirectoryGuard {
+    fn drop(&mut self) {
+        let _ = env::set_current_dir(&self.original);
+    }
+}
 
 /// Target architecture for building
 #[derive(Debug, Clone, Copy, ValueEnum, PartialEq)]
@@ -44,6 +64,78 @@ impl std::str::FromStr for Arch {
     }
 }
 
+/// Build mode for OP-TEE components
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BuildMode {
+    /// Client Application (CA) - runs in Normal World Linux environment
+    /// Can use standard library, uses standard Linux targets
+    Ca,
+    /// Trusted Application with std support
+    /// Uses OP-TEE custom targets (e.g., aarch64-unknown-optee)
+    TaStd,
+    /// Trusted Application without std support
+    /// Uses standard Linux targets but runs in TEE environment
+    TaNoStd,
+}
+
+/// Target configurations for different architectures and build modes
+/// Format: (Architecture, BuildMode, target, cross_compile_prefix)
+const TARGET_CONFIGS: [(Arch, BuildMode, &str, &str); 6] = [
+    // ARM 32-bit configurations
+    (
+        Arch::Arm,
+        BuildMode::Ca,
+        "arm-unknown-linux-gnueabihf",
+        "arm-linux-gnueabihf-",
+    ),
+    (
+        Arch::Arm,
+        BuildMode::TaNoStd,
+        "arm-unknown-linux-gnueabihf",
+        "arm-linux-gnueabihf-",
+    ),
+    (
+        Arch::Arm,
+        BuildMode::TaStd,
+        "arm-unknown-optee",
+        "arm-linux-gnueabihf-",
+    ),
+    // AArch64 configurations
+    (
+        Arch::Aarch64,
+        BuildMode::Ca,
+        "aarch64-unknown-linux-gnu",
+        "aarch64-linux-gnu-",
+    ),
+    (
+        Arch::Aarch64,
+        BuildMode::TaNoStd,
+        "aarch64-unknown-linux-gnu",
+        "aarch64-linux-gnu-",
+    ),
+    (
+        Arch::Aarch64,
+        BuildMode::TaStd,
+        "aarch64-unknown-optee",
+        "aarch64-linux-gnu-",
+    ),
+];
+
+/// Unified function to derive target and cross-compile prefix from architecture and build mode
+pub fn get_target_and_cross_compile(arch: Arch, mode: BuildMode) -> Result<(String, String)> {
+    for &(config_arch, config_mode, target, cross_compile_prefix) in &TARGET_CONFIGS {
+        if config_arch == arch && config_mode == mode {
+            return Ok((target.to_string(), cross_compile_prefix.to_string()));
+        }
+    }
+
+    bail!(
+        "No target configuration found for arch: {:?}, mode: {:?}",
+        arch,
+        mode
+    )
+}
+
 /// Helper function to print command output and return error
 pub fn print_output_and_bail(cmd_name: &str, output: &Output) -> Result<()> {
     eprintln!(
@@ -61,39 +153,6 @@ pub fn print_output_and_bail(cmd_name: &str, output: &Output) -> Result<()> {
         cmd_name,
         output.status.code()
     )
-}
-
-/// Helper function to derive target and cross-compile prefix from arch
-pub fn get_target_and_cross_compile(arch: Arch) -> (String, String) {
-    match arch {
-        Arch::Arm => (
-            "arm-unknown-linux-gnueabihf".to_string(),
-            "arm-linux-gnueabihf-".to_string(),
-        ),
-        Arch::Aarch64 => (
-            "aarch64-unknown-linux-gnu".to_string(),
-            "aarch64-linux-gnu-".to_string(),
-        ),
-    }
-}
-
-/// RAII guard to ensure we return to the original directory
-pub struct ChangeDirectoryGuard {
-    original: PathBuf,
-}
-
-impl ChangeDirectoryGuard {
-    pub fn new(new_dir: &PathBuf) -> Result<Self> {
-        let original = env::current_dir()?;
-        env::set_current_dir(new_dir)?;
-        Ok(Self { original })
-    }
-}
-
-impl Drop for ChangeDirectoryGuard {
-    fn drop(&mut self) {
-        let _ = env::set_current_dir(&self.original);
-    }
 }
 
 /// Print cargo command for debugging
@@ -129,33 +188,27 @@ pub fn print_cargo_command(cmd: &Command, description: &str) {
     );
 }
 
-/// Find the target directory using Cargo's workspace discovery strategy
-/// Start from current directory and walk up looking for workspace root
-pub fn find_target_directory() -> Result<PathBuf> {
-    let mut current_dir = env::current_dir()?;
+/// Get the target directory using cargo metadata
+pub fn get_target_directory_from_metadata() -> Result<PathBuf> {
+    // We're already in the project directory, so no need for --manifest-path
+    let output = Command::new("cargo")
+        .arg("metadata")
+        .arg("--format-version")
+        .arg("1")
+        .arg("--no-deps")
+        .output()?;
 
-    loop {
-        // Check if current directory has a Cargo.toml that declares a workspace
-        let cargo_toml_path = current_dir.join("Cargo.toml");
-        if cargo_toml_path.exists() {
-            let cargo_toml_content = fs::read_to_string(&cargo_toml_path)?;
-            if let Ok(cargo_toml) = toml::from_str::<Value>(&cargo_toml_content) {
-                // If this Cargo.toml has a [workspace] section, this is the workspace root
-                if cargo_toml.get("workspace").is_some() {
-                    return Ok(current_dir.join("target"));
-                }
-            }
-        }
-
-        // Move to parent directory
-        if let Some(parent) = current_dir.parent() {
-            current_dir = parent.to_path_buf();
-        } else {
-            // Reached filesystem root, no workspace found
-            // Use target directory in the original crate directory
-            return Ok(env::current_dir()?.join("target"));
-        }
+    if !output.status.success() {
+        bail!("Failed to get cargo metadata");
     }
+
+    let metadata: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+    let target_directory = metadata
+        .get("target_directory")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Could not get target directory from cargo metadata"))?;
+
+    Ok(PathBuf::from(target_directory))
 }
 
 /// Read UUID from a file (e.g., uuid.txt)
@@ -172,6 +225,45 @@ pub fn read_uuid_from_file(uuid_path: &std::path::Path) -> Result<String> {
     }
 
     Ok(uuid)
+}
+
+/// Join path segments and check if the resulting path exists
+pub fn join_and_check<P: AsRef<std::path::Path>>(
+    base: &std::path::Path,
+    segments: &[P],
+    error_context: &str,
+) -> Result<PathBuf> {
+    let mut path = base.to_path_buf();
+    for segment in segments {
+        path = path.join(segment);
+    }
+
+    if !path.exists() {
+        bail!("{} does not exist: {:?}", error_context, path);
+    }
+
+    Ok(path)
+}
+
+/// Join path segments with a formatted final segment and check if the resulting path exists
+pub fn join_format_and_check<P: AsRef<std::path::Path>>(
+    base: &std::path::Path,
+    segments: &[P],
+    formatted_segment: &str,
+    error_context: &str,
+) -> Result<PathBuf> {
+    let mut path = base.to_path_buf();
+    for segment in segments {
+        path = path.join(segment);
+    }
+
+    let final_path = path.join(formatted_segment);
+
+    if !final_path.exists() {
+        bail!("{} does not exist: {:?}", error_context, final_path);
+    }
+
+    Ok(final_path)
 }
 
 /// Clean build artifacts for any OP-TEE component (TA, CA, Plugin)
@@ -196,4 +288,24 @@ pub fn clean_project(project_path: &std::path::Path) -> Result<()> {
 
     println!("Build artifacts cleaned successfully");
     Ok(())
+}
+
+/// Get the package name from Cargo.toml in the current directory
+pub fn get_package_name() -> Result<String> {
+    // We assume we're already in the project directory (via ChangeDirectoryGuard)
+    let manifest_path = PathBuf::from("Cargo.toml");
+    if !manifest_path.exists() {
+        bail!("Cargo.toml not found in current directory");
+    }
+
+    let cargo_toml_content = fs::read_to_string(&manifest_path)?;
+    let cargo_toml: Value = toml::from_str(&cargo_toml_content)?;
+
+    let package_name = cargo_toml
+        .get("package")
+        .and_then(|p| p.get("name"))
+        .and_then(|n| n.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Could not find package name in Cargo.toml"))?;
+
+    Ok(package_name.to_string())
 }
