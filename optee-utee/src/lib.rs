@@ -50,7 +50,9 @@ pub use self::error::{Error, ErrorKind, Result};
 pub use self::extension::*;
 pub use self::identity::{Identity, LoginType};
 pub use self::object::*;
-pub use self::parameter::{ParamType, ParamTypes, Parameter, Parameters};
+pub use self::parameter::{
+    ParamType, ParamTypes, Parameter, Parameters, RawParamType, RawParamTypes, RawParams,
+};
 pub use self::ta_session::{TaSession, TaSessionBuilder};
 pub use self::tee_parameter::{ParamIndex, TeeParams};
 pub use self::time::*;

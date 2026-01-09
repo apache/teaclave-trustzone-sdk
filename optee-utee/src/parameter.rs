@@ -19,10 +19,14 @@ use crate::{Error, ErrorKind, Result};
 use core::{marker, slice};
 use optee_utee_sys as raw;
 
+pub type RawParamType = u32;
+pub type RawParamTypes = u32;
+pub type RawParams = [raw::TEE_Param; 4];
+
 pub struct Parameters(pub Parameter, pub Parameter, pub Parameter, pub Parameter);
 
 impl Parameters {
-    pub fn from_raw(tee_params: &mut [raw::TEE_Param; 4], param_types: u32) -> Self {
+    pub fn from_raw(tee_params: &mut RawParams, param_types: u32) -> Self {
         let (f0, f1, f2, f3) = ParamTypes::from(param_types).into_flags();
         let p0 = Parameter::from_raw(&mut tee_params[0], f0);
         let p1 = Parameter::from_raw(&mut tee_params[1], f1);
