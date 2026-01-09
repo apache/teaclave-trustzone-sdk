@@ -18,8 +18,6 @@
 extern crate alloc;
 extern crate proc_macro;
 
-#[cfg(not(feature = "std"))]
-use alloc::vec::Vec;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::parse_macro_input;
@@ -30,21 +28,22 @@ use syn::spanned::Spanned;
 /// # Examples
 ///
 /// ``` no_run
-/// #[ta_crate]
-/// fn ta_crate() -> Result<()> { }
+/// #[ta_create]
+/// fn ta_create() -> Result<()> { }
 /// ```
 #[proc_macro_attribute]
 pub fn ta_create(_args: TokenStream, input: TokenStream) -> TokenStream {
     let f = parse_macro_input!(input as syn::ItemFn);
-    let ident = &f.ident;
+    let f_sig = &f.sig;
+    let f_ident = &f_sig.ident;
 
     // check the function signature
-    let valid_signature = f.constness.is_none()
+    let valid_signature = f_sig.constness.is_none()
         && matches!(f.vis, syn::Visibility::Inherited)
-        && f.abi.is_none()
-        && f.decl.inputs.is_empty()
-        && f.decl.generics.where_clause.is_none()
-        && f.decl.variadic.is_none();
+        && f_sig.abi.is_none()
+        && f_sig.inputs.is_empty()
+        && f_sig.generics.where_clause.is_none()
+        && f_sig.variadic.is_none();
 
     if !valid_signature {
         return syn::parse::Error::new(
@@ -58,7 +57,7 @@ pub fn ta_create(_args: TokenStream, input: TokenStream) -> TokenStream {
     quote!(
         #[no_mangle]
         pub extern "C" fn TA_CreateEntryPoint() -> optee_utee_sys::TEE_Result {
-            match #ident() {
+            match #f_ident() {
                 Ok(_) => optee_utee_sys::TEE_SUCCESS,
                 Err(e) => e.raw_code()
             }
@@ -80,16 +79,17 @@ pub fn ta_create(_args: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn ta_destroy(_args: TokenStream, input: TokenStream) -> TokenStream {
     let f = parse_macro_input!(input as syn::ItemFn);
-    let ident = &f.ident;
+    let f_sig = &f.sig;
+    let f_ident = &f_sig.ident;
 
     // check the function signature
-    let valid_signature = f.constness.is_none()
+    let valid_signature = f_sig.constness.is_none()
         && matches!(f.vis, syn::Visibility::Inherited)
-        && f.abi.is_none()
-        && f.decl.inputs.is_empty()
-        && f.decl.generics.where_clause.is_none()
-        && f.decl.variadic.is_none()
-        && matches!(f.decl.output, syn::ReturnType::Default);
+        && f_sig.abi.is_none()
+        && f_sig.inputs.is_empty()
+        && f_sig.generics.where_clause.is_none()
+        && f_sig.variadic.is_none()
+        && matches!(f_sig.output, syn::ReturnType::Default);
 
     if !valid_signature {
         return syn::parse::Error::new(
@@ -103,7 +103,7 @@ pub fn ta_destroy(_args: TokenStream, input: TokenStream) -> TokenStream {
     quote!(
         #[no_mangle]
         pub extern "C" fn TA_DestroyEntryPoint() {
-            #ident();
+            #f_ident()
         }
 
         #f
@@ -128,15 +128,16 @@ pub fn ta_destroy(_args: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn ta_open_session(_args: TokenStream, input: TokenStream) -> TokenStream {
     let f = parse_macro_input!(input as syn::ItemFn);
-    let ident = &f.ident;
+    let f_sig = &f.sig;
+    let f_ident = &f_sig.ident;
 
     // check the function signature
-    let valid_signature = f.constness.is_none()
+    let valid_signature = f_sig.constness.is_none()
         && matches!(f.vis, syn::Visibility::Inherited)
-        && f.abi.is_none()
-        && (f.decl.inputs.len() == 1 || f.decl.inputs.len() == 2)
-        && f.decl.generics.where_clause.is_none()
-        && f.decl.variadic.is_none();
+        && f_sig.abi.is_none()
+        && (f_sig.inputs.len() == 1 || f_sig.inputs.len() == 2)
+        && f_sig.generics.where_clause.is_none()
+        && f_sig.variadic.is_none();
 
     if !valid_signature {
         return syn::parse::Error::new(
@@ -147,16 +148,16 @@ pub fn ta_open_session(_args: TokenStream, input: TokenStream) -> TokenStream {
         .into();
     }
 
-    match f.decl.inputs.len() {
+    match f_sig.inputs.len() {
         1 => quote!(
             #[no_mangle]
             pub extern "C" fn TA_OpenSessionEntryPoint(
-                param_types: u32,
-                params: &mut [optee_utee_sys::TEE_Param; 4],
-                sess_ctx: *mut *mut c_void,
+                param_types: optee_utee::RawParamTypes,
+                params: &mut optee_utee::RawParams,
+                _: *mut *mut core::ffi::c_void,
             ) -> optee_utee_sys::TEE_Result {
                 let mut parameters = Parameters::from_raw(params, param_types);
-                match #ident(&mut parameters) {
+                match #f_ident(&mut parameters) {
                     Ok(_) => optee_utee_sys::TEE_SUCCESS,
                     Err(e) => e.raw_code()
                 }
@@ -167,18 +168,9 @@ pub fn ta_open_session(_args: TokenStream, input: TokenStream) -> TokenStream {
         .into(),
 
         2 => {
-            let input_types: Vec<_> = f
-                .decl
-                .inputs
-                .iter()
-                .map(|arg| match arg {
-                    syn::FnArg::Captured(val) => &val.ty,
-                    _ => unreachable!(),
-                })
-                .collect();
-            let ctx_type = match input_types.last().unwrap() {
-                syn::Type::Reference(r) => &r.elem,
-                _ => unreachable!(),
+            let ctx_type = match extract_fn_arg_mut_ref_type(&f_sig.inputs[1]) {
+                Ok(v) => v,
+                Err(e) => return e.to_compile_error().into(),
             };
 
             quote!(
@@ -186,13 +178,13 @@ pub fn ta_open_session(_args: TokenStream, input: TokenStream) -> TokenStream {
                 // we just expand the unsafe block, but the session-related macros need refactoring in the future
                 #[no_mangle]
                 pub unsafe extern "C" fn TA_OpenSessionEntryPoint(
-                    param_types: u32,
-                    params: &mut [optee_utee_sys::TEE_Param; 4],
-                    sess_ctx: *mut *mut c_void,
+                    param_types: optee_utee::RawParamTypes,
+                    params: &mut optee_utee::RawParams,
+                    sess_ctx: *mut *mut core::ffi::c_void,
                 ) -> optee_utee_sys::TEE_Result {
                     let mut parameters = Parameters::from_raw(params, param_types);
                     let mut ctx: #ctx_type = Default::default();
-                    match #ident(&mut parameters, &mut ctx) {
+                    match #f_ident(&mut parameters, &mut ctx) {
                         Ok(_) =>
                         {
                             *sess_ctx = Box::into_raw(Box::new(ctx)) as _;
@@ -225,16 +217,17 @@ pub fn ta_open_session(_args: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn ta_close_session(_args: TokenStream, input: TokenStream) -> TokenStream {
     let f = parse_macro_input!(input as syn::ItemFn);
-    let ident = &f.ident;
+    let f_sig = &f.sig;
+    let f_ident = &f_sig.ident;
 
     // check the function signature
-    let valid_signature = f.constness.is_none()
+    let valid_signature = f_sig.constness.is_none()
         && matches!(f.vis, syn::Visibility::Inherited)
-        && f.abi.is_none()
-        && (f.decl.inputs.is_empty() || f.decl.inputs.len() == 1)
-        && f.decl.generics.where_clause.is_none()
-        && f.decl.variadic.is_none()
-        && matches!(f.decl.output, syn::ReturnType::Default);
+        && f_sig.abi.is_none()
+        && (f_sig.inputs.is_empty() || f_sig.inputs.len() == 1)
+        && f_sig.generics.where_clause.is_none()
+        && f_sig.variadic.is_none()
+        && matches!(f_sig.output, syn::ReturnType::Default);
 
     if !valid_signature {
         return syn::parse::Error::new(
@@ -245,41 +238,32 @@ pub fn ta_close_session(_args: TokenStream, input: TokenStream) -> TokenStream {
         .into();
     }
 
-    match f.decl.inputs.len() {
+    match f_sig.inputs.len() {
         0 => quote!(
             #[no_mangle]
-            pub extern "C" fn TA_CloseSessionEntryPoint(sess_ctx: *mut c_void) {
-                #ident();
+            pub extern "C" fn TA_CloseSessionEntryPoint(_: *mut core::ffi::c_void) {
+                #f_ident()
             }
 
             #f
         )
         .into(),
         1 => {
-            let input_types: Vec<_> = f
-                .decl
-                .inputs
-                .iter()
-                .map(|arg| match arg {
-                    syn::FnArg::Captured(val) => &val.ty,
-                    _ => unreachable!(),
-                })
-                .collect();
-            let t = match input_types.first().unwrap() {
-                syn::Type::Reference(r) => &r.elem,
-                _ => unreachable!(),
+            let ctx_type = match extract_fn_arg_mut_ref_type(&f_sig.inputs[0]) {
+                Ok(v) => v,
+                Err(e) => return e.to_compile_error().into(),
             };
 
             quote!(
                 // To eliminate the clippy error: this public function might dereference a raw pointer but is not marked `unsafe`
                 // we just expand the unsafe block, but the session-related macros need refactoring in the future
                 #[no_mangle]
-                pub unsafe extern "C" fn TA_CloseSessionEntryPoint(sess_ctx: *mut c_void) {
+                pub unsafe extern "C" fn TA_CloseSessionEntryPoint(sess_ctx: *mut core::ffi::c_void) {
                     if sess_ctx.is_null() {
                         panic!("sess_ctx is null");
                     }
-                    let mut b = Box::from_raw(sess_ctx as *mut #t);
-                    #ident(&mut b);
+                    let mut b = Box::from_raw(sess_ctx as *mut #ctx_type);
+                    #f_ident(&mut b);
                     drop(b);
                 }
 
@@ -306,15 +290,16 @@ pub fn ta_close_session(_args: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn ta_invoke_command(_args: TokenStream, input: TokenStream) -> TokenStream {
     let f = parse_macro_input!(input as syn::ItemFn);
-    let ident = &f.ident;
+    let f_sig = &f.sig;
+    let f_ident = &f_sig.ident;
 
     // check the function signature
-    let valid_signature = f.constness.is_none()
+    let valid_signature = f_sig.constness.is_none()
         && matches!(f.vis, syn::Visibility::Inherited)
-        && f.abi.is_none()
-        && (f.decl.inputs.len() == 2 || f.decl.inputs.len() == 3)
-        && f.decl.generics.where_clause.is_none()
-        && f.decl.variadic.is_none();
+        && f_sig.abi.is_none()
+        && (f_sig.inputs.len() == 2 || f_sig.inputs.len() == 3)
+        && f_sig.generics.where_clause.is_none()
+        && f_sig.variadic.is_none();
 
     if !valid_signature {
         return syn::parse::Error::new(
@@ -325,17 +310,17 @@ pub fn ta_invoke_command(_args: TokenStream, input: TokenStream) -> TokenStream 
         .into();
     }
 
-    match f.decl.inputs.len() {
+    match f_sig.inputs.len() {
         2 => quote!(
             #[no_mangle]
             pub extern "C" fn TA_InvokeCommandEntryPoint(
-                sess_ctx: *mut c_void,
+                _: *mut core::ffi::c_void,
                 cmd_id: u32,
                 param_types: u32,
-                params: &mut [optee_utee_sys::TEE_Param; 4],
+                params: &mut optee_utee::RawParams,
             ) -> optee_utee_sys::TEE_Result {
                 let mut parameters = Parameters::from_raw(params, param_types);
-                match #ident(cmd_id, &mut parameters) {
+                match #f_ident(cmd_id, &mut parameters) {
                     Ok(_) => {
                         optee_utee_sys::TEE_SUCCESS
                     },
@@ -347,18 +332,9 @@ pub fn ta_invoke_command(_args: TokenStream, input: TokenStream) -> TokenStream 
         )
         .into(),
         3 => {
-            let input_types: Vec<_> = f
-                .decl
-                .inputs
-                .iter()
-                .map(|arg| match arg {
-                    syn::FnArg::Captured(val) => &val.ty,
-                    _ => unreachable!(),
-                })
-                .collect();
-            let t = match input_types.first().unwrap() {
-                syn::Type::Reference(r) => &r.elem,
-                _ => unreachable!(),
+            let ctx_type = match extract_fn_arg_mut_ref_type(&f_sig.inputs[0]) {
+                Ok(v) => v,
+                Err(e) => return e.to_compile_error().into(),
             };
 
             quote!(
@@ -366,17 +342,17 @@ pub fn ta_invoke_command(_args: TokenStream, input: TokenStream) -> TokenStream 
                 // we just expand the unsafe block, but the session-related macros need refactoring in the future
                 #[no_mangle]
                 pub unsafe extern "C" fn TA_InvokeCommandEntryPoint(
-                    sess_ctx: *mut c_void,
+                    sess_ctx: *mut core::ffi::c_void,
                     cmd_id: u32,
                     param_types: u32,
-                    params: &mut [optee_utee_sys::TEE_Param; 4],
+                    params: &mut optee_utee::RawParams,
                 ) -> optee_utee_sys::TEE_Result {
                     if sess_ctx.is_null() {
                         return optee_utee_sys::TEE_ERROR_SECURITY;
                     }
                     let mut parameters = Parameters::from_raw(params, param_types);
-                    let mut b = Box::from_raw(sess_ctx as *mut #t);
-                    match #ident(&mut b, cmd_id, &mut parameters) {
+                    let mut b = Box::from_raw(sess_ctx as *mut #ctx_type);
+                    match #f_ident(&mut b, cmd_id, &mut parameters) {
                         Ok(_) => {
                             core::mem::forget(b);
                             optee_utee_sys::TEE_SUCCESS
@@ -394,4 +370,18 @@ pub fn ta_invoke_command(_args: TokenStream, input: TokenStream) -> TokenStream 
         }
         _ => unreachable!(),
     }
+}
+
+fn extract_fn_arg_mut_ref_type(fn_arg: &syn::FnArg) -> Result<&syn::Type, syn::parse::Error> {
+    if let syn::FnArg::Typed(ty) = fn_arg {
+        if let syn::Type::Reference(type_ref) = ty.ty.as_ref() {
+            if type_ref.mutability.is_some() {
+                return Ok(&*type_ref.elem);
+            }
+        }
+    };
+    Err(syn::parse::Error::new(
+        fn_arg.span(),
+        "this argument should have signature `_: &mut T`",
+    ))
 }
