@@ -24,6 +24,10 @@ repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
 description = "An example of Rust OP-TEE TrustZone SDK."
 edition = "2018"
 
+[features]
+default = []
+std = ["optee-utee/std", "optee-utee-sys/std"]
+
 [dependencies]
 proto = { path = "../proto" }
 optee-utee-sys = { path = "../../../optee-utee/optee-utee-sys", features = ["std"] }
@@ -45,3 +49,11 @@ optee-utee-build = { path = "../../../optee-utee-build" }
 panic = "abort"
 lto = false
 opt-level = 3
+
+[package.metadata.optee.ta]
+arch = "aarch64"
+debug = false
+std = true
+uuid-path = "../uuid.txt"
+ta-dev-kit-dir = { aarch64 = "/opt/teaclave/optee/optee_os/out/arm-plat-vexpress/export-ta_arm64", arm = "/opt/teaclave/optee/optee_os/out/arm-plat-vexpress/export-ta_arm32" }
+signing-key = "/opt/teaclave/optee/optee_os/out/arm-plat-vexpress/export-ta_arm64/keys/default_ta.pem"
