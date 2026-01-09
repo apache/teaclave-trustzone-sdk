@@ -55,10 +55,10 @@ pub struct utee_attribute {
 #[repr(C)]
 pub struct utee_object_info {
     obj_type: u32,
-	obj_size: u32,
-	max_obj_size: u32,
-	obj_usage: u32,
-	data_size: u32,
-	data_pos: u32,
-	handle_flags: u32,
+    obj_size: u32,
+    max_obj_size: u32,
+    obj_usage: u32,
+    data_size: u32,
+    data_pos: u32,
+    handle_flags: u32,
 }

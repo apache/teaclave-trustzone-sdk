@@ -106,7 +106,7 @@ impl std::io::Write for UdpSocket {
     }
 }
 
-// This is implemented to save developers from having to make numerous map_err 
+// This is implemented to save developers from having to make numerous map_err
 // calls.
 impl Into<std::io::Error> for SocketError {
     fn into(self) -> std::io::Error {

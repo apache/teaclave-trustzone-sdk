@@ -74,8 +74,7 @@ impl PropertyValue for String {
                 if out_size == 0 {
                     // return an empty string
                     Ok(String::new())
-                }
-                else {
+                } else {
                     Err(Error::new(ErrorKind::Generic))
                 }
             }
@@ -102,9 +101,7 @@ impl PropertyValue for String {
 
                 Ok(result)
             }
-            _ => {
-                Err(Error::from_raw_error(res))
-            }
+            _ => Err(Error::from_raw_error(res)),
         }
     }
 }
@@ -126,7 +123,8 @@ impl PropertyValue for u32 {
     unsafe fn from_raw(set: raw::TEE_PropSetHandle, key: CString) -> Result<Self> {
         let mut value = 0;
 
-        let res = raw::TEE_GetPropertyAsU32(set, key.as_ptr() as *const core::ffi::c_char, &mut value);
+        let res =
+            raw::TEE_GetPropertyAsU32(set, key.as_ptr() as *const core::ffi::c_char, &mut value);
         if res != 0 {
             return Err(Error::from_raw_error(res));
         }
@@ -139,7 +137,8 @@ impl PropertyValue for u64 {
     unsafe fn from_raw(set: raw::TEE_PropSetHandle, key: CString) -> Result<Self> {
         let mut value = 0;
 
-        let res = raw::TEE_GetPropertyAsU64(set, key.as_ptr() as *const core::ffi::c_char, &mut value);
+        let res =
+            raw::TEE_GetPropertyAsU64(set, key.as_ptr() as *const core::ffi::c_char, &mut value);
         if res != 0 {
             return Err(Error::from_raw_error(res));
         }
@@ -168,8 +167,7 @@ impl PropertyValue for Vec<u8> {
                 if out_size == 0 {
                     // return an empty buffer
                     Ok(vec![])
-                }
-                else {
+                } else {
                     Err(Error::new(ErrorKind::Generic))
                 }
             }
@@ -190,9 +188,7 @@ impl PropertyValue for Vec<u8> {
                     Ok(buf)
                 }
             }
-            _ => {
-                Err(Error::from_raw_error(res))
-            }
+            _ => Err(Error::from_raw_error(res)),
         }
     }
 }
@@ -206,8 +202,11 @@ impl PropertyValue for Uuid {
             clockSeqAndNode: [0; 8],
         };
 
-        let res =
-            raw::TEE_GetPropertyAsUUID(set, key.as_ptr() as *const core::ffi::c_char, &mut raw_uuid);
+        let res = raw::TEE_GetPropertyAsUUID(
+            set,
+            key.as_ptr() as *const core::ffi::c_char,
+            &mut raw_uuid,
+        );
         if res != 0 {
             return Err(Error::from_raw_error(res));
         }
@@ -229,7 +228,11 @@ impl PropertyValue for Identity {
             },
         };
 
-        let res = raw::TEE_GetPropertyAsIdentity(set, key.as_ptr() as *const core::ffi::c_char, &mut raw_id);
+        let res = raw::TEE_GetPropertyAsIdentity(
+            set,
+            key.as_ptr() as *const core::ffi::c_char,
+            &mut raw_id,
+        );
         if res != 0 {
             return Err(Error::from_raw_error(res));
         }
@@ -286,28 +289,18 @@ macro_rules! define_property_key {
 // The `Set` is one of the PropertySet it belongs to.
 // The `key` is the raw property key string.
 // The `OutputType` is the type of the property value.
-// 
+//
 // To get the property value, use the `get` method.
 // Example usage:
-// 
+//
 // ``` no_run
 // use optee_utee::{PropertyKey, TaAppId};
-// 
+//
 // let my_property = TaAppId.get()?;
 // ```
 define_property_key!(TaAppId, CurrentTa, "gpd.ta.appID", Uuid);
-define_property_key!(
-    TaSingleInstance,
-    CurrentTa,
-    "gpd.ta.singleInstance",
-    bool
-);
-define_property_key!(
-    TaMultiSession,
-    CurrentTa,
-    "gpd.ta.multiSession",
-    bool
-);
+define_property_key!(TaSingleInstance, CurrentTa, "gpd.ta.singleInstance", bool);
+define_property_key!(TaMultiSession, CurrentTa, "gpd.ta.multiSession", bool);
 define_property_key!(
     TaInstanceKeepAlive,
     CurrentTa,
@@ -317,12 +310,7 @@ define_property_key!(
 define_property_key!(TaDataSize, CurrentTa, "gpd.ta.dataSize", u32);
 define_property_key!(TaStackSize, CurrentTa, "gpd.ta.stackSize", u32);
 define_property_key!(TaVersion, CurrentTa, "gpd.ta.version", String);
-define_property_key!(
-    TaDescription,
-    CurrentTa,
-    "gpd.ta.description",
-    String
-);
+define_property_key!(TaDescription, CurrentTa, "gpd.ta.description", String);
 define_property_key!(TaEndian, CurrentTa, "gpd.ta.endian", u32);
 define_property_key!(
     TaDoesNotCloseHandleOnCorruptObject,
@@ -355,12 +343,7 @@ define_property_key!(
     "gpd.tee.description",
     String
 );
-define_property_key!(
-    TeeDeviceId,
-    TeeImplementation,
-    "gpd.tee.deviceID",
-    Uuid
-);
+define_property_key!(TeeDeviceId, TeeImplementation, "gpd.tee.deviceID", Uuid);
 define_property_key!(
     TeeSystemTimeProtectionLevel,
     TeeImplementation,

@@ -16,8 +16,8 @@
 // under the License.
 
 use crate::{Error, Result};
-use optee_utee_sys as raw;
 use core::fmt;
+use optee_utee_sys as raw;
 
 /// A millisecond resolution structure for saving the time.
 pub struct Time {

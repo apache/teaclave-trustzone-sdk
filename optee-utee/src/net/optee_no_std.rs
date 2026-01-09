@@ -16,7 +16,7 @@
 // under the License.
 use super::{Setup, Socket, SocketAdapter, SocketError};
 
-/// A trait used for convenience; import it so that the code remains consistent 
+/// A trait used for convenience; import it so that the code remains consistent
 /// with the std version (with the only difference being the return error type).
 ///
 /// Take TcpStream as example:
@@ -42,7 +42,7 @@ pub trait StdCompatConnect: Sized {
     }
 }
 
-/// A trait used for convenience; import it so that the code remains consistent 
+/// A trait used for convenience; import it so that the code remains consistent
 /// with the std version (with the only difference being the return error type).
 ///
 /// Take TcpStream as example:
@@ -81,7 +81,7 @@ pub trait StdCompatWrite {
     }
 }
 
-/// A trait used for convenience; import it so that the code remains consistent 
+/// A trait used for convenience; import it so that the code remains consistent
 /// with the std version (with the only difference being the return error type).
 ///
 /// Take TcpStream as example:
