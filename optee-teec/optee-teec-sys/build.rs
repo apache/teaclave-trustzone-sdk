@@ -19,25 +19,29 @@ use std::env::{self, VarError};
 use std::path::PathBuf;
 
 fn main() -> Result<(), VarError> {
-    if !is_feature_enable("no_link")? {
-        link();
+    if !is_feature_enabled("no_link")? {
+        link(is_env_present("TEEC_STATIC")?);
     }
     Ok(())
 }
 
-// Check if feature enabled.
-// Refer to: https://doc.rust-lang.org/cargo/reference/features.html#build-scripts
-fn is_feature_enable(feature: &str) -> Result<bool, VarError> {
-    let feature_env = format!("CARGO_FEATURE_{}", feature.to_uppercase().replace("-", "_"));
-
-    match env::var(feature_env) {
+fn is_env_present(var: &str) -> Result<bool, VarError> {
+    println!("cargo:rerun-if-env-changed={var}");
+    match env::var(var) {
         Err(VarError::NotPresent) => Ok(false),
         Ok(_) => Ok(true),
         Err(err) => Err(err),
     }
 }
 
-fn link() {
+/// Checks if feature is enabled.
+/// Refer to: https://doc.rust-lang.org/cargo/reference/features.html#build-scripts
+fn is_feature_enabled(feature: &str) -> Result<bool, VarError> {
+    let feature_env = format!("CARGO_FEATURE_{}", feature.to_uppercase().replace("-", "_"));
+    is_env_present(&feature_env)
+}
+
+fn link(static_linkage: bool) {
     const ENV_OPTEE_CLIENT_EXPORT: &str = "OPTEE_CLIENT_EXPORT";
     println!("cargo:rerun-if-env-changed={}", ENV_OPTEE_CLIENT_EXPORT);
 
@@ -52,5 +56,8 @@ fn link() {
     }
 
     println!("cargo:rustc-link-search={}", library_path.display());
-    println!("cargo:rustc-link-lib=dylib=teec");
+    println!(
+        "cargo:rustc-link-lib={}=teec",
+        if static_linkage { "static" } else { "dylib" }
+    );
 }
