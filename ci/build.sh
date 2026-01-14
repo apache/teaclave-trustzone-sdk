@@ -416,9 +416,11 @@ echo "         INSTALL SUMMARY"
 echo "==========================================="
 echo ""
 echo "Mode:          ${STD:-no-std}"
-echo "Architecture:  TA=$ARCH_TA, CA=$ARCH_CA"
+echo "Architecture:  TA=$ARCH_TA, CA=$ARCH_HOST"
 echo "Examples:      $CURRENT installed"
-echo "Target dir:    $SHARED_DIR"
+echo "TA install dir:      $TA_INSTALL_DIR"
+echo "CA install dir:      $CA_INSTALL_DIR"
+echo "Plugin install dir:  $PLUGIN_INSTALL_DIR"
 echo ""
 
 if [ -n "$FAILED_EXAMPLES" ]; then
