@@ -4,21 +4,27 @@ permalink: /trustzone-sdk-docs/emulate-and-dev-in-docker-std.md
 
 # 🚀 Developing TAs with Rust Standard Library in Docker
 
-This guide covers the **dev-env with std support** that enables **developing TA using Rust standard library (std)**, 
-compared to the regular no-std environment documented in [emulate-and-dev-in-docker.md](emulate-and-dev-in-docker.md).
+This guide covers the **dev-env with std support** that enables **developing TA
+using Rust standard library (std)**, compared to the regular no-std environment
+documented in [emulate-and-dev-in-docker.md](emulate-and-dev-in-docker.md).
 
-The **dev-env with std support** provides a complete setup for building TAs that can use Rust's standard library 
-features like collections, networking, etc.
+The **dev-env with std support** provides a complete setup for building TAs that
+can use Rust's standard library features like collections, networking, etc.
 
-> 📖 **Prerequisites**: Read the [original Docker development guide](emulate-and-dev-in-docker.md) 
-> first. This document focuses only on std-specific differences and capabilities.
+> 📖 **Prerequisites**: Read the [original Docker development
+> guide](emulate-and-dev-in-docker.md) first. This document focuses only on
+> std-specific differences and capabilities.
 
 ## What the Dev-Env with Std Support Provides
 
-The **dev-env with std support** enables **developing TA using Rust std** by providing:
-- **Flexible configuration management** - Switch between std/no-std modes and architectures dynamically
-- **Rust standard library tailored for OP-TEE** - Build TAs using collections, networking, serialization capabilities
-- **Mixed development support** - Combine different host and TA architectures, including switching between no-std/std in the same project
+The **dev-env with std support** enables **developing TA using Rust std** by
+providing:
+- **Flexible configuration management** - Switch between std/no-std modes and
+  architectures dynamically
+- **Rust standard library tailored for OP-TEE** - Build TAs using collections,
+  networking, serialization capabilities
+- **Mixed development support** - Combine different host and TA architectures,
+  including switching between no-std/std in the same project
 
 ## 1. Setting Up the Dev-Env with Std Support
 
@@ -41,15 +47,17 @@ $ docker run -it --rm \
 $ ln -s $RUST_STD_DIR rust
 ```
 
-> 📝 **Note**: This symlink is required for current SDK examples due to hardcoded std dependency paths in Cargo.toml. 
-> Your own projects may organize std files differently.
+> 📝 **Note**: This symlink is required for current SDK examples due to
+> hardcoded std dependency paths in Cargo.toml. Your own projects may organize
+> std files differently.
 
 ## 2. Configuration Management System
 
-The key difference is the **unified configuration system** that allows switching between std/no-std 
-modes and different architectures on demand.
+The key difference is the **unified configuration system** that allows switching
+between std/no-std modes and different architectures on demand.
 
-And cargo-optee is available as an alternative to the original configuration management tool: switch_config.
+And [cargo-optee](../cargo-optee/README.md#configuration-system) is available as
+an alternative to the original configuration management tool: switch_config.
 
 ### If you use switch_config:
 
@@ -86,12 +94,14 @@ $ switch_config --host arm32 && switch_config --ta std/aarch64
 
 ### If you use cargo-optee:
 
-You can see the [cargo-optee configuration system](../cargo-optee/README.md#configuration-system) for details.
+You can see the [cargo-optee configuration
+system](../cargo-optee/README.md#configuration-system) for details.
 
 ## 3. Building and Target Differences
 
-Follow the [original building instructions](emulate-and-dev-in-docker.md#2-build-the-hello-world-example), 
-but note these important target differences:
+Follow the [original building
+instructions](emulate-and-dev-in-docker.md#2-build-the-hello-world-example), but
+note these important target differences:
 
 | Configuration | TA Target | Build Tool | Host Target |
 |---------------|-----------|------------|-------------|
@@ -129,12 +139,13 @@ $ make clean && make
 TA=ta/target/aarch64-unknown-linux-gnu/release/133af0ca-bdab-11eb-9130-43bf7873bf67.ta
 ```
 
-If you are using cargo-optee, the relevant workflow is already clearly 
-documented in the [cargo-optee appendix](../cargo-optee/README.md#appendix), 
-so it will not be repeated here.
+If you are using cargo-optee, the relevant workflow is already clearly
+documented in the [cargo-optee appendix](../cargo-optee/README.md#appendix), so
+it will not be repeated here.
 
 ## 5. Emulation and Execution
 
-The emulation process is identical to the no-std environment. 
-Follow [sections 3-6 of the original guide](emulate-and-dev-in-docker.md#3-make-the-artifacts-accessible-to-the-emulator) 
+The emulation process is identical to the no-std environment. Follow [sections
+3-6 of the original
+guide](emulate-and-dev-in-docker.md#3-make-the-artifacts-accessible-to-the-emulator)
 for complete emulation setup instructions.

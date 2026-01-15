@@ -1,10 +1,14 @@
 # cargo-optee
 
-A Cargo subcommand for building OP-TEE Trusted Applications (TAs) and Client Applications (CAs) in Rust.
+A Cargo subcommand for building OP-TEE Trusted Applications (TAs) and Client
+Applications (CAs) in Rust.
 
 ## Overview
 
-`cargo-optee` simplifies the development workflow for OP-TEE applications by replacing complex Makefiles with a unified, type-safe command-line interface. It handles cross-compilation, custom target specifications, environment setup, and signing automatically.
+`cargo-optee` simplifies the development workflow for OP-TEE applications by
+replacing complex Makefiles with a unified, type-safe command-line interface. It
+handles cross-compilation, custom target specifications, environment setup, and
+signing automatically.
 
 ## High-Level Design
 
@@ -59,83 +63,124 @@ A Cargo subcommand for building OP-TEE Trusted Applications (TAs) and Client App
 
 ### Installation
 
-Assume developers have Rust, Cargo, and the gcc toolchain installed and added to PATH (the guide is in future plan). Then install `cargo-optee` using Cargo:
+Assume developers have Rust, Cargo, and the gcc toolchain installed and added to
+PATH (the guide is in future plan). Then install `cargo-optee` using Cargo:
 
 ```bash
 cargo install cargo-optee
 ```
 
+### Quick Build for Hello World
+
+This section provides a quick start guide for building the Hello World example
+using `cargo-optee`. Before proceeding, ensure you have set up the Docker
+development environment. For detailed instructions on setting up the Docker
+environment, refer to the [QEMU emulation
+guide](../docs/emulate-and-dev-in-docker.md).
+
+#### Prerequisites
+
+First, pull and run the Docker image. We provide two types of images:
+- **no-std environment**: For building TAs without the standard library
+  (recommended for quick start)
+- **std environment**: For building TAs with Rust standard library support
+
+**Pull and start the no-std development environment:**
+```bash
+# Pull the pre-built development environment image
+docker pull teaclave/teaclave-trustzone-emulator-nostd-expand-memory:latest
+
+# Start the development container
+docker run -it --rm \
+  --name teaclave_dev_env \
+  -v $(pwd):/root/teaclave_sdk_src \
+  -w /root/teaclave_sdk_src \
+  teaclave/teaclave-trustzone-emulator-nostd-expand-memory:latest
+```
+
+> 📖 **Note**: If you need Rust standard library (std) support, refer to the
+> [Docker development environment guide with std
+> support](../docs/emulate-and-dev-in-docker-std.md) and use the
+> `teaclave/teaclave-trustzone-emulator-std-expand-memory:latest` image.
+
+#### Build Steps
+
+**1. Navigate to the Hello World example directory**
+
+Inside the Docker container, execute:
+```bash
+cd examples/hello_world-rs/
+```
+
+**2. Build the Trusted Application (TA)**
+
+Build the TA using `cargo-optee`. In the Docker environment, the OP-TEE TA
+development kit is typically located at
+`/opt/teaclave/optee/optee_os/out/arm-plat-vexpress/export-ta_arm64`:
+
+```bash
+# Build aarch64 no-std TA (default configuration)
+cargo-optee build ta \
+  --manifest-path ta/Cargo.toml \
+  --ta-dev-kit-dir /opt/teaclave/optee/optee_os/out/arm-plat-vexpress/export-ta_arm64 \
+  --arch aarch64 \
+  --no-std
+```
+
+**3. Build the Client Application (CA)**
+
+Build the client application:
+```bash
+# Build aarch64 CA
+cargo-optee build ca \
+  --manifest-path host/Cargo.toml \
+  --optee-client-export /opt/teaclave/optee/optee_client/export_arm64 \
+  --arch aarch64
+```
+
+> 💡 **Tip**: If you configure metadata in your `Cargo.toml` file (see
+> [Configuration System](#configuration-system)), you can simplify the command
+> by only specifying `--manifest-path`:
+> ```bash
+> cargo-optee build ca --manifest-path host/Cargo.toml
+> ```
+
+#### Build Output
+
+After a successful build, you can find the generated files at the following
+locations:
+
+- **TA binary**:
+  `ta/target/aarch64-unknown-linux-gnu/release/133af0ca-bdab-11eb-9130-43bf7873bf67.ta`
+- **CA binary**: `host/target/aarch64-unknown-linux-gnu/release/hello_world-rs`
+
+#### Next Steps
+
+After building, you can:
+1. Use the `sync_to_emulator` command to sync build artifacts to the emulator
+   environment
+2. Start the QEMU emulator for testing
+3. Refer to the [QEMU emulation guide](../docs/emulate-and-dev-in-docker.md) for
+   complete development and testing workflows
+
+> 💡 **Tip**: If you configure metadata in `Cargo.toml` (see [Configuration
+> System](#configuration-system)), you can simplify build commands by only
+> specifying `--manifest-path`.
+
 ## Configuration System
 
-`cargo-optee` uses a flexible configuration system with the following priority (highest to lowest):
+`cargo-optee` uses a flexible configuration system with the following priority
+(highest to lowest):
 
-1. **Command Line Arguments** - Direct CLI flags override everything
-2. **Cargo.toml Metadata** - Project-specific configuration in `[package.metadata.optee.*]` sections  
+1. **Command Line Arguments** - Direct CLI flags override everything (see [Build
+   through CLI](#build-through-cli))
+2. **Cargo.toml Metadata** - Project-specific configuration in
+   `[package.metadata.optee.*]` sections (see [Build through
+   metadata](#build-through-metadata))
 3. **Defaults** - Built-in sensible defaults
 
-This allows projects to define their standard configuration in `Cargo.toml` while still permitting CLI overrides for specific builds.
-
-### Metadata Configuration
-
-#### Trusted Application (TA) Metadata
-
-Configure TA builds in your `Cargo.toml`:
-
-```toml
-[package.metadata.optee.ta]
-arch = "aarch64"                    # Target architecture: "aarch64" | "arm" (optional, default: "aarch64")
-debug = false                       # Debug build: true | false (optional, default: false)
-std = false                         # Use std library: true | false (optional, default: false)
-uuid-path = "../uuid.txt"           # Path to UUID file (optional, default: "../uuid.txt")
-# Architecture-specific configuration (omitted architectures default to null/unsupported)
-ta-dev-kit-dir = { aarch64 = "/opt/optee/export-ta_arm64", arm = "/opt/optee/export-ta_arm32" }
-signing-key = "/path/to/key.pem"    # Path to signing key (optional, defaults to ta-dev-kit/keys/default_ta.pem)
-```
-
-**Allowed entries:**
-- `arch`: Target architecture (`"aarch64"` or `"arm"`)
-- `debug`: Build in debug mode (`true` or `false`) 
-- `std`: Enable std library support (`true` or `false`)
-- `uuid-path`: Relative or absolute path to UUID file
-- `ta-dev-kit-dir`: Architecture-specific paths to TA development kit (required)
-- `signing-key`: Path to signing key file
-
-#### Client Application (CA) Metadata
-
-Configure CA builds in your `Cargo.toml`:
-
-```toml
-[package.metadata.optee.ca]
-arch = "aarch64"                    # Target architecture: "aarch64" | "arm" (optional, default: "aarch64")
-debug = false                       # Debug build: true | false (optional, default: false)
-# Architecture-specific configuration
-# if your CA only supports aarch64, you can omit arm
-optee-client-export = { aarch64 = "/opt/optee/export-client_arm64" } 
-```
-
-**Allowed entries:**
-- `arch`: Target architecture (`"aarch64"` or `"arm"`)
-- `debug`: Build in debug mode (`true` or `false`)
-- `optee-client-export`: Architecture-specific paths to OP-TEE client export (required)
-
-#### Plugin Metadata
-
-Configure plugin builds in your `Cargo.toml`:
-
-```toml
-[package.metadata.optee.plugin]
-arch = "aarch64"                    # Target architecture: "aarch64" | "arm" (optional, default: "aarch64")  
-debug = false                       # Debug build: true | false (optional, default: false)
-uuid-path = "../plugin_uuid.txt"    # Path to UUID file (required for plugins)
-# Architecture-specific configuration
-optee-client-export = { aarch64 = "/opt/optee/export-client_arm64", arm = "/opt/optee/export-client_arm32" }
-```
-
-**Allowed entries:**
-- `arch`: Target architecture (`"aarch64"` or `"arm"`)
-- `debug`: Build in debug mode (`true` or `false`)
-- `uuid-path`: Relative or absolute path to UUID file (required for plugins)
-- `optee-client-export`: Architecture-specific paths to OP-TEE client export (required)
+This allows projects to define their standard configuration in `Cargo.toml`
+while still permitting CLI overrides for specific builds.
 
 ### Project Structure
 
@@ -159,10 +204,85 @@ project/
         └── lib.rs
 ```
 
-See examples in the SDK for reference, such as `hello_world-rs`.
-The `cargo new` command (planned, not yet available) will generate a project template with this structure. For now, copy an existing example as a starting point.
+See examples in the SDK for reference, such as `hello_world-rs`. The `cargo new`
+command (planned, not yet available) will generate a project template with this
+structure. For now, copy an existing example as a starting point.
 
-### Build Commands
+### Usage Workflows (including future design)
+
+#### Development/Emulation Environment
+
+For development and emulation, developers would like to build the one project
+and deploy to a target filesystem (e.g. QEMU shared folder) quickly. Frequent
+builds and quick rebuilds are common.
+
+**Using CLI arguments:**
+```bash
+# 1. Create new project (future)
+cargo-optee new my_app
+cd my_app
+
+# 2. Build TA and CA
+cargo-optee build ta \
+  --ta-dev-kit-dir $TA_DEV_KIT_DIR \
+  --manifest-path ./ta/Cargo.toml \
+  --arch aarch64 \
+  --std
+
+cargo-optee build ca \
+  --optee-client-export $OPTEE_CLIENT_EXPORT \
+  --manifest-path ./host/Cargo.toml \
+  --arch aarch64
+
+# 3. Install to specific folder (future), e.g. QEMU shared folder for emulation
+cargo-optee install --target /tmp/qemu-shared-folder
+```
+
+**Using metadata configuration:**
+```bash
+# 1. Configure once in Cargo.toml files, then simple builds
+cd ta && cargo-optee build ta
+cd ../host && cargo-optee build ca
+
+# 2. Override specific parameters when needed
+cd ta && cargo-optee build ta --debug  # Override to debug build
+cd host && cargo-optee build ca --arch arm  # Override architecture
+```
+
+#### Production/CI Environment
+
+For production and CI environments, artifacts should be cleaned up after
+successful builds. It can help to avoid storage issues on CI runners.
+
+**Automated Build Pipeline:**
+```bash
+#!/bin/bash
+# CI build script
+
+set -e
+
+# Build TA (release mode)
+cargo-optee build ta \
+  --ta-dev-kit-dir $TA_DEV_KIT_DIR \
+  --manifest-path ./ta/Cargo.toml \
+  --arch aarch64 \
+  --std \
+  --signing-key ./keys/production.pem
+
+# Build CA (release mode)
+cargo-optee build ca \
+  --optee-client-export $OPTEE_CLIENT_EXPORT \
+  --manifest-path ./host/Cargo.toml \
+  --arch aarch64
+
+# Install to staging area (future)
+cargo-optee install --target ./dist
+
+# Clean build artifacts to save space (future)
+cargo-optee clean --all
+```
+
+### Build through CLI
 
 #### Build Trusted Application (TA)
 
@@ -179,7 +299,8 @@ cargo-optee build ta \
 ```
 
 **Required:**
-- `--ta-dev-kit-dir <PATH>`: Path to OP-TEE TA development kit (available after building OP-TEE OS), user must provide this for building TAs.
+- `--ta-dev-kit-dir <PATH>`: Path to OP-TEE TA development kit (available after
+  building OP-TEE OS), user must provide this for building TAs.
 
 **Optional:**
 - `--manifest-path <PATH>`: Path to Cargo.toml manifest file
@@ -187,8 +308,10 @@ cargo-optee build ta \
   - `aarch64`: ARM 64-bit architecture
   - `arm`: ARM 32-bit architecture
 - `--std`: Build with std support (uses xargo and custom target)
-- `--no-std`: Build without std support (uses cargo, mutually exclusive with --std)
-- `--signing-key <PATH>`: Path to signing key (default: `<ta-dev-kit-dir>/keys/default_ta.pem`)
+- `--no-std`: Build without std support (uses cargo, mutually exclusive with
+  --std)
+- `--signing-key <PATH>`: Path to signing key (default:
+  `<ta-dev-kit-dir>/keys/default_ta.pem`)
 - `--uuid-path <PATH>`: Path to UUID file (default: `../uuid.txt`)
 - `--debug`: Build in debug mode (default: release mode)
 
@@ -229,7 +352,9 @@ cargo-optee build ca \
 ```
 
 **Required:**
-- `--optee-client-export <PATH>`: Path to OP-TEE client library directory (available after building OP-TEE client), user must provide this for building CAs.
+- `--optee-client-export <PATH>`: Path to OP-TEE client library directory
+  (available after building OP-TEE client), user must provide this for building
+  CAs.
 
 **Optional:**
 - `--manifest-path <PATH>`: Path to Cargo.toml manifest file
@@ -262,7 +387,9 @@ cargo-optee build plugin \
 ```
 
 **Required:**
-- `--optee-client-export <PATH>`: Path to OP-TEE client library directory (available after building OP-TEE client), user must provide this for building plugins.
+- `--optee-client-export <PATH>`: Path to OP-TEE client library directory
+  (available after building OP-TEE client), user must provide this for building
+  plugins.
 - `--uuid-path <PATH>`: Path to UUID file for naming the plugin
 
 **Optional:**
@@ -283,76 +410,69 @@ cargo-optee build plugin \
 **Output:**
 - Plugin binary: `target/<target-triple>/release/<uuid>.plugin.so`
 
-### Usage Workflows (including future design)
+### Build through metadata
 
-#### Development/Emulation Environment
+#### Trusted Application (TA) Metadata
 
-For development and emulation, developers would like to build the one project and deploy to a target filesystem (e.g. QEMU shared folder) quickly. Frequent builds and quick rebuilds are common.
+Configure TA builds in your `Cargo.toml`:
 
-**Using CLI arguments:**
-```bash
-# 1. Create new project (future)
-cargo-optee new my_app
-cd my_app
-
-# 2. Build TA and CA
-cargo-optee build ta \
-  --ta-dev-kit-dir $TA_DEV_KIT_DIR \
-  --manifest-path ./ta/Cargo.toml \
-  --arch aarch64 \
-  --std
-
-cargo-optee build ca \
-  --optee-client-export $OPTEE_CLIENT_EXPORT \
-  --manifest-path ./host/Cargo.toml \
-  --arch aarch64
-
-# 3. Install to specific folder (future), e.g. QEMU shared folder for emulation
-cargo-optee install --target /tmp/qemu-shared-folder
+```toml
+[package.metadata.optee.ta]
+arch = "aarch64"                    # Target architecture: "aarch64" | "arm" (optional, default: "aarch64")
+debug = false                       # Debug build: true | false (optional, default: false)
+std = false                         # Use std library: true | false (optional, default: false)
+uuid-path = "../uuid.txt"           # Path to UUID file (optional, default: "../uuid.txt")
+# Architecture-specific configuration (omitted architectures default to null/unsupported)
+ta-dev-kit-dir = { aarch64 = "/opt/optee/export-ta_arm64", arm = "/opt/optee/export-ta_arm32" }
+signing-key = "/path/to/key.pem"    # Path to signing key (optional, defaults to ta-dev-kit/keys/default_ta.pem)
 ```
 
-**Using metadata configuration:**
-```bash
-# 1. Configure once in Cargo.toml files, then simple builds
-cd ta && cargo-optee build ta
-cd ../host && cargo-optee build ca
+**Allowed entries:**
+- `arch`: Target architecture (`"aarch64"` or `"arm"`)
+- `debug`: Build in debug mode (`true` or `false`) 
+- `std`: Enable std library support (`true` or `false`)
+- `uuid-path`: Relative or absolute path to UUID file
+- `ta-dev-kit-dir`: Architecture-specific paths to TA development kit (required)
+- `signing-key`: Path to signing key file
 
-# 2. Override specific parameters when needed
-cd ta && cargo-optee build ta --debug  # Override to debug build
-cd host && cargo-optee build ca --arch arm  # Override architecture
+#### Client Application (CA) Metadata
+
+Configure CA builds in your `Cargo.toml`:
+
+```toml
+[package.metadata.optee.ca]
+arch = "aarch64"                    # Target architecture: "aarch64" | "arm" (optional, default: "aarch64")
+debug = false                       # Debug build: true | false (optional, default: false)
+# Architecture-specific configuration
+# if your CA only supports aarch64, you can omit arm
+optee-client-export = { aarch64 = "/opt/optee/export-client_arm64" } 
 ```
 
-#### Production/CI Environment
+**Allowed entries:**
+- `arch`: Target architecture (`"aarch64"` or `"arm"`)
+- `debug`: Build in debug mode (`true` or `false`)
+- `optee-client-export`: Architecture-specific paths to OP-TEE client export
+  (required)
 
-For production and CI environments, artifacts should be cleaned up after successful builds. It can help to avoid storage issues on CI runners.
+#### Plugin Metadata
 
-**Automated Build Pipeline:**
-```bash
-#!/bin/bash
-# CI build script
+Configure plugin builds in your `Cargo.toml`:
 
-set -e
-
-# Build TA (release mode)
-cargo-optee build ta \
-  --ta-dev-kit-dir $TA_DEV_KIT_DIR \
-  --manifest-path ./ta/Cargo.toml \
-  --arch aarch64 \
-  --std \
-  --signing-key ./keys/production.pem
-
-# Build CA (release mode)
-cargo-optee build ca \
-  --optee-client-export $OPTEE_CLIENT_EXPORT \
-  --manifest-path ./host/Cargo.toml \
-  --arch aarch64
-
-# Install to staging area (future)
-cargo-optee install --target ./dist
-
-# Clean build artifacts to save space (future)
-cargo-optee clean --all
+```toml
+[package.metadata.optee.plugin]
+arch = "aarch64"                    # Target architecture: "aarch64" | "arm" (optional, default: "aarch64")  
+debug = false                       # Debug build: true | false (optional, default: false)
+uuid-path = "../plugin_uuid.txt"    # Path to UUID file (required for plugins)
+# Architecture-specific configuration
+optee-client-export = { aarch64 = "/opt/optee/export-client_arm64", arm = "/opt/optee/export-client_arm32" }
 ```
+
+**Allowed entries:**
+- `arch`: Target architecture (`"aarch64"` or `"arm"`)
+- `debug`: Build in debug mode (`true` or `false`)
+- `uuid-path`: Relative or absolute path to UUID file (required for plugins)
+- `optee-client-export`: Architecture-specific paths to OP-TEE client export
+  (required)
 
 ## Implementation Status
 
@@ -452,7 +572,8 @@ python3 /opt/optee/export-ta_arm32/scripts/sign_encrypt.py \
   --out target/arm-unknown-optee/release/<uuid>.ta
 ```
 
-**Note:** `/tmp/cargo-optee-XXXXX` is a temporary directory containing the embedded `arm-unknown-optee.json` target specification.
+**Note:** `/tmp/cargo-optee-XXXXX` is a temporary directory containing the
+embedded `arm-unknown-optee.json` target specification.
 
 ##### Example 3: Build aarch64 CA (Client Application)
 
@@ -485,7 +606,8 @@ aarch64-linux-gnu-objcopy --strip-unneeded \
 
 #### Build Command Convention: Cargo to Low-Level Tools
 
-This section explains how cargo orchestrates low-level tools to build the TA ELF binary. We use an aarch64 no-std TA as an example.
+This section explains how cargo orchestrates low-level tools to build the TA ELF
+binary. We use an aarch64 no-std TA as an example.
 
 **Dependency Structure:**
 ```
@@ -527,7 +649,8 @@ Cargo inherits from cargo-optee:
 - `TA_DEV_KIT_DIR=/opt/optee/export-ta_arm64`
 - `RUSTFLAGS="-C panic=abort"`
 
-Cargo then executes build scripts in dependency order to set up the build directives:
+Cargo then executes build scripts in dependency order to set up the build
+directives:
 
 1. **`optee_utee_sys/build.rs`**
    - Requires: `TA_DEV_KIT_DIR`
@@ -541,7 +664,8 @@ Cargo then executes build scripts in dependency order to set up the build direct
 
 2. **`ta/build.rs`** → calls **`optee_utee_build`** crate
    - Requires: `TA_DEV_KIT_DIR`, `TARGET`, `OUT_DIR`, `RUSTC_LINKER`
-   - Optional: `CARGO_PKG_VERSION`, `CARGO_PKG_DESCRIPTION` (for automatic TA config)
+   - Optional: `CARGO_PKG_VERSION`, `CARGO_PKG_DESCRIPTION` (for automatic TA
+     config)
    - Actions:
      1. Generates TA manifest (`user_ta_header.rs`) with TA properties
      2. Outputs linker directives based on target architecture and linker type
