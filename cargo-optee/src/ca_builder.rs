@@ -16,32 +16,19 @@
 // under the License.
 
 use anyhow::{bail, Result};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::common;
 use crate::common::{
     get_package_name, get_target_and_cross_compile, get_target_directory_from_metadata,
-    print_cargo_command, print_output_and_bail, read_uuid_from_file, Arch, BuildMode,
+    print_cargo_command, print_output_and_bail, read_uuid_from_file, BuildMode,
     ChangeDirectoryGuard,
 };
-
-#[derive(Clone)]
-pub struct CaBuildConfig {
-    pub arch: Arch,                   // Architecture
-    pub optee_client_export: PathBuf, // Path to OP-TEE client export
-    pub debug: bool,                  // Debug mode (default false = release)
-    pub path: PathBuf,                // Path to CA directory
-    pub plugin: bool,                 // Build as plugin (shared library)
-    pub uuid_path: Option<PathBuf>,   // Path to UUID file (for plugins)
-    // Customized variables
-    pub env: Vec<(String, String)>, // Custom environment variables for cargo build
-    pub no_default_features: bool,  // Disable default features
-    pub features: Option<String>,   // Additional features to enable
-}
+use crate::config::CaBuildConfig;
 
 // Main function to build the CA, optionally installing to a target directory
-pub fn build_ca(config: CaBuildConfig, install_dir: Option<&std::path::Path>) -> Result<()> {
+pub fn build_ca(config: CaBuildConfig, install_dir: Option<&Path>) -> Result<()> {
     // Change to the CA directory
     let _guard = ChangeDirectoryGuard::new(&config.path)?;
 
@@ -241,7 +228,6 @@ fn copy_plugin(config: &CaBuildConfig) -> Result<PathBuf> {
 fn strip_binary(config: &CaBuildConfig) -> Result<PathBuf> {
     println!("Stripping binary...");
 
-    // Determine target based on arch
     // Determine target and cross-compile based on arch (CA runs in Normal World Linux)
     let (target, cross_compile) = get_target_and_cross_compile(config.arch, BuildMode::Ca)?;
 
