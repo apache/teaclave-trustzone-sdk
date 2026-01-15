@@ -19,35 +19,20 @@ use crate::common;
 use anyhow::{bail, Result};
 use std::env;
 use std::fs;
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use tempfile::TempDir;
 
 use crate::common::{
     get_package_name, get_target_and_cross_compile, get_target_directory_from_metadata,
-    print_cargo_command, print_output_and_bail, read_uuid_from_file, Arch, BuildMode,
+    print_cargo_command, print_output_and_bail, read_uuid_from_file, BuildMode,
     ChangeDirectoryGuard,
 };
+use crate::config::TaBuildConfig;
 
 // Embed the target JSON files at compile time
 const AARCH64_TARGET_JSON: &str = include_str!("../aarch64-unknown-optee.json");
 const ARM_TARGET_JSON: &str = include_str!("../arm-unknown-optee.json");
-
-#[derive(Clone)]
-pub struct TaBuildConfig {
-    pub arch: Arch,              // Architecture
-    pub std: bool,               // Enable std feature
-    pub ta_dev_kit_dir: PathBuf, // Path to TA dev kit
-    pub signing_key: PathBuf,    // Path to signing key
-    pub debug: bool,             // Debug mode (default false = release)
-    pub path: PathBuf,           // Path to TA directory
-    pub uuid_path: PathBuf,      // Path to UUID file
-    // Customized variables
-    pub env: Vec<(String, String)>, // Custom environment variables for cargo build
-    pub no_default_features: bool,  // Disable default features
-    pub features: Option<String>,   // Additional features to enable
-}
 
 // Main function to build the TA, optionally installing to a target directory
 pub fn build_ta(config: TaBuildConfig, install_dir: Option<&Path>) -> Result<()> {
@@ -96,7 +81,11 @@ pub fn build_ta(config: TaBuildConfig, install_dir: Option<&Path>) -> Result<()>
             bail!("Install directory does not exist: {:?}", install_dir);
         }
 
-        let uuid = read_uuid_from_file(&config.uuid_path)?;
+        let uuid_path = config
+            .uuid_path
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("UUID path is required but not configured"))?;
+        let uuid = read_uuid_from_file(uuid_path)?;
         let ta_file = common::join_format_and_check::<&str>(
             &target_dir,
             &[],
@@ -222,7 +211,11 @@ fn sign_ta(config: &TaBuildConfig, stripped_path: &Path, target_dir: &Path) -> R
     println!("Signing TA with signing key {:?}...", config.signing_key);
 
     // Read UUID from specified file
-    let uuid = read_uuid_from_file(&config.uuid_path)?;
+    let uuid_path = config
+        .uuid_path
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("UUID path is required but not configured"))?;
+    let uuid = read_uuid_from_file(uuid_path)?;
 
     // Validate signing key exists
     if !config.signing_key.exists() {
