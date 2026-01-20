@@ -17,7 +17,7 @@
 
 [package]
 name = "optee-teec-macros"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
 license = "Apache-2.0"
 repository = "https://github.com/apache/teaclave-trustzone-sdk.git"

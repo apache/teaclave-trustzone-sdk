@@ -19,7 +19,7 @@
 
 UUID ?= $(shell cat "../uuid.txt")
 
-TARGET ?= aarch64-unknown-linux-gnu
+TARGET ?= aarch64-unknown-optee
 CROSS_COMPILE ?= aarch64-linux-gnu-
 OBJCOPY := $(CROSS_COMPILE_TA)objcopy
 # Configure the linker to use GCC, which works on both cross-compilation and ARM machines
