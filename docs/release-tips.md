@@ -60,6 +60,23 @@ cargo publish --dry-run  # check if ready, will not upload
 cargo publish # check and upload
 ```
 
+We have a script to simplify this process:
+[publish_crates.sh](https://github.com/apache/teaclave-trustzone-sdk/blob/main/scripts/release/publish_crates.sh).
+
+To use the script with the Docker environment:
+
+```bash
+# Run the Docker container (use the same image from the vote email)
+docker run -it --rm \
+  -v $(pwd):/root/teaclave_sdk_src \
+  -w /root/teaclave_sdk_src \
+  teaclave/teaclave-trustzone-emulator-nostd-expand-memory:OPTEE-VERSION
+  
+# Inside the Docker container:
+cargo login
+./scripts/release/publish_crates.sh
+```
+
 ### GitHub Action for Drafting Release Notes
 
 We use a GitHub Action to help categorize pull requests and generate a draft of
