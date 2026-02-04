@@ -22,6 +22,7 @@ pub enum Error {
     Uuid(uuid::Error),
     PropertyNotFound(String),
     InvalidVersion(String),
+    Utf(std::string::FromUtf8Error),
 }
 
 impl From<std::io::Error> for Error {
@@ -39,5 +40,11 @@ impl From<std::env::VarError> for Error {
 impl From<uuid::Error> for Error {
     fn from(value: uuid::Error) -> Self {
         Self::Uuid(value)
+    }
+}
+
+impl From<std::string::FromUtf8Error> for Error {
+    fn from(value: std::string::FromUtf8Error) -> Self {
+        Self::Utf(value)
     }
 }

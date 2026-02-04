@@ -18,8 +18,8 @@
 use std::env;
 use std::fs::File;
 use std::io::Write;
-use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
+use std::process::Command;
 
 use crate::Error;
 
@@ -67,20 +67,27 @@ pub enum LinkerType {
 ///
 pub struct Linker {
     linker_type: LinkerType,
+    ftrace_buf_size: Option<usize>,
 }
 
 impl Linker {
     /// Construct a Linker by manually specific the type of linker, you may use
     /// `auto`, it would detect current linker automatically.
     pub fn new(linker_type: LinkerType) -> Self {
-        Self { linker_type }
+        Self {
+            linker_type,
+            ftrace_buf_size: None,
+        }
     }
     /// Construct a Linker by auto detect the type of linker, try `new` function
     ///  if our detection mismatch.
     pub fn auto() -> Self {
-        Self {
-            linker_type: Self::auto_detect_linker_type(),
-        }
+        Self::new(Self::auto_detect_linker_type())
+    }
+    /// Set the ftrace buffer size
+    pub fn with_ftrace_buf_size(mut self, ftrace_buf_size: usize) -> Self {
+        self.ftrace_buf_size = Some(ftrace_buf_size);
+        self
     }
     /// Handle all the linking stuff.
     ///
@@ -106,9 +113,9 @@ impl Linker {
             LinkerType::Ld => println!("cargo:rustc-link-arg=--sort-section=alignment"),
         };
         let mut dyn_list = File::create(out_dir.join("dyn_list"))?;
-        write!(
+        writeln!(
             dyn_list,
-            "{{ __elf_phdr_info; trace_ext_prefix; trace_level; ta_head; }};\n"
+            "{{ __elf_phdr_info; trace_ext_prefix; trace_level; ta_head; }};"
         )?;
         match self.linker_type {
             LinkerType::Cc => println!("cargo:rustc-link-arg=-Wl,--dynamic-list=dyn_list"),
@@ -129,51 +136,127 @@ impl Linker {
         // cargo passes TARGET as env to the build scripts
         const ENV_TARGET: &str = "TARGET";
         println!("cargo:rerun-if-env-changed={}", ENV_TARGET);
-        let mut aarch64_flag = true;
         match env::var(ENV_TARGET) {
             Ok(ref v) if v == "arm-unknown-linux-gnueabihf" || v == "arm-unknown-optee" => {
                 match self.linker_type {
                     LinkerType::Cc => println!("cargo:rustc-link-arg=-Wl,--no-warn-mismatch"),
                     LinkerType::Ld => println!("cargo:rustc-link-arg=--no-warn-mismatch"),
                 };
-                aarch64_flag = false;
             }
             _ => {}
         };
 
-        let f = BufReader::new(File::open(ta_dev_kit_dir.join("src/ta.ld.S"))?);
-        let ta_lds_file_path = out_dir.join("ta.lds");
-        let mut ta_lds = File::create(ta_lds_file_path.clone())?;
-        for line in f.lines() {
-            let l = line?;
-
-            if aarch64_flag {
-                if l.starts_with('#')
-                    || l == "OUTPUT_FORMAT(\"elf32-littlearm\")"
-                    || l == "OUTPUT_ARCH(arm)"
-                {
-                    continue;
-                }
-            } else {
-                if l.starts_with('#')
-                    || l == "OUTPUT_FORMAT(\"elf64-littleaarch64\")"
-                    || l == "OUTPUT_ARCH(aarch64)"
-                {
-                    continue;
-                }
-            }
-
-            if l == "\t. = ALIGN(4096);" {
-                write!(ta_lds, "\t. = ALIGN(65536);\n")?;
-            } else {
-                write!(ta_lds, "{}\n", l)?;
-            }
+        let link_script_dest = out_dir.join("ta.lds");
+        let link_script = self.generate_new_link_script(ta_dev_kit_dir)?;
+        if !std::fs::read(link_script_dest.as_path())
+            .is_ok_and(|v| v.as_slice() == link_script.as_bytes())
+        {
+            std::fs::write(link_script_dest.as_path(), link_script.as_bytes())?;
         }
 
+        Self::change_default_page_size();
         println!("cargo:rustc-link-search={}", out_dir.display());
-        println!("cargo:rerun-if-changed={}", ta_lds_file_path.display());
-        println!("cargo:rustc-link-arg=-T{}", ta_lds_file_path.display());
+        println!("cargo:rerun-if-changed={}", link_script_dest.display());
+        println!("cargo:rustc-link-arg=-T{}", link_script_dest.display());
         Ok(())
+    }
+
+    // Correcting ELF segment alignment discrepancy between Rust and C, and in
+    // the linker script provided by OP-TEE, the alignment are set to 0x1000.
+    //
+    // There is a mismatch in the ELF segment alignment between the Rust and
+    // C builds.
+    // The C-compiled binary correctly uses an alignment of 0x1000 (4KB),
+    // which is required for OP-TEE compatibility. However, the
+    // Rust-generated ELF defaults to 0x10000 (64KB).
+    // To resolve this, we need to adjust the Rust linker parameters to
+    // match the C alignment.
+    //
+    // example of C build elf header:
+    //  Elf file type is DYN (Position-Independent Executable file)
+    //  Entry point 0x2f4
+    //  There are 4 program headers, starting at offset 64
+    //
+    //  Program Headers:
+    //    Type           Offset             VirtAddr           PhysAddr
+    //                   FileSiz            MemSiz              Flags  Align
+    //    LOAD           0x0000000000001000 0x0000000000000000 0x0000000000000000
+    //                   0x00000000000191b8 0x00000000000191b8  R E    0x1000
+    //    LOAD           0x000000000001b000 0x000000000001a000 0x000000000001a000
+    //                   0x00000000000006c4 0x000000000000bf80  RW     0x1000
+    //    DYNAMIC        0x000000000001b000 0x000000000001a000 0x000000000001a000
+    //                   0x0000000000000110 0x0000000000000110  RW     0x8
+    //    GNU_STACK      0x0000000000000000 0x0000000000000000 0x0000000000000000
+    //                   0x0000000000000000 0x0000000000000000  RW     0x10
+    //
+    // example of Rust build elf header:
+    //  Elf file type is DYN (Position-Independent Executable file)
+    //  Entry point 0x18d8
+    //  There are 5 program headers, starting at offset 64
+    //
+    //  Program Headers:
+    //    Type           Offset             VirtAddr           PhysAddr
+    //                   FileSiz            MemSiz              Flags  Align
+    //    LOAD           0x0000000000010000 0x0000000000000000 0x0000000000000000
+    //                   0x000000000001c89c 0x0000000000028150  RWE    0x10000
+    //    DYNAMIC        0x000000000002c000 0x000000000001c000 0x000000000001c000
+    //                   0x0000000000000170 0x0000000000000170  RW     0x8
+    //    NOTE           0x000000000002c4b0 0x000000000001c4b0 0x000000000001c4b0
+    //                   0x0000000000000044 0x0000000000000044  R      0x4
+    //    GNU_EH_FRAME   0x0000000000024b54 0x0000000000014b54 0x0000000000014b54
+    //                   0x0000000000000e6c 0x0000000000000e6c  R      0x4
+    //    GNU_STACK      0x0000000000000000 0x0000000000000000 0x0000000000000000
+    //                   0x0000000000000000 0x0000000000000000  RW     0x10
+    fn change_default_page_size() {
+        println!("cargo:rustc-link-arg=-z");
+        println!("cargo:rustc-link-arg=max-page-size=0x1000");
+        println!("cargo:rustc-link-arg=-z");
+        println!("cargo:rustc-link-arg=common-page-size=0x1000");
+    }
+
+    fn generate_new_link_script(&self, ta_dev_kit_dir: PathBuf) -> Result<String, Error> {
+        let link_script_template_path = ta_dev_kit_dir.join("src/ta.ld.S");
+        println!("cargo:rerun-if-changed={}", link_script_template_path.display());
+
+        let link_script_output = {
+            const ENV_CC: &str = "CC";
+            println!("cargo:rerun-if-env-changed={}", ENV_CC);
+
+            let cc_cmd = env::var(ENV_CC).unwrap_or("cc".to_string());
+            let mut tmp = Command::new(cc_cmd);
+            tmp.args([
+                "-E",
+                "-P",
+                "-x",
+                "c",
+                link_script_template_path.to_str().expect("infallible"),
+            ]);
+            const ENV_TARGET_ARCH: &str = "CARGO_CFG_TARGET_ARCH";
+            println!("cargo:rerun-if-env-changed={}", ENV_TARGET_ARCH);
+            match env::var(ENV_TARGET_ARCH)?.as_str() {
+                "riscv32" => {
+                    tmp.arg("-DRV32=1");
+                }
+                "riscv64" => {
+                    tmp.arg("-DRV64=1");
+                }
+                "arm" => {
+                    tmp.arg("-DARM32=1");
+                }
+                "aarch64" => {
+                    tmp.arg("-DARM64=1");
+                }
+                _ => {}
+            };
+            if let Some(ftrace_buf_size) = self.ftrace_buf_size {
+                tmp.arg(format!("-DCFG_FTRACE_BUF_SIZE={}", ftrace_buf_size));
+            }
+            tmp
+        }
+        .output()?
+        .stdout;
+        let link_script_text = String::from_utf8(link_script_output)?;
+        Ok(link_script_text)
     }
 
     fn auto_detect_linker_type() -> LinkerType {

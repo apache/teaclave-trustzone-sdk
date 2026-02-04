@@ -232,7 +232,7 @@ fn property_value_data_codes(value: &PropertyValue) -> Result<proc_macro2::Token
         PropertyValue::Str(v) => Ok(string_to_binary_codes(v)),
         PropertyValue::BinaryBlock(v) => Ok(string_to_binary_codes(v)),
         PropertyValue::Identity(login, uuid) => {
-            identity_to_tee_identity_value_codes(login.clone(), &uuid)
+            identity_to_tee_identity_value_codes(*login, uuid)
         }
     }
 }
