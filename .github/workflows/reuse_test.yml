@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+name: "[Workflow Call]Test"
+
 on:
   workflow_call:
     inputs:
@@ -63,127 +65,34 @@ jobs:
           (cd optee-utee && cargo clippy --target aarch64-unknown-linux-gnu -- -D warnings)
           (cd optee-teec && cargo clippy --target aarch64-unknown-linux-gnu -- -D warnings)
 
-  # Cross-compile on host and run tests in QEMU
-  #
-  # Cross-compile target pairs:
-  # - (arm32 host, arm32 ta)
-  # - (arm32 host, arm64 ta)
-  # - (arm64 host, arm32 ta)
-  # - (arm64 host, arm64 ta)
-  #
-  # Run tests target: (arm64 host, arm64 ta)
-  build-and-test-examples:
-    runs-on: ${{ inputs.runs-on }}
-    container: ${{ inputs.container }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Building
-        run: |
-          # Setup Rust and toolchains
-          ./setup.sh
-          source "$HOME/.cargo/env"
+  build-and-test-examples-for-32bit-no-std-TAs:
+    uses: ./.github/workflows/reuse_host_build_and_qemu_run.yml
+    with:
+      runs-on: ${{ inputs.runs-on }}
+      container: ${{ inputs.container }}
+      std: false
+      ta_arch: arm
 
-          # Build optee_os and optee_client for qemu_v8
-          ./build_optee_libraries.sh $HOME
-          export OPTEE_DIR=$HOME
+  build-and-test-examples-for-64bit-no-std-TAs:
+    uses: ./.github/workflows/reuse_host_build_and_qemu_run.yml
+    with:
+      runs-on: ${{ inputs.runs-on }}
+      container: ${{ inputs.container }}
+      std: false
+      ta_arch: aarch64
 
-          # Build OP-TEE Rust examples for Arm 32-bit both host and TA
-          export ARCH_HOST=arm
-          export ARCH_TA=arm
-          source environment
-          make examples -j`nproc`
-
-          # Build OP-TEE Rust examples for Arm 32-bit host and 64-bit TA
-          export ARCH_HOST=arm
-          unset ARCH_TA
-          source environment
-          make clean && make examples -j`nproc`
-
-          # Build OP-TEE Rust examples for Arm 64-bit host and 32-bit TA
-          unset ARCH_HOST
-          export ARCH_TA=arm
-          source environment
-          make clean && make examples -j`nproc`
-
-          # Build OP-TEE Rust examples for Arm 64-bit both host and TA
-          unset ARCH_TA
-          unset ARCH_HOST
-          source environment
-          make clean && make examples -j`nproc`
-      - name: Run tests for Arm 64-bit both host and TA
-        run: |
-          source environment
-          (cd ci && ./ci.sh)
-
-  # Cross-compile for ARM64 on host and run tests in QEMU
-  build-and-test-examples-for-64bit-std-TAs:
-    runs-on: ${{ inputs.runs-on }}
-    container: ${{ inputs.container }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Building Arm 64-bit both host and TA (with STD enabled)
-        run: |
-          # Setup Rust and toolchains
-          ./setup.sh
-          source "$HOME/.cargo/env"
-
-          # Setup std dependencies
-          ./setup_std_dependencies.sh
-
-          # Build optee_os and optee_client for qemu_v8
-          ./build_optee_libraries.sh $HOME
-
-          # Setup environment
-          export OPTEE_DIR=$HOME
-          export STD=y
-          source environment
-
-          # Build OP-TEE Rust examples for Arm 64-bit both host and TA
-          make std-examples -j2
-
-          # Build project
-          (cd projects/web3/eth_wallet && make)
-      - name: Run tests for Arm 64-bit both host and TA
-        run: |
-          export STD=y
-          source environment
-          (cd ci && ./ci.sh)
-
-  # Cross-compile for ARM32 on host and run tests in QEMU
   build-and-test-examples-for-32bit-std-TAs:
-    runs-on: ${{ inputs.runs-on }}
-    container: ${{ inputs.container }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Building Arm 64-bit both host and TA (with STD enabled)
-        run: |
-          # Setup Rust and toolchains
-          ./setup.sh
-          source "$HOME/.cargo/env"
+    uses: ./.github/workflows/reuse_host_build_and_qemu_run.yml
+    with:
+      runs-on: ${{ inputs.runs-on }}
+      container: ${{ inputs.container }}
+      std: true
+      ta_arch: arm
 
-          # Setup std dependencies
-          ./setup_std_dependencies.sh
-
-          # Build optee_os and optee_client for qemu_v8
-          ./build_optee_libraries.sh $HOME
-
-          # Setup environment
-          export OPTEE_DIR=$HOME
-          export ARCH_TA=arm
-          export STD=y
-          source environment
-
-          # Build OP-TEE Rust examples for Arm 64-bit both host and TA
-          make std-examples -j2
-
-          # Build project
-          (cd projects/web3/eth_wallet && make)
-      - name: Run tests for Arm 32-bit both host and TA
-        run: |
-          export ARCH_TA=arm
-          export STD=y
-          source environment
-          (cd ci && ./ci.sh)
+  build-and-test-examples-for-64bit-std-TAs:
+    uses: ./.github/workflows/reuse_host_build_and_qemu_run.yml
+    with:
+      runs-on: ${{ inputs.runs-on }}
+      container: ${{ inputs.container }}
+      std: true
+      ta_arch: aarch64
