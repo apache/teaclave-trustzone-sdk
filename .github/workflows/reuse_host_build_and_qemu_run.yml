@@ -1,0 +1,84 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+name: "[Workflow Call]Host Build and QEMU run"
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: true
+        type: string
+      container:
+        required: true
+        type: string
+      std:
+        required: true
+        type: boolean
+      ta_arch:
+        required: true
+        type: string
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # compile on host and run tests in QEMU
+  build-and-test-examples:
+    env:
+      # Setup the env for the build, currently our QEMU image only support
+      # aarch64 CA
+      ARCH_HOST: aarch64
+      ARCH_TA: ${{ inputs.ta_arch }}
+      OPTEE_DIR: /tmp/optee
+    runs-on: ${{ inputs.runs-on }}
+    container: ${{ inputs.container }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      # Setup Rust and toolchains
+      - name: Setup
+        run: |
+          ./setup.sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      # Setup std dependencies
+      - name: Setup STD
+        if: ${{ inputs.std }}
+        run: |
+          ./setup_std_dependencies.sh
+          echo "STD=y" >> $GITHUB_ENV
+
+      - name: Build
+        run: |
+          # print the env
+          env
+          # Build optee_os and optee_client for qemu_v8
+          mkdir -p $OPTEE_DIR
+          ./build_optee_libraries.sh $OPTEE_DIR
+          # Setup environment
+          source environment
+          if [ "${{ inputs.std }}" == "true" ]; then
+            make std-examples -j2
+            (cd projects/web3/eth_wallet && make)
+          else
+            make no-std-examples -j2
+          fi
+      - name: Run
+        run: |
+          source environment
+          (cd ci && ./ci.sh)
