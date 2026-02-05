@@ -26,3 +26,13 @@ Relevant Patch File:
     to match the QEMU memory expansion.
 3. optee-build_expand_memory.patch: Updates build configurations to reflect the
     expanded memory setup.
+
+## Patches for enabling ssh
+
+Our CI workflow automates command execution via SSH and handles CA/TA deployment
+using SCP, providing a seamless local-like interface for the QEMU image.
+
+Relevant Patch File:
+
+1. optee-build_enable_ssh.patch: update build configurations to enable the ssh
+    server.

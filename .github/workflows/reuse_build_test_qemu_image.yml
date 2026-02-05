@@ -116,6 +116,9 @@ jobs:
           (cd ${{ env.QEMUV8_BUILD_FOLDER }}/qemu && git apply $GITHUB_WORKSPACE/.patches/test_qemu/qemu-qemu_expand_secure_memory.patch)
           (cd ${{ env.QEMUV8_BUILD_FOLDER }}/trusted-firmware-a && git apply $GITHUB_WORKSPACE/.patches/test_qemu/arm-atf_expand_secure_memory.patch)
 
+      - name: Apply patches to enable ssh
+        run: |
+          (cd ${{ env.QEMUV8_BUILD_FOLDER }}/build && git apply $GITHUB_WORKSPACE/.patches/test_qemu/optee-build_enable_ssh.patch)
       # cd to the output folder first to avoid extra path in the tar file.
       - name: Build And Pack
         env:
