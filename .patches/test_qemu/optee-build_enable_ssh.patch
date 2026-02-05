@@ -1,0 +1,77 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+diff --git a/br-ext/board/qemu/post-build.sh b/br-ext/board/qemu/post-build.sh
+index 5b4f8b5..fe65f11 100755
+--- a/br-ext/board/qemu/post-build.sh
++++ b/br-ext/board/qemu/post-build.sh
+@@ -7,6 +7,7 @@ TARGETDIR="$1"
+ VIRTFS_AUTOMOUNT="$2"
+ VIRTFS_MOUNTPOINT="$3"
+ PSS_AUTOMOUNT="$4"
++ENABLE_SSH="$5"
+ 
+ if [[ -z $TARGET_DIR ]]; then
+     echo "TARGET_DIR missing"
+@@ -28,6 +29,11 @@ if [[ -z $PSS_AUTOMOUNT ]]; then
+     exit 1
+ fi
+ 
++if [[ -z $ENABLE_SSH ]]; then
++    echo "ENABLE_SSH missing"
++    exit 1
++fi
++
+ 
+ if [[ $VIRTFS_AUTOMOUNT == "y" ]]; then
+     grep host "$TARGETDIR"/etc/fstab > /dev/null || \
+@@ -41,3 +47,10 @@ if [[ $PSS_AUTOMOUNT == "y" ]]; then
+     echo "secure /var/lib/tee 9p trans=virtio,version=9p2000.L,msize=65536,rw 0 0" >> "$TARGET_DIR"/etc/fstab
+     echo "[+] persistent secure storage mount added to fstab"
+ fi
++
++
++if [[ $ENABLE_SSH == "y" ]]; then
++    sed -i -e 's/#PermitEmptyPasswords no/PermitEmptyPasswords yes/' "$TARGET_DIR"/etc/ssh/sshd_config
++    sed -i -e 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' "$TARGET_DIR"/etc/ssh/sshd_config
++    echo "[+] ssh server allow root with no password"
++fi
+diff --git a/qemu_v8.mk b/qemu_v8.mk
+index 9c36c8a..8d553d3 100644
+--- a/qemu_v8.mk
++++ b/qemu_v8.mk
+@@ -7,6 +7,7 @@ COMPILE_NS_USER ?= 64
+ override COMPILE_NS_KERNEL := 64
+ COMPILE_S_USER ?= 64
+ COMPILE_S_KERNEL ?= 64
++ENABLE_SSH ?= y
+ 
+ ################################################################################
+ # If you change this, you MUST run `make arm-tf-clean` first before rebuilding
+@@ -15,7 +16,11 @@ TF_A_TRUSTED_BOARD_BOOT ?= n
+ 
+ BR2_ROOTFS_OVERLAY = $(ROOT)/build/br-ext/board/qemu/overlay
+ BR2_ROOTFS_POST_BUILD_SCRIPT = $(ROOT)/build/br-ext/board/qemu/post-build.sh
+-BR2_ROOTFS_POST_SCRIPT_ARGS = "$(QEMU_VIRTFS_AUTOMOUNT) $(QEMU_VIRTFS_MOUNTPOINT) $(QEMU_PSS_AUTOMOUNT)"
++BR2_ROOTFS_POST_SCRIPT_ARGS = "$(QEMU_VIRTFS_AUTOMOUNT) $(QEMU_VIRTFS_MOUNTPOINT) $(QEMU_PSS_AUTOMOUNT) $(ENABLE_SSH)"
++ifeq ($(ENABLE_SSH),y)
++BR2_PACKAGE_OPENSSH ?= y
++BR2_SYSTEM_DHCP ?= eth0
++endif
+ 
+ PLAT_QEMU ?= virt
+ ifeq ($(PLAT_QEMU),virt)
