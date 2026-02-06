@@ -23,22 +23,14 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/error_handling-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/error_handling-rs/host/target/$TARGET_HOST/release/error_handling-rs shared
+copy_ta_to_qemu ../examples/error_handling-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/error_handling-rs/host/target/$TARGET_HOST/release/error_handling-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./error_handling-rs\n"
-run_in_qemu "^C"
+OUTPUT=$(run_in_qemu "error_handling-rs") || print_detail_and_exit
 
 # Script specific checks
 {
-    grep -q -v "panicked" screenlog.0 &&
-    grep -q "Test passed" screenlog.0
-} || {
-    cat -v screenlog.0
-    cat -v /tmp/serial.log
-    false
-}
-
-rm -rf screenlog.0
+    grep -q -v "panicked" <<< "$OUTPUT" &&
+    grep -q "Test passed" <<< "$OUTPUT"
+} || print_detail_and_exit

@@ -23,25 +23,17 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/time-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/time-rs/host/target/$TARGET_HOST/release/time-rs shared
+copy_ta_to_qemu ../examples/time-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/time-rs/host/target/$TARGET_HOST/release/time-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./time-rs\n"
-run_in_qemu "^C"
+OUTPUT=$(run_in_qemu "time-rs") || print_detail_and_exit
 
 # Script specific checks
 {
-    grep -q "Success" screenlog.0 &&
+    grep -q "Success" <<< "$OUTPUT" &&
     grep -q "\[+] Get REE time (second: [0-9]*, millisecond: [0-9]*)" /tmp/serial.log &&
     grep -q "\[+] Now wait 1 second in TEE" /tmp/serial.log &&
     grep -q "\[+] Get system time (second: [0-9]*, millisecond: [0-9]*)" /tmp/serial.log &&
     grep -q "\[+] After set the TA time 5 seconds ahead of system time, new TA time (second: [0-9]*, millisecond: [0-9]*)" /tmp/serial.log
-} || {
-    cat -v screenlog.0
-    cat -v /tmp/serial.log
-        false
-}
-
-rm screenlog.0
+} || print_detail_and_exit

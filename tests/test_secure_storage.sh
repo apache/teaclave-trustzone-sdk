@@ -23,32 +23,24 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/secure_storage-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/secure_storage-rs/host/target/$TARGET_HOST/release/secure_storage-rs shared
+copy_ta_to_qemu ../examples/secure_storage-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/secure_storage-rs/host/target/$TARGET_HOST/release/secure_storage-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
 # IO could be much slower than expected
-run_in_qemu_with_timeout_secs "./secure_storage-rs\n" 10
-run_in_qemu "^C"
+OUTPUT=$(run_in_qemu_with_timeout_secs "secure_storage-rs" 20) || print_detail_and_exit
 
 # Script specific checks
 {
-    grep -q "Test on object \"object#1\"" screenlog.0 &&
-    grep -q "\- Create and load object in the TA secure storage" screenlog.0 &&
-    grep -q "\- Read back the object" screenlog.0 &&
-    grep -q "\- Content read-out correctly" screenlog.0 &&
-    grep -q "\- Delete the object" screenlog.0 &&
+    grep -q "Test on object \"object#1\"" <<< "$OUTPUT" &&
+    grep -q "\- Create and load object in the TA secure storage" <<< "$OUTPUT" &&
+    grep -q "\- Read back the object" <<< "$OUTPUT" &&
+    grep -q "\- Content read-out correctly" <<< "$OUTPUT" &&
+    grep -q "\- Delete the object" <<< "$OUTPUT" &&
 
-    grep -q "Test on object \"object#2\"" screenlog.0 &&
+    grep -q "Test on object \"object#2\"" <<< "$OUTPUT" &&
     #miss the read correctly output
-    grep -Eq "\- Object not found in TA secure storage, create it|\- Object found in TA secure storage, delete it" screenlog.0 &&
+    grep -Eq "\- Object not found in TA secure storage, create it|\- Object found in TA secure storage, delete it" <<< "$OUTPUT" &&
 
-    grep -q "We're done, close and release TEE resources" screenlog.0
-} || {
-        cat -v screenlog.0
-        cat -v /tmp/serial.log
-        false
-}
-
-rm screenlog.0
+    grep -q "We're done, close and release TEE resources" <<< "$OUTPUT"
+} || print_detail_and_exit

@@ -24,21 +24,8 @@ NEED_EXPANDED_MEM=true
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/tls_client-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/tls_client-rs/host/target/$TARGET_HOST/release/tls_client-rs shared
+copy_ta_to_qemu ../examples/tls_client-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/tls_client-rs/host/target/$TARGET_HOST/release/tls_client-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./tls_client-rs\n"
-run_in_qemu "^C"
-
-# Script specific checks
-{
-	grep -q "Success" screenlog.0
-} || {
-	cat -v screenlog.0
-	cat -v /tmp/serial.log
-	false
-}
-
-rm screenlog.0
+run_in_qemu "tls_client-rs" || print_detail_and_exit

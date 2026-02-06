@@ -23,23 +23,13 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/signature_verification-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/signature_verification-rs/host/target/$TARGET_HOST/release/signature_verification-rs shared
+copy_ta_to_qemu ../examples/signature_verification-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/signature_verification-rs/host/target/$TARGET_HOST/release/signature_verification-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./signature_verification-rs\n"
-# Additional 5 secs for the application to finish
-sleep 5
-run_in_qemu "^C"
+OUTPUT=$(run_in_qemu "signature_verification-rs") || print_detail_and_exit
 
 # Script specific checks
 {
-    grep -q "Success" screenlog.0
-} || {
-    cat -v screenlog.0
-    cat -v /tmp/serial.log
-    false
-}
-
-rm screenlog.0
+    grep -q "Success" <<< "$OUTPUT"
+} || print_detail_and_exit

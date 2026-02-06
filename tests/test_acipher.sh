@@ -23,22 +23,14 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/acipher-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/acipher-rs/host/target/$TARGET_HOST/release/acipher-rs shared
+copy_ta_to_qemu ../examples/acipher-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/acipher-rs/host/target/$TARGET_HOST/release/acipher-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./acipher-rs 256 teststring\n"
-run_in_qemu "^C"
+OUTPUT=$(run_in_qemu "acipher-rs 256 teststring") || print_detail_and_exit
 
 # Script specific checks
 {
-    grep -q "Success encrypt input text \".*\" as [0-9]* bytes cipher text:" screenlog.0 &&
-    grep -q "Success decrypt the above ciphertext as [0-9]* bytes plain text:" screenlog.0
-} || {
-    cat -v screenlog.0
-    cat -v /tmp/serial.log
-    false
-}
-
-rm screenlog.0
+    grep -q "Success encrypt input text \".*\" as [0-9]* bytes cipher text:" <<< "$OUTPUT" &&
+    grep -q "Success decrypt the above ciphertext as [0-9]* bytes plain text:" <<< "$OUTPUT"
+} || print_detail_and_exit

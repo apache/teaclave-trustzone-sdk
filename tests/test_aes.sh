@@ -23,26 +23,18 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/aes-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/aes-rs/host/target/$TARGET_HOST/release/aes-rs shared
+copy_ta_to_qemu ../examples/aes-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/aes-rs/host/target/$TARGET_HOST/release/aes-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./aes-rs\n"
-run_in_qemu "^C"
+OUTPUT=$(run_in_qemu "aes-rs") || print_detail_and_exit
 
 # Script specific checks
 {
-    grep -q "Prepare encode operation" screenlog.0 &&
-    grep -q "Load key in TA" screenlog.0 &&
-    grep -q "Reset ciphering operation in TA (provides the initial vector)" screenlog.0 &&
-    grep -q "Encode buffer from TA" screenlog.0 &&
-    grep -q "Prepare decode operation" screenlog.0 &&
-    grep -q "Clear text and decoded text match" screenlog.0
-} || {
-    cat -v screenlog.0
-    cat -v /tmp/serial.log
-    false
-}
-
-rm screenlog.0
+    grep -q "Prepare encode operation" <<< "$OUTPUT" &&
+    grep -q "Load key in TA" <<< "$OUTPUT" &&
+    grep -q "Reset ciphering operation in TA (provides the initial vector)" <<< "$OUTPUT" &&
+    grep -q "Encode buffer from TA" <<< "$OUTPUT" &&
+    grep -q "Prepare decode operation" <<< "$OUTPUT" &&
+    grep -q "Clear text and decoded text match" <<< "$OUTPUT"
+} || print_detail_and_exit

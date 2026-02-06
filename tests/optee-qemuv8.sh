@@ -32,5 +32,5 @@ cd $1 && ./qemu-system-aarch64 \
     -kernel Image \
     -fsdev local,id=fsdev0,path=$(pwd)/../shared,security_model=none \
     -device virtio-9p-device,fsdev=fsdev0,mount_tag=host \
-    -netdev user,id=vmnic,hostfwd=:127.0.0.1:54433-:4433 \
+    -netdev user,id=vmnic,hostfwd=:127.0.0.1:54433-:4433,hostfwd=:127.0.0.1:54432-:22 \
     -device virtio-net-device,netdev=vmnic

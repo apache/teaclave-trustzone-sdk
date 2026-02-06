@@ -23,29 +23,13 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/big_int-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/big_int-rs/host/target/$TARGET_HOST/release/big_int-rs shared
+copy_ta_to_qemu ../examples/big_int-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/big_int-rs/host/target/$TARGET_HOST/release/big_int-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./big_int-rs\n"
-run_in_qemu "^C"
+OUTPUT=$(run_in_qemu "big_int-rs") || print_detail_and_exit
 
 # Script specific checks
 {
-    grep -q "\[.*] > \[.*]\|\[.*] < \[.*]\|\[.*] == \[.*]" /tmp/serial.log &&
-    grep -q "\[.*] in u8 array is \[.*]" /tmp/serial.log &&
-    grep -q "\[.*] in i32 is [0-9]*" /tmp/serial.log &&
-    grep -q "\[.*] + \[.*] = \[.*]" /tmp/serial.log &&
-    grep -q "\[.*] - \[.*] = \[.*]" /tmp/serial.log &&
-    grep -q "\[.*] \* \[.*] = \[.*]" /tmp/serial.log &&
-    grep -q "\[.*] / \[.*] = \[.*]" /tmp/serial.log &&
-    grep -q "\[.*] % \[.*] = \[.*]" /tmp/serial.log &&
-    grep -q "Success" screenlog.0
-} || {
-    cat -v screenlog.0
-    cat -v /tmp/serial.log
-        false
-}
-
-rm screenlog.0
+    grep -q "Success" <<< "$OUTPUT"
+} || print_detail_and_exit
