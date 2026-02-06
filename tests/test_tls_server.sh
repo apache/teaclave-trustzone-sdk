@@ -23,32 +23,20 @@ NEED_EXPANDED_MEM=true
 # Include base script
 source setup.sh
 
-rm -f openssl.log
-
 # Copy TA and host binary
-cp ../examples/tls_server-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/tls_server-rs/host/target/$TARGET_HOST/release/tls_server-rs shared
-cp ../examples/tls_server-rs/ta/test-ca/ecdsa/ca.cert shared
+copy_ta_to_qemu ../examples/tls_server-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/tls_server-rs/host/target/$TARGET_HOST/release/tls_server-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./tls_server-rs\n"
+run_in_qemu "nohup tls_server-rs > /tmp/tls_server.log 2>&1 &"
+(sleep 5 && run_in_qemu "cat /tmp/tls_server.log" | grep -q "listening") || (echo " [TIMEOUT] Server failed to start." && print_detail_and_exit)
 # Outside the QEMU: connect the server using openssl, accept the self-signed CA cert
 # || true because we want to continue testing even if the connection fails, and check the log later
-echo "Q" | openssl s_client -connect 127.0.0.1:54433 -CAfile shared/ca.cert -debug > openssl.log 2>&1 || true
-run_in_qemu "^C"
+OPENSSL_OUTPUT=$(echo "Q" | openssl s_client -connect 127.0.0.1:54433 -CAfile ../examples/tls_server-rs/ta/test-ca/ecdsa/ca.cert -debug 2>&1) || true
+run_in_qemu "kill \$(pidof tls_server-rs)" || print_detail_and_exit
 
 # Script specific checks
 {
-	grep -q "Verification: OK" openssl.log &&
-	grep -q "close session" screenlog.0
-} || {
-	cat -v screenlog.0
-	cat -v /tmp/serial.log
-	cat -v openssl.log
-	false
-}
-
-rm screenlog.0
-
-rm -rf openssl.log
+	grep -q "Verification: OK" <<< "$OPENSSL_OUTPUT" &&
+	grep -v "SSL handshake has read 0 bytes " <<< "$OPENSSL_OUTPUT" # prevent openssl goes to http protocol
+} || print_detail_and_exit

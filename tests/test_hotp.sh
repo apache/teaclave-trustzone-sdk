@@ -23,22 +23,14 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/hotp-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/hotp-rs/host/target/$TARGET_HOST/release/hotp-rs shared
+copy_ta_to_qemu ../examples/hotp-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/hotp-rs/host/target/$TARGET_HOST/release/hotp-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./hotp-rs\n"
-run_in_qemu "^C"
+OUTPUT=$(run_in_qemu "hotp-rs") || print_detail_and_exit
 
 # Script specific checks
 {
-    grep -q "Get HOTP" screenlog.0 &&
-    grep -q "Success" screenlog.0
-} || {
-        cat -v screenlog.0
-        cat -v /tmp/serial.log
-        false
-}
-
-rm screenlog.0
+    grep -q "Get HOTP" <<< "$OUTPUT" &&
+    grep -q "Success" <<< "$OUTPUT"
+} || print_detail_and_exit

@@ -23,21 +23,13 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/message_passing_interface-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/message_passing_interface-rs/host/target/$TARGET_HOST/release/message_passing_interface-rs shared
+copy_ta_to_qemu ../examples/message_passing_interface-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/message_passing_interface-rs/host/target/$TARGET_HOST/release/message_passing_interface-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./message_passing_interface-rs\n"
-run_in_qemu "^C"
+OUTPUT=$(run_in_qemu "message_passing_interface-rs") || print_detail_and_exit
 
 # Script specific checks
 {
-	grep -q "Hello, World" screenlog.0
-} || {
-	cat -v screenlog.0
-	cat -v /tmp/serial.log
-	false
-}
-
-rm screenlog.0
+	grep -q "Hello, World" <<< "$OUTPUT"
+} || print_detail_and_exit

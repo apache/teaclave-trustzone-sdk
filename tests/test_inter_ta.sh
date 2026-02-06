@@ -23,21 +23,15 @@ set -xe
 source setup.sh
 
 # Copy hello_world-rs TA for testing
-cp ../examples/hello_world-rs/ta/target/$TARGET_TA/release/*.ta shared
+copy_ta_to_qemu ../examples/hello_world-rs/ta/target/$TARGET_TA/release/*.ta
 # Copy TA and host binary
-cp ../examples/inter_ta-rs/host/target/$TARGET_HOST/release/inter_ta-rs shared
-cp ../examples/inter_ta-rs/ta/target/$TARGET_TA/release/*.ta shared
+copy_ta_to_qemu ../examples/inter_ta-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/inter_ta-rs/host/target/$TARGET_HOST/release/inter_ta-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./inter_ta-rs\n"
-run_in_qemu "^C"
+OUTPUT=$(run_in_qemu "inter_ta-rs") || print_detail_and_exit
 
 # Script specific checks
 {
-    grep -q "Success" screenlog.0
-} || {
-    cat -v screenlog.0
-    cat -v /tmp/serial.log
-    false
-}
+    grep -q "Success" <<< "$OUTPUT"
+} || print_detail_and_exit

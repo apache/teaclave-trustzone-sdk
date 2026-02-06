@@ -23,22 +23,14 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/authentication-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/authentication-rs/host/target/$TARGET_HOST/release/authentication-rs shared
+copy_ta_to_qemu ../examples/authentication-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/authentication-rs/host/target/$TARGET_HOST/release/authentication-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./authentication-rs\n"
-run_in_qemu "^C"
+OUTPUT=$(run_in_qemu "authentication-rs") || print_detail_and_exit
 
 # Script specific checks
 {
-    grep -q "Clear text and decoded text match" screenlog.0 &&
-    grep -q "Success" screenlog.0
-} || {
-    cat -v screenlog.0
-    cat -v /tmp/serial.log
-        false
-}
-
-rm screenlog.0
+    grep -q "Clear text and decoded text match" <<< "$OUTPUT" &&
+    grep -q "Success" <<< "$OUTPUT"
+} || print_detail_and_exit

@@ -23,26 +23,17 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/build_with_optee_utee_sys-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/build_with_optee_utee_sys-rs/host/target/$TARGET_HOST/release/build_with_optee_utee_sys-rs shared
+copy_ta_to_qemu ../examples/build_with_optee_utee_sys-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/build_with_optee_utee_sys-rs/host/target/$TARGET_HOST/release/build_with_optee_utee_sys-rs
 
-# Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
 # Run command twice, ensure the instance are keeping alive.
-run_in_qemu "./build_with_optee_utee_sys-rs\n"
-run_in_qemu "./build_with_optee_utee_sys-rs\n"
-run_in_qemu "^C"
+OUTPUT1=$(run_in_qemu "build_with_optee_utee_sys-rs") || print_detail_and_exit
+OUTPUT2=$(run_in_qemu "build_with_optee_utee_sys-rs") || print_detail_and_exit
 
 # Script specific checks
 {
-    grep -q "result is: 0" screenlog.0 &&
-    grep -q "result is: 1" screenlog.0 &&
-    grep -q "result is: 2" screenlog.0 &&
-    grep -q "result is: 3" screenlog.0
-} || {
-    cat -v screenlog.0
-    cat -v /tmp/serial.log
-    false
-}
-
-rm screenlog.0
+    grep -q "result is: 0" <<< "$OUTPUT1" &&
+    grep -q "result is: 1" <<< "$OUTPUT1" &&
+    grep -q "result is: 2" <<< "$OUTPUT2" &&
+    grep -q "result is: 3" <<< "$OUTPUT2"
+} || print_detail_and_exit

@@ -23,19 +23,8 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/property-rs/host/target/$TARGET_HOST/release/property-rs shared
-cp ../examples/property-rs/ta/target/$TARGET_TA/release/*.ta shared
+copy_ta_to_qemu ../examples/property-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/property-rs/host/target/$TARGET_HOST/release/property-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./property-rs\n"
-run_in_qemu "^C"
-
-# Script specific checks
-{
-    grep -q "Success" screenlog.0
-} || {
-    cat -v screenlog.0
-    cat -v /tmp/serial.log
-    false
-}
+run_in_qemu "property-rs" || print_detail_and_exit

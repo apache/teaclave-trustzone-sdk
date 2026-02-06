@@ -23,29 +23,21 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/supp_plugin-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/supp_plugin-rs/host/target/$TARGET_HOST/release/supp_plugin-rs shared
-cp ../examples/supp_plugin-rs/plugin/target/$TARGET_HOST/release/*.plugin.so shared
+copy_ta_to_qemu ../examples/supp_plugin-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/supp_plugin-rs/host/target/$TARGET_HOST/release/supp_plugin-rs
+copy_plugin_to_qemu ../examples/supp_plugin-rs/plugin/target/$TARGET_HOST/release/*.plugin.so
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "cp *.plugin.so /usr/lib/tee-supplicant/plugins/\n"
-run_in_qemu "kill \$(pidof tee-supplicant)\n"
-run_in_qemu "/usr/sbin/tee-supplicant &\n\n"
-run_in_qemu "./supp_plugin-rs\n"
-run_in_qemu "^C"
+run_in_qemu "kill \$(pidof tee-supplicant)"
+run_in_qemu "nohup /usr/sbin/tee-supplicant > /tmp/tee_supplicant.log 2>&1 &"
+OUTPUT=$(run_in_qemu "supp_plugin-rs && cat /tmp/tee_supplicant.log") || print_detail_and_exit
 
 # Script specific checks
 {
-    grep -q "send value" screenlog.0 &&
-    grep -q "invoke" screenlog.0 &&
-    grep -q "receive value" screenlog.0 &&
-    grep -q "invoke commmand finished" screenlog.0 &&
-    grep -q "Success" screenlog.0
-} || {
-    cat -v screenlog.0
-    cat -v /tmp/serial.log
-    false
-}
-
-rm screenlog.0
+    grep -q "\*host\*: send value" <<< "$OUTPUT" &&
+    grep -q "\*host\*: invoke" <<< "$OUTPUT" &&
+    grep -q "Success" <<< "$OUTPUT"
+    grep -q "\*plugin\*: invoke" <<< "$OUTPUT" &&
+    grep -q "\*plugin\*: receive value" <<< "$OUTPUT" &&
+    grep -q "\*plugin\*: send value" <<< "$OUTPUT"
+} || print_detail_and_exit

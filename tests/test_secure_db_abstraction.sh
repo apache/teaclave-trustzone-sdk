@@ -23,22 +23,9 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/secure_db_abstraction-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/secure_db_abstraction-rs/host/target/$TARGET_HOST/release/secure_db_abstraction-rs shared
+copy_ta_to_qemu ../examples/secure_db_abstraction-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/secure_db_abstraction-rs/host/target/$TARGET_HOST/release/secure_db_abstraction-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
 # IO could be much slower than expected
-run_in_qemu_with_timeout_secs "./secure_db_abstraction-rs\n" 10
-run_in_qemu "^C"
-
-# Script specific checks
-{
-    grep -q "Success" screenlog.0
-} || {
-    cat -v screenlog.0
-    cat -v /tmp/serial.log
-    false
-}
-
-rm screenlog.0
+run_in_qemu_with_timeout_secs "secure_db_abstraction-rs" 20 || print_detail_and_exit

@@ -18,29 +18,18 @@
 # under the License.
 
 set -xe
-
 # Include base script
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/hello_world-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/hello_world-rs/host/target/$TARGET_HOST/release/hello_world-rs shared
+copy_ta_to_qemu ../examples/hello_world-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/hello_world-rs/host/target/$TARGET_HOST/release/hello_world-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./hello_world-rs\n"
-run_in_qemu "^C"
-
-# Script specific checks
+OUTPUT=$(run_in_qemu "hello_world-rs") || print_detail_and_exit
 {
-    grep -q "original value is 29" screenlog.0 &&
-    grep -q "inc value is 129" screenlog.0 &&
-    grep -q "dec value is 29" screenlog.0 &&
-    grep -q "Success" screenlog.0
-} || {
-    cat -v screenlog.0
-    cat -v /tmp/serial.log
-    false
-}
-
-rm screenlog.0
+    grep -q "original value is 29" <<< "$OUTPUT" &&
+    grep -q "inc value is 129" <<< "$OUTPUT" &&
+    grep -q "dec value is 29" <<< "$OUTPUT" &&
+    grep -q "Success" <<< "$OUTPUT"
+} || print_detail_and_exit

@@ -25,10 +25,12 @@ pushd ../tests
 # probability of detecting failures early in the pipeline.
 # Run std only tests
 if [ "$STD" ]; then
-    ./test_serde.sh
-    ./test_message_passing_interface.sh
+    # move the EXPAND_TA_MEMORY tests together
     ./test_tls_client.sh
     ./test_tls_server.sh
+
+    ./test_serde.sh
+    ./test_message_passing_interface.sh
     ./test_eth_wallet.sh
     ./test_secure_db_abstraction.sh
 else

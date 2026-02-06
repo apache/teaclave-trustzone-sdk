@@ -23,23 +23,15 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../examples/random-rs/ta/target/$TARGET_TA/release/*.ta shared
-cp ../examples/random-rs/host/target/$TARGET_HOST/release/random-rs shared
+copy_ta_to_qemu ../examples/random-rs/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../examples/random-rs/host/target/$TARGET_HOST/release/random-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./random-rs\n"
-run_in_qemu "^C"
+OUTPUT=$(run_in_qemu "random-rs") || print_detail_and_exit
 
 # Script specific checks
 {
-    grep -q "Invoking TA to generate random UUID" screenlog.0 &&
-    grep -q "Generate random UUID: [a-z0-9]*-[a-z0-9]*-[a-z0-9]*-[a-z0-9]*" screenlog.0 &&
-    grep -q "Success" screenlog.0
-} || {
-        cat -v screenlog.0
-        cat -v /tmp/serial.log
-        false
-}
-
-rm screenlog.0
+    grep -q "Invoking TA to generate random UUID" <<< "$OUTPUT" &&
+    grep -q "Generate random UUID: [a-z0-9]*-[a-z0-9]*-[a-z0-9]*-[a-z0-9]*" <<< "$OUTPUT" &&
+    grep -q "Success" <<< "$OUTPUT"
+} || print_detail_and_exit

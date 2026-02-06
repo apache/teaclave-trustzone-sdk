@@ -23,20 +23,13 @@ set -xe
 source setup.sh
 
 # Copy TA and host binary
-cp ../projects/web3/eth_wallet/ta/target/$TARGET_TA/release/*.ta shared
-cp ../projects/web3/eth_wallet/host/target/$TARGET_HOST/release/eth_wallet-rs shared
+copy_ta_to_qemu ../projects/web3/eth_wallet/ta/target/$TARGET_TA/release/*.ta
+copy_ca_to_qemu ../projects/web3/eth_wallet/host/target/$TARGET_HOST/release/eth_wallet-rs
 
 # Run script specific commands in QEMU
-run_in_qemu "cp *.ta /lib/optee_armtz/\n"
-run_in_qemu "./eth_wallet-rs test\n"
-run_in_qemu "^C"
+OUTPUT=$(run_in_qemu "eth_wallet-rs test") || print_detail_and_exit
 
 # Script specific checks
 {
-	grep -q "Tests passed" screenlog.0
-} || {
-        cat -v screenlog.0
-        false
-}
-
-rm screenlog.0
+	grep -q "Tests passed" <<< "$OUTPUT"
+} || print_detail_and_exit
