@@ -24,7 +24,7 @@ use alloc::string::String;
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
-use optee_utee::{ErrorKind, Parameters, Result};
+use optee_utee::{Error as TeeError, ErrorKind, Parameters, Result};
 use proto::{Command, Point};
 
 #[ta_create]
@@ -54,8 +54,8 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::DefaultOp => {
-            let mut p = unsafe { params.0.as_memref()? };
-            let buffer = p.buffer();
+            let mut p = unsafe { params.0.as_memref()? }.output()?;
+            let mut buffer = p.buffer().ok_or(TeeError::new(ErrorKind::ShortBuffer))?;
             let point = Point { x: 1, y: 2 };
 
             // Convert the Point to a JSON string.
@@ -68,16 +68,17 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
 
             // Ensure the buffer is large enough to hold the serialized data.
             let len = bytes.len();
-            if len > buffer.len() {
+            if len > buffer.capacity() {
                 trace_println!("Buffer too small, cannot copy all bytes");
+                p.request_more_capacity(len).expect("infallible");
                 return Err(ErrorKind::BadParameters.into());
             }
 
             // Copy the serialized JSON string into the buffer.
-            buffer[..len].copy_from_slice(bytes);
+            buffer.copy_from(bytes);
 
             // update size of output buffer
-            p.set_updated_size(len);
+            p.set_updated_size(len).expect("infallible");
 
             // Prints serialized = {"x":1,"y":2}
             trace_println!("serialized = {}", serialized);

@@ -369,3 +369,9 @@ impl<T, NewAccess> InvalidAccessErr<T, NewAccess> {
         self.value
     }
 }
+
+impl<T, A> From<InvalidAccessErr<T, A>> for crate::Error {
+    fn from(_value: InvalidAccessErr<T, A>) -> Self {
+        Error::new(ErrorKind::BadParameters)
+    }
+}
