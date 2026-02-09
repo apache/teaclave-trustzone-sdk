@@ -73,7 +73,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
                 // by convention, TAs can hint to a CA that more capacity is
                 // needed. Note that the CA in this example doesn't make use of
                 // this hint.
-                if let Err(_) = p.request_more_capacity(len) {
+                if p.request_more_capacity(len).is_err() {
                     unreachable!()
                 }
                 return Err(ErrorKind::BadParameters.into());
@@ -83,7 +83,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
             buffer.copy_from(bytes)?;
 
             // update size of output buffer
-            if let Err(_) = p.set_updated_size(len) {
+            if p.set_updated_size(len).is_err() {
                 unreachable!()
             }
 
