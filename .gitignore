@@ -31,3 +31,7 @@ rust/
 !examples/tls_client-rs/ta/Cargo.lock
 !examples/tls_server-rs/ta/Cargo.lock
 !projects/web3/eth_wallet/ta/Cargo.lock
+
+# NixOS
+.direnv/
+.envrc
