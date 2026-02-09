@@ -325,6 +325,12 @@ impl Display for BiggerThanCapacityErr {
 
 impl CoreError for BiggerThanCapacityErr {}
 
+impl From<BiggerThanCapacityErr> for crate::Error {
+    fn from(_value: BiggerThanCapacityErr) -> Self {
+        crate::Error::new(ErrorKind::Overflow)
+    }
+}
+
 #[derive(Debug)]
 pub struct NotBiggerThanCapacityErr {
     requested_capacity: usize,
@@ -342,6 +348,12 @@ impl Display for NotBiggerThanCapacityErr {
 }
 
 impl CoreError for NotBiggerThanCapacityErr {}
+
+impl From<NotBiggerThanCapacityErr> for crate::Error {
+    fn from(_value: NotBiggerThanCapacityErr) -> Self {
+        crate::Error::new(ErrorKind::Generic)
+    }
+}
 
 /// Error while attempting to cast access
 #[derive(Debug, Clone)]

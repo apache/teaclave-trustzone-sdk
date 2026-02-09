@@ -80,7 +80,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
             }
 
             // Copy the serialized JSON string into the buffer.
-            buffer.copy_from(bytes);
+            buffer.copy_from(bytes)?;
 
             // update size of output buffer
             if let Err(_) = p.set_updated_size(len) {

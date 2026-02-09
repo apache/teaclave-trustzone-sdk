@@ -41,6 +41,7 @@ use core::{fmt::Display, marker::PhantomData, ptr::NonNull};
 use crate::{
     access::{NoAccess, Readable, Writable},
     error::CoreError,
+    ErrorKind,
 };
 
 /// A volatile buffer of memory. Unlike regular slices, volatile buffers cannot ever
@@ -188,6 +189,12 @@ impl Display for InsufficientBufferSizeErr {
 
 impl CoreError for InsufficientBufferSizeErr {}
 
+impl From<InsufficientBufferSizeErr> for crate::Error {
+    fn from(_value: InsufficientBufferSizeErr) -> Self {
+        crate::Error::new(ErrorKind::ShortBuffer)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct OutOfBoundsErr;
 
@@ -198,3 +205,9 @@ impl Display for OutOfBoundsErr {
 }
 
 impl CoreError for OutOfBoundsErr {}
+
+impl From<OutOfBoundsErr> for crate::Error {
+    fn from(_value: OutOfBoundsErr) -> Self {
+        crate::Error::new(ErrorKind::Overflow)
+    }
+}
