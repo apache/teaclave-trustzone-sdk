@@ -248,7 +248,7 @@ impl Parameter {
                 Ok(ParamMemref {
                     raw: NonNull::new_unchecked(addr_of_mut!((*self.raw).memref)),
                     param_type: self.param_type,
-                    capacity: unsafe { *self.raw }.memref.size,
+                    capacity: (*self.raw).memref.size,
                     _phantom_access: marker::PhantomData,
                     _phantom_param: marker::PhantomData,
                 })
