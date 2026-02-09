@@ -81,7 +81,7 @@ impl<'parameter> ParamValue<'parameter> {
 ///
 /// Note: The memory it points to is volatile and can contain maliciously crafted
 /// data, so care should be taken when accessing it. For a safe api, first check
-/// the type of the memref via [`Self::in_`], [`Self::out`], or [`Self::inout`].
+/// the type of the memref via [`Self::input`], [`Self::output`], or [`Self::inout`].
 ///
 /// These will return type type-safe versions that unsure that read or write access
 /// is only allowed based on the underlying [`ParamType`].
@@ -120,12 +120,12 @@ impl<'parameter, A> ParamMemref<'parameter, A> {
     }
 
     /// Checks that this param is a [`ParamType::MemrefInput`] and casts access to [`Read`].
-    pub fn in_(self) -> Result<ParamMemref<'parameter, Read>, InvalidAccessErr<Self, Read>> {
+    pub fn input(self) -> Result<ParamMemref<'parameter, Read>, InvalidAccessErr<Self, Read>> {
         self.access(ParamType::MemrefInput)
     }
 
     /// Checks that this param is a [`ParamType::MemrefOutput`] and casts access to [`Write`].
-    pub fn out(self) -> Result<ParamMemref<'parameter, Write>, InvalidAccessErr<Self, Write>> {
+    pub fn output(self) -> Result<ParamMemref<'parameter, Write>, InvalidAccessErr<Self, Write>> {
         self.access(ParamType::MemrefOutput)
     }
 
