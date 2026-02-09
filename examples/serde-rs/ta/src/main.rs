@@ -70,7 +70,12 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
             let len = bytes.len();
             if len > buffer.capacity() {
                 trace_println!("Buffer too small, cannot copy all bytes");
-                p.request_more_capacity(len).expect("infallible");
+                // by convention, TAs can hint to a CA that more capacity is
+                // needed. Note that the CA in this example doesn't make use of
+                // this hint.
+                if let Err(_) = p.request_more_capacity(len) {
+                    unreachable!()
+                }
                 return Err(ErrorKind::BadParameters.into());
             }
 
@@ -78,7 +83,9 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
             buffer.copy_from(bytes);
 
             // update size of output buffer
-            p.set_updated_size(len).expect("infallible");
+            if let Err(_) = p.set_updated_size(len) {
+                unreachable!()
+            }
 
             // Prints serialized = {"x":1,"y":2}
             trace_println!("serialized = {}", serialized);
