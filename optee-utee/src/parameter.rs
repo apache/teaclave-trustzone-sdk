@@ -280,7 +280,7 @@ impl From<u32> for ParamTypes {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, strum_macros::Display)]
 pub enum ParamType {
     None = 0,
     ValueInput = 1,
@@ -289,20 +289,6 @@ pub enum ParamType {
     MemrefInput = 5,
     MemrefOutput = 6,
     MemrefInout = 7,
-}
-
-impl Display for ParamType {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            ParamType::None => write!(f, "None"),
-            ParamType::ValueInput => write!(f, "ValueInput"),
-            ParamType::ValueOutput => write!(f, "ValueOutput"),
-            ParamType::ValueInout => write!(f, "ValueInout"),
-            ParamType::MemrefInput => write!(f, "MemrefInput"),
-            ParamType::MemrefOutput => write!(f, "MemrefOutput"),
-            ParamType::MemrefInout => write!(f, "MemrefInout"),
-        }
-    }
 }
 
 impl From<u32> for ParamType {
