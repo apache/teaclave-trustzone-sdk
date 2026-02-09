@@ -152,7 +152,7 @@ impl<'parameter, A: Writable, T: Copy> VolatileBuf<'parameter, A, T> {
             return Err(InsufficientBufferSizeErr);
         }
 
-        for (idx, v) in values.into_iter().copied().enumerate() {
+        for (idx, v) in values.iter().copied().enumerate() {
             unsafe { core::ptr::write_volatile(self.ptr.add(idx).as_ptr(), v) };
         }
 
