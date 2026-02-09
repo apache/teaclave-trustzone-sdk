@@ -112,7 +112,7 @@ impl<'parameter, A: Readable, T: bytemuck::Pod> VolatileBuf<'parameter, A, T> {
             return Err(InsufficientBufferSizeErr);
         }
 
-        for (idx, v) in out.into_iter().enumerate() {
+        for (idx, v) in out.iter_mut().enumerate() {
             // SAFETY: Because `T` is a POD type, and because OP-TEE guarantees that an
             // In/Inout param is readable across its entire buffer, we know that no
             // matter what the CA does to the memory, the resulting bit representation
