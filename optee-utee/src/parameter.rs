@@ -17,6 +17,7 @@
 
 use crate::{
     access::{Accessible, NoAccess, Read, ReadWrite, Writable, Write},
+    error::CoreError,
     volatile::VolatileBuf,
     Error, ErrorKind, Result,
 };
@@ -322,7 +323,7 @@ impl Display for BiggerThanCapacityErr {
     }
 }
 
-impl core::error::Error for BiggerThanCapacityErr {}
+impl CoreError for BiggerThanCapacityErr {}
 
 #[derive(Debug)]
 pub struct NotBiggerThanCapacityErr {
@@ -340,7 +341,7 @@ impl Display for NotBiggerThanCapacityErr {
     }
 }
 
-impl core::error::Error for NotBiggerThanCapacityErr {}
+impl CoreError for NotBiggerThanCapacityErr {}
 
 /// Error while attempting to cast access
 #[derive(Debug, Clone)]
@@ -361,10 +362,7 @@ impl<T, NewAccess> Display for InvalidAccessErr<T, NewAccess> {
     }
 }
 
-impl<T: Debug + Display, NewAccess: Debug + Display> core::error::Error
-    for InvalidAccessErr<T, NewAccess>
-{
-}
+impl<T: Debug + Display, NewAccess: Debug + Display> CoreError for InvalidAccessErr<T, NewAccess> {}
 
 impl<T, NewAccess> InvalidAccessErr<T, NewAccess> {
     pub fn into_inner(self) -> T {

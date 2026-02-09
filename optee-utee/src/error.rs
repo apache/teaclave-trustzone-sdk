@@ -22,6 +22,8 @@ use optee_utee_sys as raw;
 #[cfg(feature = "std")]
 use std::error;
 
+pub(crate) use error::Error as CoreError;
+
 /// A specialized [`Result`](https://doc.rust-lang.org/std/result/enum.Result.html)
 /// type for TEE operations.
 ///
@@ -272,7 +274,7 @@ impl fmt::Display for Error {
     }
 }
 
-impl error::Error for Error {
+impl CoreError for Error {
     fn description(&self) -> &str {
         self.message()
     }

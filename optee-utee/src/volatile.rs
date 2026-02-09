@@ -38,7 +38,10 @@
 
 use core::{fmt::Display, marker::PhantomData, ptr::NonNull};
 
-use crate::access::{NoAccess, Readable, Writable};
+use crate::{
+    access::{NoAccess, Readable, Writable},
+    error::CoreError,
+};
 
 /// A volatile buffer of memory. Unlike regular slices, volatile buffers cannot ever
 /// safely have references constructed. To circumvent this limitation, only copying
@@ -183,7 +186,7 @@ impl Display for InsufficientBufferSizeErr {
     }
 }
 
-impl core::error::Error for InsufficientBufferSizeErr {}
+impl CoreError for InsufficientBufferSizeErr {}
 
 #[derive(Debug, Clone)]
 pub struct OutOfBoundsErr;
@@ -194,4 +197,4 @@ impl Display for OutOfBoundsErr {
     }
 }
 
-impl core::error::Error for OutOfBoundsErr {}
+impl CoreError for OutOfBoundsErr {}
