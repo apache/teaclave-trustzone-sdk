@@ -164,14 +164,14 @@ impl<'parameter, A> ParamMemref<'parameter, A> {
 }
 
 impl<'parameter, A: Accessible> ParamMemref<'parameter, A> {
-    /// Can return `None` if the buffer is null, which is a valid state that can happen
+    /// Can return `Err` if the buffer is null, which is a valid state that can happen
     /// in OP-TEE.
-    pub fn buffer(&mut self) -> Option<VolatileBuf<'parameter, A>> {
+    pub fn buffer(&mut self) -> Result<VolatileBuf<'parameter, A>, NullBufferErr> {
         let memref = unsafe { self.raw.read() };
         let buf_ptr = memref.buffer.cast::<u8>();
-        let buf_ptr = NonNull::new(buf_ptr)?;
+        let buf_ptr = NonNull::new(buf_ptr).ok_or(NullBufferErr)?;
 
-        Some(unsafe { VolatileBuf::new(buf_ptr, self.capacity) })
+        Ok(unsafe { VolatileBuf::new(buf_ptr, self.capacity) })
     }
 }
 
@@ -373,5 +373,22 @@ impl<T, NewAccess> InvalidAccessErr<T, NewAccess> {
 impl<T, A> From<InvalidAccessErr<T, A>> for crate::Error {
     fn from(_value: InvalidAccessErr<T, A>) -> Self {
         Error::new(ErrorKind::BadParameters)
+    }
+}
+
+#[derive(Debug)]
+pub struct NullBufferErr;
+
+impl Display for NullBufferErr {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "the buffer is null",)
+    }
+}
+
+impl CoreError for NullBufferErr {}
+
+impl From<NullBufferErr> for crate::Error {
+    fn from(_value: NullBufferErr) -> Self {
+        Error::new(ErrorKind::ShortBuffer)
     }
 }

@@ -24,7 +24,7 @@ use alloc::string::String;
 use optee_utee::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
 };
-use optee_utee::{Error as TeeError, ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Parameters, Result};
 use proto::{Command, Point};
 
 #[ta_create]
@@ -55,7 +55,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
     match Command::from(cmd_id) {
         Command::DefaultOp => {
             let mut p = unsafe { params.0.as_memref()? }.output()?;
-            let mut buffer = p.buffer().ok_or(TeeError::new(ErrorKind::ShortBuffer))?;
+            let mut buffer = p.buffer()?;
             let point = Point { x: 1, y: 2 };
 
             // Convert the Point to a JSON string.
