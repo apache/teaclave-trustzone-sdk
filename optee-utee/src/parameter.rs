@@ -327,7 +327,7 @@ impl CoreError for BiggerThanCapacityErr {}
 
 impl From<BiggerThanCapacityErr> for crate::Error {
     fn from(_value: BiggerThanCapacityErr) -> Self {
-        crate::Error::new(ErrorKind::Overflow)
+        ErrorKind::Overflow.into()
     }
 }
 
@@ -351,7 +351,7 @@ impl CoreError for NotBiggerThanCapacityErr {}
 
 impl From<NotBiggerThanCapacityErr> for crate::Error {
     fn from(_value: NotBiggerThanCapacityErr) -> Self {
-        crate::Error::new(ErrorKind::Generic)
+        ErrorKind::Generic.into()
     }
 }
 
@@ -384,7 +384,7 @@ impl<T, NewAccess> InvalidAccessErr<T, NewAccess> {
 
 impl<T, A> From<InvalidAccessErr<T, A>> for crate::Error {
     fn from(_value: InvalidAccessErr<T, A>) -> Self {
-        Error::new(ErrorKind::BadParameters)
+        ErrorKind::BadParameters.into()
     }
 }
 
@@ -401,6 +401,6 @@ impl CoreError for NullBufferErr {}
 
 impl From<NullBufferErr> for crate::Error {
     fn from(_value: NullBufferErr) -> Self {
-        Error::new(ErrorKind::ShortBuffer)
+        ErrorKind::ShortBuffer.into()
     }
 }

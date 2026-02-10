@@ -191,7 +191,7 @@ impl CoreError for InsufficientBufferSizeErr {}
 
 impl From<InsufficientBufferSizeErr> for crate::Error {
     fn from(_value: InsufficientBufferSizeErr) -> Self {
-        crate::Error::new(ErrorKind::ShortBuffer)
+        ErrorKind::ShortBuffer.into()
     }
 }
 
@@ -208,6 +208,6 @@ impl CoreError for OutOfBoundsErr {}
 
 impl From<OutOfBoundsErr> for crate::Error {
     fn from(_value: OutOfBoundsErr) -> Self {
-        crate::Error::new(ErrorKind::Overflow)
+        ErrorKind::Overflow.into()
     }
 }
