@@ -32,6 +32,9 @@ rust/
 !examples/tls_server-rs/ta/Cargo.lock
 !projects/web3/eth_wallet/ta/Cargo.lock
 
+# Allow tracking Cargo.lock for cargo-optee tool
+!cargo-optee/Cargo.lock
+
 # NixOS
 .direnv/
 .envrc
