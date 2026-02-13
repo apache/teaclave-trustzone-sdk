@@ -190,23 +190,23 @@ impl<'parameter, A: Writable> ParamMemref<'parameter, A> {
         Ok(())
     }
 
-    /// By convention, setting the raw size to something larger than what was initially passed by OP-TEE, is a signal to
-    /// the CA that there is insufficient memory allocated to output a result, and that the CA should invoke the function again
-    /// with a larger buffer. See section `4.3.6.4` of the Global Platform TEE Internal Core API.
-    /// Note that this does *not* update `self.capacity()`.
-    /// Returns an error if the requested amount is not any bigger than the existing capacity.
-    pub fn request_more_capacity(
-        &mut self,
-        new_capacity: usize,
-    ) -> Result<(), NotBiggerThanCapacityErr> {
-        if new_capacity <= self.capacity {
-            return Err(NotBiggerThanCapacityErr {
-                requested_capacity: new_capacity,
+    /// Checks that the current capacity is sufficient for a buffor of length
+    /// `required_len`. Note that this does *not* update `self.capacity()`.
+    ///
+    /// If there is insufficient capacity we:
+    /// * Set the raw size to the desired capacity, which is a convention that indicates
+    ///   to the CA to invoke the TA again with the increased buffer size (see section
+    ///   `4.3.6.4` of the Global Platform TEE Internal Core API).
+    /// * Return an error.
+    pub fn ensure_capacity(&mut self, required_len: usize) -> Result<(), ShortBufferErr> {
+        if required_len > self.capacity {
+            let memref = unsafe { self.raw.as_mut() };
+            memref.size = required_len;
+            return Err(ShortBufferErr {
+                required_len,
                 capacity: self.capacity,
             });
         }
-        let memref = unsafe { self.raw.as_mut() };
-        memref.size = new_capacity;
 
         Ok(())
     }
@@ -332,26 +332,26 @@ impl From<BiggerThanCapacityErr> for crate::Error {
 }
 
 #[derive(Debug)]
-pub struct NotBiggerThanCapacityErr {
-    requested_capacity: usize,
+pub struct ShortBufferErr {
+    required_len: usize,
     capacity: usize,
 }
 
-impl Display for NotBiggerThanCapacityErr {
+impl Display for ShortBufferErr {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(
             f,
-            "requested capacity {} but should have been bigger the original capacity {}",
-            self.requested_capacity, self.capacity,
+            "required a buffer of len {} but only had capacity of {}",
+            self.required_len, self.capacity,
         )
     }
 }
 
-impl CoreError for NotBiggerThanCapacityErr {}
+impl CoreError for ShortBufferErr {}
 
-impl From<NotBiggerThanCapacityErr> for crate::Error {
-    fn from(_value: NotBiggerThanCapacityErr) -> Self {
-        ErrorKind::Generic.into()
+impl From<ShortBufferErr> for crate::Error {
+    fn from(_value: ShortBufferErr) -> Self {
+        ErrorKind::ShortBuffer.into()
     }
 }
 

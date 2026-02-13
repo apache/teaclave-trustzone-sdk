@@ -68,16 +68,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
 
             // Ensure the buffer is large enough to hold the serialized data.
             let len = bytes.len();
-            if len > buffer.capacity() {
-                trace_println!("Buffer too small, cannot copy all bytes");
-                // by convention, TAs can hint to a CA that more capacity is
-                // needed. Note that the CA in this example doesn't make use of
-                // this hint.
-                if p.request_more_capacity(len).is_err() {
-                    unreachable!()
-                }
-                return Err(ErrorKind::BadParameters.into());
-            }
+            p.ensure_capacity(len)?;
 
             // Copy the serialized JSON string into the buffer.
             buffer.copy_from(bytes)?;
