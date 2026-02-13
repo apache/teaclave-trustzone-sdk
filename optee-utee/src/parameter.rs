@@ -15,8 +15,17 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{Error, ErrorKind, Result};
-use core::{marker, slice};
+use crate::{
+    access::{Accessible, NoAccess, Read, ReadWrite, Writable, Write},
+    error::CoreError,
+    volatile::VolatileBuf,
+    Error, ErrorKind, Result,
+};
+use core::{
+    fmt::{Debug, Display},
+    marker,
+    ptr::{addr_of_mut, NonNull},
+};
 use optee_utee_sys as raw;
 
 pub type RawParamType = u32;
@@ -69,27 +78,137 @@ impl<'parameter> ParamValue<'parameter> {
     }
 }
 
-pub struct ParamMemref<'parameter> {
-    raw: *mut raw::Memref,
+/// A [`Parameter`] that is a reference to CA-controlled shared memory.
+///
+/// Note: The memory it points to is volatile and can contain maliciously crafted
+/// data, so care should be taken when accessing it. For a safe api, first check
+/// the type of the memref via [`Self::input`], [`Self::output`], or [`Self::inout`].
+///
+/// These will return type type-safe versions that unsure that read or write access
+/// is only allowed based on the underlying [`ParamType`].
+///
+/// Then, call [`Self::buffer`] which returns a [`VolatileBuf`] that can be accessed
+/// safely.
+pub struct ParamMemref<'parameter, A = NoAccess> {
+    raw: NonNull<raw::Memref>,
     param_type: ParamType,
-    _marker: marker::PhantomData<&'parameter mut [u8]>,
+    capacity: usize,
+    _phantom_param: marker::PhantomData<&'parameter mut [u8]>,
+    _phantom_access: marker::PhantomData<A>,
 }
 
-impl<'parameter> ParamMemref<'parameter> {
-    pub fn buffer(&mut self) -> &mut [u8] {
-        unsafe { slice::from_raw_parts_mut((*self.raw).buffer as *mut u8, (*self.raw).size) }
+impl<'parameter, A> ParamMemref<'parameter, A> {
+    // Helper function to cast access.
+    fn access<NewAccess>(
+        self,
+        expected_param_type: ParamType,
+    ) -> Result<ParamMemref<'parameter, NewAccess>, InvalidAccessErr<Self, NewAccess>> {
+        if self.param_type != expected_param_type {
+            return Err(InvalidAccessErr {
+                param_type: self.param_type,
+                value: self,
+                _phantom: marker::PhantomData,
+            });
+        }
+
+        Ok(ParamMemref::<'parameter, NewAccess> {
+            raw: self.raw,
+            param_type: self.param_type,
+            capacity: self.capacity,
+            _phantom_param: marker::PhantomData,
+            _phantom_access: marker::PhantomData,
+        })
+    }
+
+    /// Checks that this param is a [`ParamType::MemrefInput`] and casts access to [`Read`].
+    pub fn input(self) -> Result<ParamMemref<'parameter, Read>, InvalidAccessErr<Self, Read>> {
+        self.access(ParamType::MemrefInput)
+    }
+
+    /// Checks that this param is a [`ParamType::MemrefOutput`] and casts access to [`Write`].
+    pub fn output(self) -> Result<ParamMemref<'parameter, Write>, InvalidAccessErr<Self, Write>> {
+        self.access(ParamType::MemrefOutput)
+    }
+
+    /// Checks that this param is a [`ParamType::MemrefInout`] and casts access to [`ReadWrite`].
+    pub fn inout(
+        self,
+    ) -> Result<ParamMemref<'parameter, ReadWrite>, InvalidAccessErr<Self, ReadWrite>> {
+        self.access(ParamType::MemrefInout)
+    }
+
+    /// Casts access type to [`NoAccess`], preventing anyone from accessing the buffer
+    /// it points to (except by c-style pointer).
+    pub fn noaccess(self) -> ParamMemref<'parameter, NoAccess> {
+        ParamMemref {
+            raw: self.raw,
+            param_type: self.param_type,
+            capacity: self.capacity,
+            _phantom_param: marker::PhantomData,
+            _phantom_access: marker::PhantomData,
+        }
+    }
+
+    pub fn raw(&mut self) -> NonNull<raw::Memref> {
+        self.raw
+    }
+
+    /// The size of the allocated memory region (i.e. the original value of `self.size`)
+    pub fn capacity(&self) -> usize {
+        self.capacity
     }
 
     pub fn param_type(&self) -> ParamType {
         self.param_type
     }
+}
 
-    pub fn raw(&mut self) -> *mut raw::Memref {
-        self.raw
+impl<'parameter, A: Accessible> ParamMemref<'parameter, A> {
+    /// Can return `Err` if the buffer is null, which is a valid state that can happen
+    /// in OP-TEE.
+    pub fn buffer(&mut self) -> Result<VolatileBuf<'parameter, A>, NullBufferErr> {
+        let memref = unsafe { self.raw.read() };
+        let buf_ptr = memref.buffer.cast::<u8>();
+        let buf_ptr = NonNull::new(buf_ptr).ok_or(NullBufferErr)?;
+
+        Ok(unsafe { VolatileBuf::new(buf_ptr, self.capacity) })
+    }
+}
+
+impl<'parameter, A: Writable> ParamMemref<'parameter, A> {
+    /// Errors if the new size would be bigger than `self.capacity()`
+    pub fn set_updated_size(&mut self, size: usize) -> Result<(), BiggerThanCapacityErr> {
+        if size > self.capacity {
+            return Err(BiggerThanCapacityErr {
+                requested_size: size,
+                capacity: self.capacity,
+            });
+        }
+        let memref = unsafe { self.raw.as_mut() };
+        memref.size = size;
+
+        Ok(())
     }
 
-    pub fn set_updated_size(&mut self, size: usize) {
-        unsafe { (*self.raw).size = size };
+    /// Checks that the current capacity is sufficient for a buffor of length
+    /// `required_len`. Note that this does *not* update `self.capacity()`.
+    ///
+    /// If there is insufficient capacity we:
+    /// * Set the raw size to the desired capacity, which is a convention that indicates
+    ///   to the CA to invoke the TA again with the increased buffer size (see section
+    ///   `4.3.6.4` of the Global Platform TEE Internal Core API).
+    /// * Return an error.
+    pub fn ensure_capacity(&mut self, required_len: usize) -> Result<(), ShortBufferErr> {
+        if required_len > self.capacity {
+            let memref = unsafe { self.raw.as_mut() };
+            memref.size = required_len;
+            return Err(ShortBufferErr {
+                required_len,
+                capacity: self.capacity,
+            });
+        }
+
+        Ok(())
     }
 }
 
@@ -127,9 +246,11 @@ impl Parameter {
         match self.param_type {
             ParamType::MemrefInout | ParamType::MemrefInput | ParamType::MemrefOutput => {
                 Ok(ParamMemref {
-                    raw: &mut (*self.raw).memref,
+                    raw: NonNull::new_unchecked(addr_of_mut!((*self.raw).memref)),
                     param_type: self.param_type,
-                    _marker: marker::PhantomData,
+                    capacity: (*self.raw).memref.size,
+                    _phantom_access: marker::PhantomData,
+                    _phantom_param: marker::PhantomData,
                 })
             }
             _ => Err(Error::new(ErrorKind::BadParameters)),
@@ -160,7 +281,7 @@ impl From<u32> for ParamTypes {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, strum_macros::Display)]
 pub enum ParamType {
     None = 0,
     ValueInput = 1,
@@ -183,5 +304,103 @@ impl From<u32> for ParamType {
             7 => ParamType::MemrefInout,
             _ => ParamType::None,
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct BiggerThanCapacityErr {
+    requested_size: usize,
+    capacity: usize,
+}
+
+impl Display for BiggerThanCapacityErr {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "requested size {} but this is bigger than the capacity {}",
+            self.requested_size, self.capacity,
+        )
+    }
+}
+
+impl CoreError for BiggerThanCapacityErr {}
+
+impl From<BiggerThanCapacityErr> for crate::Error {
+    fn from(_value: BiggerThanCapacityErr) -> Self {
+        ErrorKind::Overflow.into()
+    }
+}
+
+#[derive(Debug)]
+pub struct ShortBufferErr {
+    required_len: usize,
+    capacity: usize,
+}
+
+impl Display for ShortBufferErr {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "required a buffer of len {} but only had capacity of {}",
+            self.required_len, self.capacity,
+        )
+    }
+}
+
+impl CoreError for ShortBufferErr {}
+
+impl From<ShortBufferErr> for crate::Error {
+    fn from(_value: ShortBufferErr) -> Self {
+        ErrorKind::ShortBuffer.into()
+    }
+}
+
+/// Error while attempting to cast access
+#[derive(Debug, Clone)]
+pub struct InvalidAccessErr<T, NewAccess> {
+    param_type: ParamType,
+    value: T,
+    _phantom: marker::PhantomData<NewAccess>,
+}
+
+impl<T, NewAccess> Display for InvalidAccessErr<T, NewAccess> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "unable to cast access to {}, param_type was {}",
+            core::any::type_name::<NewAccess>(),
+            self.param_type
+        )
+    }
+}
+
+impl<T: Debug + Display, NewAccess: Debug + Display> CoreError for InvalidAccessErr<T, NewAccess> {}
+
+impl<T, NewAccess> InvalidAccessErr<T, NewAccess> {
+    pub fn into_inner(self) -> T {
+        self.value
+    }
+}
+
+impl<T, A> From<InvalidAccessErr<T, A>> for crate::Error {
+    fn from(_value: InvalidAccessErr<T, A>) -> Self {
+        ErrorKind::BadParameters.into()
+    }
+}
+
+#[derive(Debug)]
+pub struct NullBufferErr;
+
+impl Display for NullBufferErr {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "the buffer is null",)
+    }
+}
+
+impl CoreError for NullBufferErr {}
+
+impl From<NullBufferErr> for crate::Error {
+    fn from(_value: NullBufferErr) -> Self {
+        ErrorKind::ShortBuffer.into()
     }
 }

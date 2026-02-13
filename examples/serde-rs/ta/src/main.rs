@@ -54,8 +54,8 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::DefaultOp => {
-            let mut p = unsafe { params.0.as_memref()? };
-            let buffer = p.buffer();
+            let mut p = unsafe { params.0.as_memref()? }.output()?;
+            let mut buffer = p.buffer()?;
             let point = Point { x: 1, y: 2 };
 
             // Convert the Point to a JSON string.
@@ -68,16 +68,15 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
 
             // Ensure the buffer is large enough to hold the serialized data.
             let len = bytes.len();
-            if len > buffer.len() {
-                trace_println!("Buffer too small, cannot copy all bytes");
-                return Err(ErrorKind::BadParameters.into());
-            }
+            p.ensure_capacity(len)?;
 
             // Copy the serialized JSON string into the buffer.
-            buffer[..len].copy_from_slice(bytes);
+            buffer.copy_from(bytes)?;
 
             // update size of output buffer
-            p.set_updated_size(len);
+            if p.set_updated_size(len).is_err() {
+                unreachable!("already made sure the buffer has enough capacity")
+            }
 
             // Prints serialized = {"x":1,"y":2}
             trace_println!("serialized = {}", serialized);
