@@ -75,7 +75,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
 
             // update size of output buffer
             if p.set_updated_size(len).is_err() {
-                unreachable!()
+                unreachable!("already made sure the buffer has enough capacity")
             }
 
             // Prints serialized = {"x":1,"y":2}
