@@ -25,7 +25,6 @@ edition = "2018"
 description = "Build tool for TA"
 
 [dependencies]
-uuid = "1.11.0"
 quote = "1.0.37"
 proc-macro2 = "1.0.92"
 syn = "2.0.90"
@@ -36,4 +35,5 @@ prettyplease = "0.2.25"
 # we have to set the crates to an exact compatible version.
 # Remove them after we upgrade our patched STD rustc.
 litemap = "=0.7.4"
+uuid = "=1.20.0"
 zerofrom = "=0.1.5"
