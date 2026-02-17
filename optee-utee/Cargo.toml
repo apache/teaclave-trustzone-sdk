@@ -28,10 +28,11 @@ edition = "2018"
 optee-utee-sys = { version = "0.8.0", path = "optee-utee-sys" }
 optee-utee-macros = { version = "0.8.0", path = "macros" }
 bitflags = "1.0.4"
-uuid = { version = "0.8", default-features = false }
+bytemuck = { version = "1.25.0", default-features = false }
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 libc_alloc = "1.0.5"
 strum_macros = "0.26"
+uuid = { version = "0.8", default-features = false }
 
 [dev-dependencies]
 rand = "0.8.5"
