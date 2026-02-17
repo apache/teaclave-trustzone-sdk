@@ -31,8 +31,13 @@ optee-teec = { path = "../../../../optee-teec" }
 structopt = "0.3"
 bincode = "1.3.3"
 anyhow = "1.0"
-uuid = { version = "1.8", features = ["serde"] }
+
 hex = { version = "0.4", features = ["serde"] }
+# The newer versions of these crates require rustc > 1.80, while our custom
+# patched STD version is 1.80, causing compatibility issues. To resolve this,
+# we have to set the crates to an exact compatible version.
+# Remove them after we upgrade our patched STD rustc.
+uuid = { version = "=1.20.0", features = ["serde"] }
 
 [profile.release]
 lto = true
