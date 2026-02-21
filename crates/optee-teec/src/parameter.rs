@@ -127,6 +127,26 @@ impl<'a> ParamTmpRef<'a> {
         }
     }
 
+    /// Creates a temporary input/output memory reference.
+    ///
+    /// `buffer` is a region of memory which needs to be temporarily
+    /// registered for the duration of the `Operation` and can be both
+    /// read and written by the Trusted Application (TA).
+    ///
+    /// This is useful when you need to pass data to a TA that will
+    /// modify it and return the modified data in the same buffer.
+    pub fn new_inout(buffer: &'a mut [u8]) -> Self {
+        let raw = raw::TEEC_TempMemoryReference {
+            buffer: buffer.as_ptr() as _,
+            size: buffer.len(),
+        };
+        Self {
+            raw,
+            param_type: ParamType::MemrefTempInout,
+            _marker: marker::PhantomData,
+        }
+    }
+
     pub fn updated_size(&self) -> usize {
         self.raw.size
     }
