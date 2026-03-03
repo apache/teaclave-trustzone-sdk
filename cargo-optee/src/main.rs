@@ -29,12 +29,6 @@ mod ta_builder;
 use cli::{BuildCommand, Cli, Command, CommonBuildArgs, InstallCommand};
 
 fn main() {
-    // Setup cargo environment
-    if let Err(e) = setup_cargo_environment() {
-        eprintln!("Error: {}", e);
-        process::exit(1);
-    }
-
     // Drop extra `optee` argument provided by `cargo`.
     let mut found_optee = false;
     let filtered_args: Vec<String> = env::args()
@@ -227,54 +221,12 @@ fn resolve_project_path(manifest_path: Option<&PathBuf>) -> anyhow::Result<PathB
     }
 }
 
-/// Setup cargo environment by checking availability and adding to PATH if needed
-fn setup_cargo_environment() -> anyhow::Result<()> {
-    // Check if cargo is already available in PATH
-    let cargo_available = std::process::Command::new("which")
-        .arg("cargo")
-        .output()
-        .is_ok_and(|output| output.status.success());
-
-    if cargo_available {
-        return Ok(());
-    }
-
-    // Check if ~/.cargo/bin/cargo exists
-    let cargo_bin_dir = if let Ok(home) = env::var("HOME") {
-        let cargo_path = std::path::Path::new(&home)
-            .join(".cargo")
-            .join("bin")
-            .join("cargo");
-        if cargo_path.exists() {
-            cargo_path.parent().map(|p| p.to_path_buf())
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
-    // Or check $CARGO_HOME/bin/cargo
-    let cargo_bin_dir = cargo_bin_dir.or_else(|| {
-        env::var("CARGO_HOME").ok().and_then(|cargo_home| {
-            let cargo_path = std::path::Path::new(&cargo_home).join("bin").join("cargo");
-            if cargo_path.exists() {
-                cargo_path.parent().map(|p| p.to_path_buf())
-            } else {
-                None
-            }
-        })
-    });
-
-    // If found, add cargo bin directory to current process PATH
-    if let Some(cargo_bin_dir) = cargo_bin_dir {
-        let current_path = env::var("PATH").unwrap_or_default();
-        let separator = if cfg!(windows) { ";" } else { ":" };
-        let new_path = format!("{}{}{}", cargo_bin_dir.display(), separator, current_path);
-        env::set_var("PATH", new_path);
-        return Ok(());
-    }
-
-    // If not found, prompt user to install Cargo
-    anyhow::bail!("cargo command not found. Please install Rust: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh");
+// Get Cargo Command.
+// As a Cargo plugin, this tool requires an existing Cargo installation.
+// It also follows standard Cargo conventions by prioritizing the `CARGO`
+// environment variable when invoking the binary.
+fn cargo_command() -> process::Command {
+    // https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-reads
+    const ENV_CARGO: &str = "CARGO";
+    process::Command::new(env::var_os(ENV_CARGO).unwrap_or_else(|| "cargo".into()))
 }
