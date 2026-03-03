@@ -220,7 +220,7 @@ fn copy_plugin(config: &CaBuildConfig) -> Result<PathBuf> {
 
     // Copy to <uuid>.plugin.so
     let plugin_dest = target_dir.join(format!("{}.plugin.so", uuid));
-    std::fs::copy(&plugin_src, &plugin_dest)?;
+    std::fs::copy(plugin_src, &plugin_dest)?;
 
     Ok(plugin_dest)
 }

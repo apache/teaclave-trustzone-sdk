@@ -94,7 +94,7 @@ pub fn build_ta(config: TaBuildConfig, install_dir: Option<&Path>) -> Result<()>
         )?;
 
         let dest_path = install_dir.join(format!("{}.ta", uuid));
-        fs::copy(&ta_file, &dest_path)?;
+        fs::copy(ta_file, &dest_path)?;
 
         println!(
             "TA installed to: {:?}",

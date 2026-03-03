@@ -105,7 +105,7 @@ impl TaBuildConfig {
                     .as_ref()
                     .and_then(|c| c.ta_dev_kit_dir.clone())
             })
-            .ok_or_else(|| ta_dev_kit_dir_error())?;
+            .ok_or_else(ta_dev_kit_dir_error)?;
 
         // Resolve ta_dev_kit_dir path (relative to absolute)
         let ta_dev_kit_dir = resolve_path_relative_to_project(
@@ -230,7 +230,7 @@ impl CaBuildConfig {
                     .as_ref()
                     .and_then(|c| c.optee_client_export.clone())
             })
-            .ok_or_else(|| optee_client_export_error())?;
+            .ok_or_else(optee_client_export_error)?;
 
         // Resolve optee_client_export path (relative to absolute)
         let optee_client_export = resolve_path_relative_to_project(
