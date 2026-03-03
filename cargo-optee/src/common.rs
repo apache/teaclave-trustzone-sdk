@@ -17,7 +17,6 @@
 
 use anyhow::{bail, Result};
 use clap::ValueEnum;
-use serde_json;
 use std::env;
 use std::fs;
 use std::path::PathBuf;

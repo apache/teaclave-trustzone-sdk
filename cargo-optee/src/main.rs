@@ -271,7 +271,7 @@ fn setup_cargo_environment() -> anyhow::Result<()> {
         let current_path = env::var("PATH").unwrap_or_default();
         let separator = if cfg!(windows) { ";" } else { ":" };
         let new_path = format!("{}{}{}", cargo_bin_dir.display(), separator, current_path);
-        env::set_var("PATH", &new_path);
+        env::set_var("PATH", new_path);
         return Ok(());
     }
 
