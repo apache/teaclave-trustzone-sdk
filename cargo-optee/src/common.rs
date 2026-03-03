@@ -23,6 +23,8 @@ use std::path::PathBuf;
 use std::process::{Command, Output};
 use toml::Value;
 
+use crate::cargo_command;
+
 /// RAII guard to ensure we return to the original directory
 pub struct ChangeDirectoryGuard {
     original: PathBuf,
@@ -190,7 +192,7 @@ pub fn print_cargo_command(cmd: &Command, description: &str) {
 /// Get the target directory using cargo metadata
 pub fn get_target_directory_from_metadata() -> Result<PathBuf> {
     // We're already in the project directory, so no need for --manifest-path
-    let output = Command::new("cargo")
+    let output = cargo_command()
         .arg("metadata")
         .arg("--format-version")
         .arg("1")
@@ -269,7 +271,7 @@ pub fn join_format_and_check<P: AsRef<std::path::Path>>(
 pub fn clean_project(project_path: &std::path::Path) -> Result<()> {
     println!("Cleaning build artifacts in: {:?}", project_path);
 
-    let output = Command::new("cargo")
+    let output = cargo_command()
         .arg("clean")
         .current_dir(project_path)
         .output()?;

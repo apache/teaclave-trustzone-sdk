@@ -15,20 +15,21 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use crate::cargo_command;
 use crate::common;
-use anyhow::{bail, Result};
-use std::env;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use tempfile::TempDir;
-
 use crate::common::{
     get_package_name, get_target_and_cross_compile, get_target_directory_from_metadata,
     print_cargo_command, print_output_and_bail, read_uuid_from_file, BuildMode,
     ChangeDirectoryGuard,
 };
 use crate::config::TaBuildConfig;
+
+use anyhow::{bail, Result};
+use std::env;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use tempfile::TempDir;
 
 // Embed the target JSON files at compile time
 const AARCH64_TARGET_JSON: &str = include_str!("../aarch64-unknown-optee.json");
@@ -111,7 +112,7 @@ fn run_clippy(config: &TaBuildConfig) -> Result<()> {
     println!("Running cargo fmt and clippy...");
 
     // Run cargo fmt (we're already in the project directory via ChangeDirectoryGuard)
-    let fmt_output = Command::new("cargo").arg("fmt").output()?;
+    let fmt_output = cargo_command().arg("fmt").output()?;
 
     if !fmt_output.status.success() {
         print_output_and_bail("cargo fmt", &fmt_output)?;
@@ -318,9 +319,6 @@ fn setup_build_command(
     };
     let (target, _cross_compile) = get_target_and_cross_compile(config.arch, build_mode)?;
 
-    // Determine builder (cargo or xargo)
-    let builder = if config.std { "xargo" } else { "cargo" };
-
     // Setup custom targets if using std - keep TempDir alive
     let temp_dir = if config.std {
         Some(setup_custom_targets()?)
@@ -328,7 +326,11 @@ fn setup_build_command(
         None
     };
 
-    let mut cmd = Command::new(builder);
+    // Determine builder (cargo or xargo)
+    let mut cmd = match config.std {
+        true => Command::new("xargo"),
+        false => cargo_command(),
+    };
     cmd.arg(command);
     cmd.arg("--target").arg(&target);
 

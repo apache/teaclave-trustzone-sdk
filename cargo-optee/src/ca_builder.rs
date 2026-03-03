@@ -15,10 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use anyhow::{bail, Result};
-use std::path::{Path, PathBuf};
-use std::process::Command;
-
+use crate::cargo_command;
 use crate::common;
 use crate::common::{
     get_package_name, get_target_and_cross_compile, get_target_directory_from_metadata,
@@ -26,6 +23,9 @@ use crate::common::{
     ChangeDirectoryGuard,
 };
 use crate::config::CaBuildConfig;
+
+use anyhow::{bail, Result};
+use std::path::{Path, PathBuf};
 
 // Main function to build the CA, optionally installing to a target directory
 pub fn build_ca(config: CaBuildConfig, install_dir: Option<&Path>) -> Result<()> {
@@ -98,7 +98,7 @@ fn run_clippy(config: &CaBuildConfig) -> Result<()> {
     println!("Running cargo fmt and clippy...");
 
     // Run cargo fmt
-    let fmt_output = Command::new("cargo").arg("fmt").output()?;
+    let fmt_output = cargo_command().arg("fmt").output()?;
 
     if !fmt_output.status.success() {
         print_output_and_bail("cargo fmt", &fmt_output)?;
@@ -107,7 +107,7 @@ fn run_clippy(config: &CaBuildConfig) -> Result<()> {
     // Determine target based on arch (CA runs in Normal World Linux)
     let (target, _cross_compile) = get_target_and_cross_compile(config.arch, BuildMode::Ca)?;
 
-    let mut clippy_cmd = Command::new("cargo");
+    let mut clippy_cmd = cargo_command();
     clippy_cmd.arg("clippy");
     clippy_cmd.arg("--target").arg(&target);
 
@@ -136,7 +136,7 @@ fn build_binary(config: &CaBuildConfig) -> Result<()> {
     // Determine target and cross-compile based on arch (CA runs in Normal World Linux)
     let (target, cross_compile) = get_target_and_cross_compile(config.arch, BuildMode::Ca)?;
 
-    let mut build_cmd = Command::new("cargo");
+    let mut build_cmd = cargo_command();
     build_cmd.arg("build");
     build_cmd.arg("--target").arg(&target);
 
@@ -244,7 +244,7 @@ fn strip_binary(config: &CaBuildConfig) -> Result<PathBuf> {
 
     let objcopy = format!("{}objcopy", cross_compile);
 
-    let strip_output = Command::new(&objcopy)
+    let strip_output = std::process::Command::new(&objcopy)
         .arg("--strip-unneeded")
         .arg(&binary_path)
         .arg(&binary_path) // Strip in place
