@@ -64,6 +64,7 @@ pub use optee_utee_macros::{
 pub mod trace;
 #[macro_use]
 mod macros;
+pub mod access;
 pub mod arithmetical;
 pub mod crypto_op;
 mod error;
@@ -71,9 +72,10 @@ pub mod extension;
 pub mod identity;
 pub mod net;
 pub mod object;
-mod parameter;
+pub mod parameter;
 pub mod property;
 mod ta_session;
 mod tee_parameter;
 pub mod time;
 pub mod uuid;
+pub mod volatile;
