@@ -25,12 +25,19 @@ cd "$(dirname "$0")"
 
 ##########################################
 # install Xargo if not exist
-which xargo || cargo install xargo
+if ! command -v xargo >/dev/null 2>&1; then
+	# xargo 0.3.26 does not compile on recent toolchains (TryLockError API change).
+	# Build it with an older known-good nightly.
+	# Since we're working on migrating to cargo -Z build-std, we can remove the xargo then.
+	XARGO_BOOTSTRAP_TOOLCHAIN=${XARGO_BOOTSTRAP_TOOLCHAIN:-nightly-2024-05-15}
+	rustup toolchain install "$XARGO_BOOTSTRAP_TOOLCHAIN" --profile minimal
+	cargo +"$XARGO_BOOTSTRAP_TOOLCHAIN" install xargo --locked
+fi
 
 ##########################################
-# initialize submodules: rust / libc
-RUST_BRANCH=optee-xargo
-LIBC_BRANCH=optee
+# initialize submodules: rust / libc / patches
+RUST_TAG=1.93.1        # commit 01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf
+LIBC_TAG=0.2.182       # commit e879ee90b6cd8f79b352d4d4d1f8ca05f94f2f53
 
 if [ -d rust/ ]
 then
@@ -39,11 +46,20 @@ fi
 
 mkdir rust && cd rust
 
-git clone --depth=1 -b $RUST_BRANCH https://github.com/DemesneGH/rust.git && \
+# Clone official Rust source at specific tag
+git clone --depth=1 --branch $RUST_TAG https://github.com/rust-lang/rust.git && \
 	(cd rust && \
 	git submodule update --init library/stdarch && \
 	git submodule update --init library/backtrace)
 
-git clone --depth=1 -b $LIBC_BRANCH https://github.com/DemesneGH/libc.git
+# Clone official libc at specific tag
+git clone --depth=1 --branch $LIBC_TAG https://github.com/rust-lang/libc.git
 
-echo "Rust submodules initialized"
+# Clone patches repository
+git clone --depth=1 https://github.com/apache/teaclave-crates.git patches
+
+# Apply patches
+(cd rust && git apply ../patches/rust-1.93.1-01f6ddf/optee-0001-std-adaptation.patch)
+(cd libc && git apply ../patches/libc-0.2.182-e879ee9/optee-0001-libc-adaptation.patch)
+
+echo "Rust and libc sources initialized and patched"

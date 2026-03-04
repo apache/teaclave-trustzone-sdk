@@ -41,6 +41,8 @@ then
     echo "set TARGET_TA=$TARGET_TA (std)"
     export BUILDER=xargo
     export FEATURES="--features std"
+    export XARGO_RUST_SRC="$(pwd)/rust/rust/library"
+    export RUSTFLAGS="-Zunstable-options"
   else
     export TARGET_TA="arm-unknown-linux-gnueabihf"
     echo "set TARGET_TA=$TARGET_TA (no-std)"
@@ -58,6 +60,8 @@ else
     echo "set TARGET_TA=$TARGET_TA (std)"
     export BUILDER=xargo
     export FEATURES="--features std"
+    export XARGO_RUST_SRC="$(pwd)/rust/rust/library"
+    export RUSTFLAGS="-Zunstable-options"
   else
     export TARGET_TA="aarch64-unknown-linux-gnu"
     echo "set TARGET_TA=$TARGET_TA (no-std)"
