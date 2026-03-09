@@ -29,7 +29,7 @@ RUSTFLAGS := -C panic=abort
 ifeq ($(BUILDER),xargo)
 EXTRA_FLAGS =
 else
-EXTRA_FLAGS = -Z build-std=core,alloc -Z build-std-features=panic_immediate_abort
+EXTRA_FLAGS = -Z build-std=core,alloc
 endif
 
 TA_SIGN_KEY ?= $(TA_DEV_KIT_DIR)/keys/default_ta.pem

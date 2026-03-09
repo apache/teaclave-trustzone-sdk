@@ -19,6 +19,11 @@ export PATH=$PATH:$HOME/.cargo/bin
 # for std: specify the target json file
 export RUST_TARGET_PATH="$(pwd)"
 
+# Disable incremental compilation to avoid ICE with recent nightly
+# error: internal compiler error: encountered incremental compilation error 
+# with lints_that_dont_need_to_run(0-0)
+export CARGO_INCREMENTAL=0
+
 if [ -z "$OPTEE_DIR" ]
 then
   echo -e "OPTEE_DIR has not set, use $PWD/optee/ as default\n"
