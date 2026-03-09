@@ -25,7 +25,7 @@ OBJCOPY := $(CROSS_COMPILE)objcopy
 LINKER_CFG := target.$(TARGET).linker=\"$(CROSS_COMPILE)gcc\"
 # fix for the error: "unwinding panics are not supported without std" reported by clippy
 RUSTFLAGS := -C panic=abort
-EXTRA_FLAGS = -Z build-std=core,alloc -Z build-std-features=panic_immediate_abort
+EXTRA_FLAGS = -Z build-std=core,alloc
 
 TA_SIGN_KEY ?= $(TA_DEV_KIT_DIR)/keys/default_ta.pem
 SIGN := $(TA_DEV_KIT_DIR)/scripts/sign_encrypt.py
