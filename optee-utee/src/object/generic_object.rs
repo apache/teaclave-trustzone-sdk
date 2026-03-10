@@ -34,10 +34,10 @@ pub trait GenericObject {
     /// For [PersistentObject](crate::PersistentObject):
     ///
     /// * `CorruptObject`: If the persistent object is corrupt. The object
-    ///    handle SHALL behave based on the
-    ///    `gpd.ta.doesNotCloseHandleOnCorruptObject` property.
+    ///   handle SHALL behave based on the
+    ///   `gpd.ta.doesNotCloseHandleOnCorruptObject` property.
     /// * `StorageNotAvailable`: If the persistent object is stored in a
-    ///    storage area which is currently inaccessible.
+    ///   storage area which is currently inaccessible.
     ///
     /// # Panics
     ///
@@ -61,10 +61,10 @@ pub trait GenericObject {
     /// For [PersistentObject](crate::PersistentObject):
     ///
     /// * `CorruptObject`: If the persistent object is corrupt. The object
-    ///    handle SHALL behave based on the
-    ///    `gpd.ta.doesNotCloseHandleOnCorruptObject` property.
+    ///   handle SHALL behave based on the
+    ///   `gpd.ta.doesNotCloseHandleOnCorruptObject` property.
     /// * `StorageNotAvailable`: If the persistent object is stored in a
-    ///    storage area which is currently inaccessible.
+    ///   storage area which is currently inaccessible.
     ///
     /// # Panics
     ///
@@ -88,15 +88,15 @@ pub trait GenericObject {
     ///
     /// * `ItemNotFound`: If the attribute is not found on this object.
     /// * `SHORT_BUFFER`: If buffer is NULL or too small to contain the key
-    ///    part.
+    ///   part.
     ///
     /// For [PersistentObject](crate::PersistentObject):
     ///
     /// * `CorruptObject`: If the persistent object is corrupt. The object
-    ///    handle SHALL behave based on the
-    ///    `gpd.ta.doesNotCloseHandleOnCorruptObject` property.
+    ///   handle SHALL behave based on the
+    ///   `gpd.ta.doesNotCloseHandleOnCorruptObject` property.
     /// * `StorageNotAvailable`: If the persistent object is stored in a
-    ///    storage area which is currently inaccessible.
+    ///   storage area which is currently inaccessible.
     ///
     /// # Panics
     ///
@@ -134,15 +134,15 @@ pub trait GenericObject {
     ///
     /// * `ItemNotFound`: If the attribute is not found on this object.
     /// * `SHORT_BUFFER`: If buffer is NULL or too small to contain the key
-    ///    part.
+    ///   part.
     ///
     /// For [PersistentObject](crate::PersistentObject):
     ///
     /// * `CorruptObject`: If the persistent object is corrupt. The object
-    ///    handle SHALL behave based on the
-    ///    `gpd.ta.doesNotCloseHandleOnCorruptObject` property.
+    ///   handle SHALL behave based on the
+    ///   `gpd.ta.doesNotCloseHandleOnCorruptObject` property.
     /// * `StorageNotAvailable`: If the persistent object is stored in a
-    ///    storage area which is currently inaccessible.
+    ///   storage area which is currently inaccessible.
     ///
     /// # Panics
     ///

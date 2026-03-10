@@ -56,22 +56,22 @@ impl OperationInfo {
     /// 1) `algorithm`: One of the algorithm of [AlgorithmId](AlgorithmId).
     /// 2) `mode`: One of the mode of [OperationMode](OperationMode).
     /// 3) `maxKeySize`: The maximum key sizes of different algorithms as defined in
-    /// [TransientObjectType](../object/enum.TransientObjectType.html).
+    ///    [TransientObjectType](../object/enum.TransientObjectType.html).
     /// 4) `operationClass`: One of the constants from [OperationConstant](OperationConstant).
     /// 5) `keySize`:
-    /// 5.1) For an operation that makes no use of keys, 0.
-    /// 5.2) For an operation that uses a single key, the actual size of this key.
-    /// 5.3) For an operation that uses multiple keys, 0. (The actual value of `keySize` can be obtained from
-    /// [OperationInfoMultiple](OperationInfoMultiple)).
+    ///    5.1) For an operation that makes no use of keys, 0.
+    ///    5.2) For an operation that uses a single key, the actual size of this key.
+    ///    5.3) For an operation that uses multiple keys, 0. (The actual value of `keySize` can be obtained from
+    ///    [OperationInfoMultiple](OperationInfoMultiple)).
     /// 6) `requiredKeyUsage`:
-    /// 6.1) For an operation that makes no use of keys, 0.
-    /// 6.2) For an operation that uses a single key, a bit vector that describes the necessary bits in the object
-    /// usage for `set_key` functions to succeed without panicking.
-    /// 6.3) For an operation that uses multiple keys, 0. (The actual value of `requiredKeyUsage` can be obtained from
-    /// [OperationInfoMultiple](OperationInfoMultiple).
+    ///    6.1) For an operation that makes no use of keys, 0.
+    ///    6.2) For an operation that uses a single key, a bit vector that describes the necessary bits in the object
+    ///    usage for `set_key` functions to succeed without panicking.
+    ///    6.3) For an operation that uses multiple keys, 0. (The actual value of `requiredKeyUsage` can be obtained from
+    ///    [OperationInfoMultiple](OperationInfoMultiple)).
     /// 7) `digestLength`: For a [Mac](Mac), [AE](AE), or [Digest](Digest), describes the number of bytes in the digest or tag.
     /// 8) `handleState`: A bit vector describing the current state of the operation. Contains one or more of the
-    /// [HandleFlag](../object/struct.HandleFlag.html).
+    ///    [HandleFlag](../object/struct.HandleFlag.html).
     pub fn from_raw(raw: raw::TEE_OperationInfo) -> Self {
         Self { raw }
     }
@@ -129,19 +129,20 @@ impl OperationInfoMultiple {
     /// 1) `algorithm`: One of the algorithm of [AlgorithmId](AlgorithmId).
     /// 2) `mode`: One of the mode of [OperationMode](OperationMode).
     /// 3) `maxKeySize`: The maximum key sizes of different algorithms as defined in
-    /// [TransientObjectType](../object/enum.TransientObjectType.html).
+    ///    [TransientObjectType](../object/enum.TransientObjectType.html).
     /// 4) `operationClass`: One of the constants from [OperationConstant](OperationConstant).
     /// 5) `digestLength`: For a [Mac](Mac), [AE](AE), or [Digest](Digest), describes the number of bytes in the digest or tag.
-    /// 6) `handleState`: A bit vector describing the current state of the operation. Contains one or more of the [HandleFlag](../object/struct.HandleFlag.html).
+    /// 6) `handleState`: A bit vector describing the current state of the operation. Contains one or more of the
+    ///    [HandleFlag](../object/struct.HandleFlag.html).
     /// 7) `operationState`: Every operation has two states which are defined as
     ///    [OperationStates](OperationStates).
     /// 8) `numberOfKeys`: This is set to the number of keys required by this operation. May be 0 for an operation which requires no keys.
     /// 9) `keyInformation`: This array contains numberOfKeys entries, each of which defines the details for one key used by the operation,
-    /// in the order they are defined.
-    /// If the buffer is larger than required to support `numberOfKeys` entries, the additional space is not initialized or modified.
-    /// For each element:
-    /// 9.1) `keySize`: If a key is programmed in the operation, the actual size of this key, otherwise 0.
-    /// 9.2) `requiredKeyUsage`: A bit vector that describes the necessary bits in the object usage for `set_key` or `set_key_2` to succeed without panicking.
+    ///    in the order they are defined.
+    ///    If the buffer is larger than required to support `numberOfKeys` entries, the additional space is not initialized or modified.
+    ///    For each element:
+    ///    9.1) `keySize`: If a key is programmed in the operation, the actual size of this key, otherwise 0.
+    ///    9.2) `requiredKeyUsage`: A bit vector that describes the necessary bits in the object usage for `set_key` or `set_key_2` to succeed without panicking.
     pub fn from_raw(raw: *mut raw::TEE_OperationInfoMultiple, size: usize) -> Self {
         Self { raw, size }
     }
@@ -379,7 +380,7 @@ impl Digest {
     /// # Panics
     ///
     /// 1) If the Implementation detects any error associated with this function which is not
-    /// explicitly associated with a defined return code for this function.
+    ///    explicitly associated with a defined return code for this function.
     pub fn allocate(algo: AlgorithmId) -> Result<Self> {
         match OperationHandle::allocate(algo, OperationMode::Digest, 0) {
             Ok(handle) => Ok(Self(handle)),
@@ -417,8 +418,8 @@ impl Digest {
     /// # Parameters
     ///
     /// 1) `info_buf`: The buffer is supposed to save multiple keys, and its size should be large enough before passed in.
-    /// The number of keys about this operation can be calculated as: OperationInfoMultiple::size -
-    /// size_of([OperationInfoMultiple](OperationInfoMultiple)) / size_of ( raw::TEE_OperationInfoKey)+1.
+    ///    The number of keys about this operation can be calculated as: OperationInfoMultiple::size -
+    ///    size_of([OperationInfoMultiple](OperationInfoMultiple)) / size_of ( raw::TEE_OperationInfoKey)+1.
     ///
     /// # Example
     ///
@@ -477,9 +478,9 @@ impl Digest {
     /// # Parameters
     ///
     /// 1) `src`: the source operation.
-    /// 1.1) If `src` has no key programmed, then the key of this operation is cleared. If there is a key
-    /// programmed in srcOperation, then the maximum key size of current SHALL be greater than or
-    /// equal to the actual key size of src.
+    ///    1.1) If `src` has no key programmed, then the key of this operation is cleared. If there is a key
+    ///    programmed in srcOperation, then the maximum key size of current SHALL be greater than or
+    ///    equal to the actual key size of src.
     ///
     /// # Example
     ///
@@ -537,13 +538,13 @@ impl Cipher {
     /// # Parameters
     ///
     /// 1) `iv`: buffer contains the operation Initialization Vector, which is used for:
-    /// 1.1) [AesCbcNopad](AlgorithmId::AesCbcNopad): IV;
-    /// 1.2) [AesCtr](AlgorithmId::AesCtr): Initial Counter Value;
-    /// 1.3) [AesCts](AlgorithmId::AesCts): IV;
-    /// 1.4) [AesXts](AlgorithmId::AesXts): Tweak Value;
-    /// 1.5) [AesCcm](AlgorithmId::AesCcm): Nonce Value;
-    /// 1.6) [AesGcm](AlgorithmId::AesGcm): Nonce Value;
-    /// 1.7) [AesCbcNopad](AlgorithmId::AesCbcNopad): IV.
+    ///    1.1) [AesCbcNopad](AlgorithmId::AesCbcNopad): IV;
+    ///    1.2) [AesCtr](AlgorithmId::AesCtr): Initial Counter Value;
+    ///    1.3) [AesCts](AlgorithmId::AesCts): IV;
+    ///    1.4) [AesXts](AlgorithmId::AesXts): Tweak Value;
+    ///    1.5) [AesCcm](AlgorithmId::AesCcm): Nonce Value;
+    ///    1.6) [AesGcm](AlgorithmId::AesGcm): Nonce Value;
+    ///    1.7) [AesCbcNopad](AlgorithmId::AesCbcNopad): IV.
     ///
     /// # Panics
     ///
@@ -601,7 +602,7 @@ impl Cipher {
     /// # Errors
     ///
     /// 1) `ShortBuffer`: If the output buffer is not large enough to contain the output.
-    /// In this case, the input is not fed into the algorithm.
+    ///    In this case, the input is not fed into the algorithm.
     ///
     /// # Panics
     ///
@@ -976,8 +977,8 @@ impl AE {
     ///
     /// 1) `nonce`: The peration nonce or IV
     /// 2) `tag_len`: Size in bits of the tag:
-    /// 2.1) for `AES-GCM`, can be 128, 120, 112, 104, or 96;
-    /// 2.2) for `AES-CCM`, can be 128, 112, 96, 80, 64, 48, or 32.
+    ///    2.1) for `AES-GCM`, can be 128, 120, 112, 104, or 96;
+    ///    2.2) for `AES-CCM`, can be 128, 112, 96, 80, 64, 48, or 32.
     /// 3) `aad_len`: length in bytes of the AAD (Used only for AES-CCM. Ignored for AES-GCM).
     /// 4) `pay_load_len`: Length in bytes of the payload (Used only for AES-CCM. Ignored for AES-GCM).
     ///

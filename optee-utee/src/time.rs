@@ -89,7 +89,6 @@ impl Time {
     /// # Panics
     ///
     /// 1) If the Implementation detects any error.
-
     pub fn wait(timeout: u32) -> Result<()> {
         match unsafe { raw::TEE_Wait(timeout) } {
             raw::TEE_SUCCESS => Ok(()),

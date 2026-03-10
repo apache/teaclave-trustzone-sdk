@@ -27,7 +27,7 @@ use core::time::Duration;
 /// protocol-related tasks, including but not limited to:
 /// * Defining its own Setup type and using it to establish a new connection;
 /// * Sending and receiving data over the connection, while managing protocol
-/// errors (such as permitting certain warnings but raising others).
+///   errors (such as permitting certain warnings but raising others).
 pub trait SocketAdapter: Sized {
     type Setup;
     type Handle;

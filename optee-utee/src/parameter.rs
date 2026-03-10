@@ -108,7 +108,7 @@ impl Parameter {
 
     /// # Safety
     /// The caller must ensure that the raw pointer is valid and points to a properly initialized TEE_Param.
-    pub unsafe fn as_value(&mut self) -> Result<ParamValue> {
+    pub unsafe fn as_value(&mut self) -> Result<ParamValue<'_>> {
         match self.param_type {
             ParamType::ValueInput | ParamType::ValueInout | ParamType::ValueOutput => {
                 Ok(ParamValue {
@@ -123,7 +123,7 @@ impl Parameter {
 
     /// # Safety
     /// The caller must ensure that the raw pointer is valid and points to a properly initialized TEE_Param.
-    pub unsafe fn as_memref(&mut self) -> Result<ParamMemref> {
+    pub unsafe fn as_memref(&mut self) -> Result<ParamMemref<'_>> {
         match self.param_type {
             ParamType::MemrefInout | ParamType::MemrefInput | ParamType::MemrefOutput => {
                 Ok(ParamMemref {
