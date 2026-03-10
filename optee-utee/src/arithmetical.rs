@@ -34,7 +34,7 @@ impl BigInt {
 
     // size represents BigInt bits
     pub fn size_in_u32(size: u32) -> u32 {
-        ((size + 31) / 32) + 2
+        size.div_ceil(32) + 2
     }
 
     pub fn new(bits: u32) -> Self {

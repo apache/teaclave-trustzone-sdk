@@ -56,7 +56,7 @@ pub enum TransientObjectType {
     RsaKeypair = 0xA1000030,
     /// Depends on Algorithm:
     /// 1) [DsaSha1](crate::AlgorithmId::DsaSha1):
-    /// Between 512 and 1024 bits, multiple of 64 bits
+    ///    Between 512 and 1024 bits, multiple of 64 bits
     /// 2) [DsaSha224](crate::AlgorithmId::DsaSha224): 2048 bits
     /// 3) [DsaSha256](crate::AlgorithmId::DsaSha256): 2048 or 3072 bits
     DsaPublicKey = 0xA0000031,
