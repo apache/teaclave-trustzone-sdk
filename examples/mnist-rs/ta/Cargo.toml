@@ -15,8 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-cargo-features = ["panic-immediate-abort"]
-
 [workspace]
 resolver = "2"
 
@@ -35,7 +33,7 @@ authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
 
 [workspace.dependencies]
 optee-utee-sys = { path = "../../../optee-utee/optee-utee-sys" }
-optee-utee = { path = "../../../optee-utee" }
+optee-utee = { path = "../../../optee-utee", features = ["unwind_stubs"] }
 optee-utee-build = { path = "../../../optee-utee-build" }
 
 proto = { path = "../proto" }

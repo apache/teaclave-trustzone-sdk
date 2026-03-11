@@ -45,6 +45,7 @@ optee-utee-sys = { version = "0.8.0", path = "optee-utee-sys", features = ["mock
 default = []
 std = ["optee-utee-sys/std", "optee-utee-macros/std"]
 no_panic_handler = []
+unwind_stubs = []
 
 [workspace]
 resolver = "2"
