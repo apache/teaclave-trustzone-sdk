@@ -31,7 +31,7 @@ std = ["optee-utee/std", "optee-utee-sys/std"]
 [dependencies]
 proto = { path = "../proto" }
 optee-utee-sys = { path = "../../../optee-utee/optee-utee-sys" }
-optee-utee = { path = "../../../optee-utee" }
+optee-utee = { path = "../../../optee-utee", features = ["unwind_stubs"] }
 cfg_block = "0.2.0"
 
 [build-dependencies]

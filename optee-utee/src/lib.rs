@@ -44,6 +44,20 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
+// Stubs for unwinding symbols required by the precompiled sysroot when not using
+// `-Z build-std`. These are never actually called because we compile with
+// `-C panic=abort`, but the linker requires the symbols to be present.
+#[cfg(all(not(feature = "std"), feature = "unwind_stubs"))]
+mod unwind_stubs {
+    #[no_mangle]
+    extern "C" fn _Unwind_Resume() -> ! {
+        loop {}
+    }
+
+    #[no_mangle]
+    extern "C" fn rust_eh_personality() {}
+}
+
 pub use self::arithmetical::*;
 pub use self::crypto_op::*;
 pub use self::error::{Error, ErrorKind, Result};

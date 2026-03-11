@@ -15,8 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-cargo-features = ["panic-immediate-abort"]
-
 [package]
 name = "ta"
 version = "0.4.0"
@@ -33,7 +31,7 @@ std = ["optee-utee/std", "optee-utee-sys/std"]
 [dependencies]
 proto = { path = "../proto" }
 optee-utee-sys = { path = "../../../optee-utee/optee-utee-sys" }
-optee-utee = { path = "../../../optee-utee" }
+optee-utee = { path = "../../../optee-utee", features = ["unwind_stubs"] }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 
 [build-dependencies]
