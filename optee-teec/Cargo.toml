@@ -27,7 +27,7 @@ edition = "2018"
 [dependencies]
 optee-teec-sys = { version = "0.8.0", path = "optee-teec-sys" }
 optee-teec-macros = { version = "0.8.0", path = "macros" }
-uuid = "0.7"
+uuid = "1.22.0"
 hex = "0.3"
 num_enum = { version = "0.7.3", default-features = false }
 
