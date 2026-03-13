@@ -21,8 +21,8 @@ CROSS_COMPILE_HOST ?= aarch64-linux-gnu-
 CROSS_COMPILE_TA ?= aarch64-linux-gnu-
 TARGET_HOST ?= aarch64-unknown-linux-gnu
 TARGET_TA ?= aarch64-unknown-linux-gnu
-BUILDER ?= cargo
 FEATURES ?=
+CARGO_FLAGS ?=
 
 .PHONY: host ta all clean
 
@@ -38,12 +38,12 @@ host: toolchain
 ta: toolchain
 	$(q)make -C ta/train TARGET=$(TARGET_TA) \
 		CROSS_COMPILE=$(CROSS_COMPILE_TA) \
-		BUILDER=$(BUILDER) \
-		FEATURES="$(FEATURES)"
+		FEATURES="$(FEATURES)" \
+		CARGO_FLAGS="$(CARGO_FLAGS)"
 	$(q)make -C ta/inference TARGET=$(TARGET_TA) \
 		CROSS_COMPILE=$(CROSS_COMPILE_TA) \
-		BUILDER=$(BUILDER) \
-		FEATURES="$(FEATURES)"
+		FEATURES="$(FEATURES)" \
+		CARGO_FLAGS="$(CARGO_FLAGS)"
 
 clean:
 	$(q)make -C host clean
