@@ -45,7 +45,7 @@ mod utee_syscalls;
 mod utee_types;
 
 // Currently, the libc crate does not support optee_os, and patching it in
-// Xargo.toml within the TA project does not affect optee-utee-sys. Therefore,
+// build-std within the TA project does not affect optee-utee-sys. Therefore,
 // we need to define the type directly in the crate to ensure compatibility.
 #[cfg(feature = "std")]
 mod libc_compat {

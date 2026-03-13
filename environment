@@ -44,15 +44,14 @@ then
   then
     export TARGET_TA="arm-unknown-optee"
     echo "set TARGET_TA=$TARGET_TA (std)"
-    export BUILDER=xargo
     export FEATURES="--features std"
-    export XARGO_RUST_SRC="$(pwd)/rust/rust/library"
-    export RUSTFLAGS="-Zunstable-options"
+    export CARGO_FLAGS="-Z build-std=std,panic_abort"
+    export __CARGO_TESTS_ONLY_SRC_ROOT="$(pwd)/rust/rust/library"
   else
     export TARGET_TA="arm-unknown-linux-gnueabihf"
     echo "set TARGET_TA=$TARGET_TA (no-std)"
-    export BUILDER=cargo
     export FEATURES=""
+    export CARGO_FLAGS=""
   fi
   export CROSS_COMPILE_TA="$CROSS_COMPILE32"
   echo "set CROSS_COMPILE_TA=$CROSS_COMPILE_TA"
@@ -63,15 +62,14 @@ else
   then
     export TARGET_TA="aarch64-unknown-optee"
     echo "set TARGET_TA=$TARGET_TA (std)"
-    export BUILDER=xargo
     export FEATURES="--features std"
-    export XARGO_RUST_SRC="$(pwd)/rust/rust/library"
-    export RUSTFLAGS="-Zunstable-options"
+    export CARGO_FLAGS="-Z build-std=std,panic_abort"
+    export __CARGO_TESTS_ONLY_SRC_ROOT="$(pwd)/rust/rust/library"
   else
     export TARGET_TA="aarch64-unknown-linux-gnu"
     echo "set TARGET_TA=$TARGET_TA (no-std)"
-    export BUILDER=cargo
     export FEATURES=""
+    export CARGO_FLAGS=""
   fi
   export CROSS_COMPILE_TA="$CROSS_COMPILE64"
   echo "set CROSS_COMPILE_TA=$CROSS_COMPILE_TA"
