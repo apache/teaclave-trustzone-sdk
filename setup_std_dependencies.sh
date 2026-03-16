@@ -24,17 +24,6 @@ set -xe
 cd "$(dirname "$0")"
 
 ##########################################
-# install Xargo if not exist
-if ! command -v xargo >/dev/null 2>&1; then
-	# xargo 0.3.26 does not compile on recent toolchains (TryLockError API change).
-	# Build it with an older known-good nightly.
-	# Since we're working on migrating to cargo -Z build-std, we can remove the xargo then.
-	XARGO_BOOTSTRAP_TOOLCHAIN=${XARGO_BOOTSTRAP_TOOLCHAIN:-nightly-2024-05-15}
-	rustup toolchain install "$XARGO_BOOTSTRAP_TOOLCHAIN" --profile minimal
-	cargo +"$XARGO_BOOTSTRAP_TOOLCHAIN" install xargo --locked
-fi
-
-##########################################
 # initialize submodules: rust / libc / patches
 RUST_TAG=1.93.1        # commit 01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf
 LIBC_TAG=0.2.182       # commit e879ee90b6cd8f79b352d4d4d1f8ca05f94f2f53

@@ -26,22 +26,23 @@ LINKER_CFG := target.$(TARGET).linker=\"$(CROSS_COMPILE)gcc\"
 # fix for the error: "unwinding panics are not supported without std" reported by clippy
 # Set panic=abort for std and no-std
 RUSTFLAGS := -C panic=abort
+# CARGO_FLAGS is set by sourcing environment (e.g. -Z build-std=std,panic_abort for std builds)
+CARGO_FLAGS ?= 
+# FEATURES is set by sourcing environment (e.g. --features std for std builds)
+FEATURES ?= 
 
 TA_SIGN_KEY ?= $(TA_DEV_KIT_DIR)/keys/default_ta.pem
 SIGN := $(TA_DEV_KIT_DIR)/scripts/sign_encrypt.py
 OUT_DIR := $(CURDIR)/target/$(TARGET)/release
 
-BUILDER ?= cargo
-FEATURES ?= 
-
 all: clippy ta strip sign
 
 clippy:
 	@cargo fmt
-	@RUSTFLAGS="$(RUSTFLAGS)" $(BUILDER) clippy --target $(TARGET) $(FEATURES) -- -D warnings -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
+	@RUSTFLAGS="$(RUSTFLAGS)" cargo clippy $(CARGO_FLAGS) --target $(TARGET) $(FEATURES) -- -D warnings -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
 
 ta: clippy
-	@RUSTFLAGS="$(RUSTFLAGS)" $(BUILDER) build --target $(TARGET) --release $(FEATURES) --config $(LINKER_CFG)
+	@RUSTFLAGS="$(RUSTFLAGS)" cargo build $(CARGO_FLAGS) --target $(TARGET) --release $(FEATURES) --config $(LINKER_CFG)
 
 strip: ta
 	@$(OBJCOPY) --strip-unneeded $(OUT_DIR)/ta $(OUT_DIR)/stripped_ta
@@ -52,4 +53,3 @@ sign: strip
 
 clean:
 	@cargo clean
-
