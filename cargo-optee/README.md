@@ -40,7 +40,7 @@ signing automatically.
         │  ┌──────────────────▼─────────────────────┐  │
         │  │  3. Execute Build Pipeline             │  │
         │  │     - Run clippy (linting)             │  │
-        │  │     - Build binary: cargo/xargo + gcc  │  │
+        │  │     - Build binary: cargo + gcc        │  │
         │  │     - Strip symbols: objcopy           │  │
         │  │     - Sign TA: Python script (TA only) │  │
         │  └──────────────────┬─────────────────────┘  │
@@ -51,7 +51,7 @@ signing automatically.
         ┌──────────────────────────────────────────────┐
         │    Low-Level Tools (dependencies)            │
         │                                              │
-        │    - cargo/xargo: Rust compilation           │
+        │    - cargo: Rust compilation                 │
         │    - gcc: Linking with OP-TEE libraries      │
         │    - objcopy: Symbol stripping               │
         │    - Python script: TA signing (TA only)     │
@@ -307,9 +307,8 @@ cargo-optee build ta \
 - `--arch <ARCH>`: Target architecture (default: `aarch64`)
   - `aarch64`: ARM 64-bit architecture
   - `arm`: ARM 32-bit architecture
-- `--std`: Build with std support (uses xargo and custom target)
-- `--no-std`: Build without std support (uses cargo, mutually exclusive with
-  --std)
+- `--std`: Build with std support (uses `cargo -Z build-std` and custom target)
+- `--no-std`: Build without std support (mutually exclusive with --std)
 - `--signing-key <PATH>`: Path to signing key (default:
   `<ta-dev-kit-dir>/keys/default_ta.pem`)
 - `--uuid-path <PATH>`: Path to UUID file (default: `../uuid.txt`)
@@ -548,14 +547,16 @@ cd ./ta
 TA_DEV_KIT_DIR=/opt/optee/export-ta_arm32 \
 RUSTFLAGS="-C panic=abort" \
 RUST_TARGET_PATH=/tmp/cargo-optee-XXXXX \
-xargo clippy --target arm-unknown-optee --features std --release \
+__CARGO_TESTS_ONLY_SRC_ROOT=/path/to/rust/library \
+cargo -Z build-std=std,panic_abort clippy --target arm-unknown-optee --features std --release \
   --manifest-path ./ta/Cargo.toml
 
 # 2. Build
 TA_DEV_KIT_DIR=/opt/optee/export-ta_arm32 \
 RUSTFLAGS="-C panic=abort" \
 RUST_TARGET_PATH=/tmp/cargo-optee-XXXXX \
-xargo build --target arm-unknown-optee --features std --release \
+__CARGO_TESTS_ONLY_SRC_ROOT=/path/to/rust/library \
+cargo -Z build-std=std,panic_abort build --target arm-unknown-optee --features std --release \
   --manifest-path ./ta/Cargo.toml \
   --config target.arm-unknown-optee.linker="arm-linux-gnueabihf-gcc"
 

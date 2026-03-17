@@ -326,12 +326,12 @@ fn setup_build_command(
         None
     };
 
-    // Determine builder (cargo or xargo)
-    let mut cmd = match config.std {
-        true => Command::new("xargo"),
-        false => cargo_command(),
-    };
+    // Always use cargo; std builds pass -Z build-std=std,panic_abort
+    let mut cmd = cargo_command();
     cmd.arg(command);
+    if config.std {
+        cmd.arg("-Z").arg("build-std=std,panic_abort");
+    }
     cmd.arg("--target").arg(&target);
 
     // Add --no-default-features if specified
@@ -359,13 +359,6 @@ fn setup_build_command(
         cmd.arg("--features").arg(features.join(","));
     }
 
-    // Add no-std specific flags to avoid the linking error of _Unwind_Resume
-    if !config.std {
-        cmd.arg("-Z").arg("build-std=core,alloc");
-        cmd.arg("-Z")
-            .arg("build-std-features=panic_immediate_abort");
-    }
-
     // Set RUSTFLAGS - preserve existing ones and add panic=abort
     let mut rustflags = env::var("RUSTFLAGS").unwrap_or_default();
     if !rustflags.is_empty() {
@@ -389,6 +382,24 @@ fn setup_build_command(
     // Set RUST_TARGET_PATH for custom targets when using std
     if let Some(ref temp_dir_ref) = temp_dir {
         cmd.env("RUST_TARGET_PATH", temp_dir_ref.path());
+    }
+
+    // Set __CARGO_TESTS_ONLY_SRC_ROOT for std builds (required by cargo -Z build-std)
+    if config.std {
+        let rust_src = env::var("__CARGO_TESTS_ONLY_SRC_ROOT")
+            .map(PathBuf::from)
+            .map_err(|_| anyhow::anyhow!(
+                "__CARGO_TESTS_ONLY_SRC_ROOT is not set.\n\
+                For std TA builds, set it to the Rust library source directory, e.g.:\n\
+                  export __CARGO_TESTS_ONLY_SRC_ROOT=/path/to/rust/library"
+            ))?;
+        if !rust_src.exists() {
+            anyhow::bail!(
+                "__CARGO_TESTS_ONLY_SRC_ROOT points to a non-existent path: {:?}",
+                rust_src
+            );
+        }
+        cmd.env("__CARGO_TESTS_ONLY_SRC_ROOT", &rust_src);
     }
 
     Ok((cmd, temp_dir))
