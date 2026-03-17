@@ -125,6 +125,20 @@ if [ -z "$OPTEE_CLIENT_EXPORT" ]; then
     exit 1
 fi
 
+# For std builds, __CARGO_TESTS_ONLY_SRC_ROOT must be set (required by cargo -Z build-std)
+if [ -n "$STD" ]; then
+    if [ -z "$__CARGO_TESTS_ONLY_SRC_ROOT" ]; then
+        if [ -n "$RUST_STD_DIR" ]; then
+            export __CARGO_TESTS_ONLY_SRC_ROOT="$RUST_STD_DIR/rust/library"
+        else
+            echo "Error: __CARGO_TESTS_ONLY_SRC_ROOT (or RUST_STD_DIR) must be set for std builds"
+            echo "  export __CARGO_TESTS_ONLY_SRC_ROOT=/path/to/rust/library"
+            exit 1
+        fi
+    fi
+    echo "  __CARGO_TESTS_ONLY_SRC_ROOT: $__CARGO_TESTS_ONLY_SRC_ROOT"
+fi
+
 echo "==========================================="
 echo "Installing with configuration:"
 echo "  ARCH_TA: $ARCH_TA"
