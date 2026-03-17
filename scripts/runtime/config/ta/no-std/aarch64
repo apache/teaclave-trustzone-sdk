@@ -19,7 +19,7 @@ export TA_DEV_KIT_DIR="$OPTEE_OS_DIR/out/arm-plat-vexpress/export-ta_arm64"
 export TARGET_TA="aarch64-unknown-linux-gnu"
 export CROSS_COMPILE_TA="aarch64-linux-gnu-"
 
-# sdk example using this env to distinguish between xargo and cargo
-export BUILDER="cargo"
+# CARGO_FLAGS is empty for no-std TAs
+export CARGO_FLAGS=""
 # Initialize FEATURES as empty for no-std TAs
 export FEATURES=""

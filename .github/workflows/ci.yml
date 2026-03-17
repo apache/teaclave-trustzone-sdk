@@ -112,8 +112,6 @@ jobs:
         run: |
           # Run entrypoint.sh to set up the bash profile
           /entrypoint.sh true
-          # Install jq for JSON parsing
-          apt-get update && apt-get install -y jq
       - name: Test cargo-optee no-std build (aarch64)
         shell: bash -l {0}  # Use login shell to load the profile
         run: |
@@ -132,8 +130,6 @@ jobs:
         run: |
           # Run entrypoint.sh to set up the bash profile
           /entrypoint.sh true
-          # Install jq for JSON parsing
-          apt-get update && apt-get install -y jq
       - name: Test cargo-optee no-std build (arm32)
         shell: bash -l {0}  # Use login shell to load the profile
         run: |
@@ -158,8 +154,6 @@ jobs:
         run: |
           # Run entrypoint.sh to set up the bash profile
           /entrypoint.sh true
-          # Install jq for JSON parsing
-          apt-get update && apt-get install -y jq
       - name: Test cargo-optee std build (aarch64)
         shell: bash -l {0}  # Use login shell to load the profile
         run: |
@@ -180,8 +174,6 @@ jobs:
         run: |
           # Run entrypoint.sh to set up the bash profile
           /entrypoint.sh true
-          # Install jq for JSON parsing
-          apt-get update && apt-get install -y jq
       - name: Test cargo-optee std build (arm32)
         shell: bash -l {0}  # Use login shell to load the profile
         run: |

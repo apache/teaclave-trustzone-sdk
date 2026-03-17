@@ -78,4 +78,5 @@ apt-get update && \
     pip \
     ca-certificates \
     libgnutls28-dev \
-    socat
+    socat \
+    jq
