@@ -34,22 +34,26 @@ cd $RUST_STD_DIR
 # Set up Rust and Cargo environment (RUSTUP_HOME and CARGO_HOME are set in bootstrap_env)
 source ${CARGO_HOME}/env
 
-# install Xargo if not exist
-which xargo || cargo install xargo
-
 # initialize submodules: rust / libc with pinned versions for reproducible builds
-RUST_BRANCH=optee-xargo
-RUST_COMMIT=HEAD  # TODO: Pin to specific commit hash for reproducible builds
-LIBC_BRANCH=optee  
-LIBC_COMMIT=HEAD  # TODO: Pin to specific commit hash for reproducible builds
+RUST_TAG=1.93.1        # commit 01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf
+LIBC_TAG=0.2.182       # commit e879ee90b6cd8f79b352d4d4d1f8ca05f94f2f53
 
-echo "Cloning rust (branch: $RUST_BRANCH) and libc (branch: $LIBC_BRANCH)..."
+echo "Cloning rust (tag: $RUST_TAG) and libc (tag: $LIBC_TAG)..."
 
-git clone --depth=1 -b $RUST_BRANCH https://github.com/DemesneGH/rust.git && \
-       (cd rust && \
-       git submodule update --init library/stdarch && \
-       git submodule update --init library/backtrace)
+# Clone official Rust source at specific tag
+git clone --depth=1 --branch $RUST_TAG https://github.com/rust-lang/rust.git && \
+    (cd rust && \
+    git submodule update --init library/stdarch && \
+    git submodule update --init library/backtrace)
 
-git clone --depth=1 -b $LIBC_BRANCH https://github.com/DemesneGH/libc.git
+# Clone official libc at specific tag
+git clone --depth=1 --branch $LIBC_TAG https://github.com/rust-lang/libc.git
+
+# Clone patches repository
+git clone --depth=1 https://github.com/apache/teaclave-crates.git patches
+
+# Apply patches
+(cd rust && git apply ../patches/rust-1.93.1-01f6ddf/optee-0001-std-adaptation.patch)
+(cd libc && git apply ../patches/libc-0.2.182-e879ee9/optee-0001-libc-adaptation.patch)
 
 echo "rust-std initialized at $RUST_STD_DIR"
