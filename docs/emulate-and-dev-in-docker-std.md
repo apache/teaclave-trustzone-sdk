@@ -105,7 +105,7 @@ note these important target differences:
 
 | Configuration | TA Target | Build Tool | Host Target |
 |---------------|-----------|------------|-------------|
-| `std/*` | `*-unknown-optee` | `xargo` | `*-unknown-linux-gnu` |
+| `std/*` | `*-unknown-optee` | `cargo -Z build-std` | `*-unknown-linux-gnu` |
 | `no-std/*` | `*-unknown-linux-gnu` | `cargo` | `*-unknown-linux-gnu` |
 
 **Example std build output:**
