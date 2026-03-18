@@ -40,4 +40,4 @@ To compile one of the examples, run `make -C examples/EXAMPLE_DIR`.
 | secure_db_abstraction-rs     | `e55291e1-521c-4dca-aa24-51e34ab32ad9` | An abstraction of database base on Secure Storage.           | std |
 | mnist-rs                     | Train: `1b5f5b74-e9cf-4e62-8c3e-7e41da6d76f6` <br/> Infer: `ff09aa8a-fbb9-4734-ae8c-d7cd1a3f6744` | Training and Performing Inference in Trusted Application. | no-std |
 | client_pool-rs               | `c9d73f40-ba45-4315-92c4-cf1255958729` | Generic Client Session Pool.                                 | both |
-| build_with_optee_utee_sys-rs | `bcac6292-5b9d-4b20-a2e5-b389d5e8ae2f` | Using `optee_utee_sys` as `build-dependencies`, requires `workspace.resolver = "2"`, which is not supported in xargo, so no_std only. | no-std |
+| build_with_optee_utee_sys-rs | `bcac6292-5b9d-4b20-a2e5-b389d5e8ae2f` | Using `optee_utee_sys` as `build-dependencies`.              | both |
