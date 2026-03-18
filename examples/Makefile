@@ -34,8 +34,7 @@ STD_ONLY_EXAMPLES = \
 
 # NO-STD-only examples (require STD to be unset to build)
 NO_STD_ONLY_EXAMPLES = \
-	mnist-rs \
-	build_with_optee_utee_sys-rs
+	mnist-rs
 
 # Common examples (build in both std and no-std modes)
 COMMON_EXAMPLES = \
@@ -59,7 +58,8 @@ COMMON_EXAMPLES = \
 	time-rs \
 	udp_socket-rs \
 	signature_verification-rs \
-	client_pool-rs
+	client_pool-rs \
+	build_with_optee_utee_sys-rs
 
 # Clean targets
 STD_ONLY_EXAMPLES_CLEAN = $(STD_ONLY_EXAMPLES:%=%-clean)

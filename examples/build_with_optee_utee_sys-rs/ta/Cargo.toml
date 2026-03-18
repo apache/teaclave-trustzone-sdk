@@ -24,6 +24,10 @@ repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
 description = "An example of Rust OP-TEE TrustZone SDK."
 edition = "2021"
 
+[features]
+default = []
+std = ["optee-utee/std", "optee-utee-sys/std"]
+
 [dependencies]
 proto = { path = "../proto" }
 optee-utee-sys = { path = "../../../optee-utee/optee-utee-sys" }
@@ -35,7 +39,6 @@ optee-utee-build = { path = "../../../optee-utee-build" }
 optee-utee-sys = { path = "../../../optee-utee/optee-utee-sys", features = ["no_link"] }
 
 [profile.release]
-panic = "abort"
 lto = true
 opt-level = 1
 
