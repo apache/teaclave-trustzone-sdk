@@ -341,7 +341,7 @@ impl PersistentObject {
     ///         ObjectStorageConstants::Private,
     ///         &obj_id,
     ///         DataFlag::ACCESS_READ) {
-    ///     Ok(object) =>
+    ///     Ok(mut object) =>
     ///     {
     ///         let mut read_buf = [0u8;16];
     ///         object.read(&mut read_buf)?;
@@ -367,7 +367,7 @@ impl PersistentObject {
     /// 2) If the Implementation detects any other error associated with this
     ///    function which is not explicitly associated with a defined return
     ///    code for this function.
-    pub fn read(&self, buf: &mut [u8]) -> Result<u32> {
+    pub fn read(&mut self, buf: &mut [u8]) -> Result<u32> {
         let mut count: usize = 0;
         match unsafe {
             raw::TEE_ReadObjectData(*self.as_raw_ref(), buf.as_mut_ptr() as _, buf.len(), &mut count)
@@ -443,7 +443,7 @@ impl PersistentObject {
     ///         ObjectStorageConstants::Private,
     ///         &obj_id,
     ///         DataFlag::ACCESS_WRITE) {
-    ///     Ok(object) =>
+    ///     Ok(mut object) =>
     ///     {
     ///         object.truncate(1u32)?;
     ///         Ok(())
@@ -469,7 +469,7 @@ impl PersistentObject {
     /// 2) If the Implementation detects any other error associated with this
     ///    function which is not explicitly associated with a defined return
     ///    code for this function.
-    pub fn truncate(&self, size: u32) -> Result<()> {
+    pub fn truncate(&mut self, size: u32) -> Result<()> {
         match unsafe { raw::TEE_TruncateObjectData(*self.as_raw_ref(), size as usize) } {
             raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
@@ -492,7 +492,7 @@ impl PersistentObject {
     ///         ObjectStorageConstants::Private,
     ///         &obj_id,
     ///         DataFlag::ACCESS_WRITE) {
-    ///     Ok(object) =>
+    ///     Ok(mut object) =>
     ///     {
     ///         object.seek(0i32, Whence::DataSeekSet)?;
     ///         Ok(())
@@ -518,7 +518,7 @@ impl PersistentObject {
     /// 2) If the Implementation detects any other error associated with this
     ///    function which is not explicitly associated with a defined return
     ///    code for this function.
-    pub fn seek(&self, offset: i32, whence: Whence) -> Result<()> {
+    pub fn seek(&mut self, offset: i32, whence: Whence) -> Result<()> {
         match unsafe { raw::TEE_SeekObjectData(*self.as_raw_ref(), offset.into(), whence.into()) } {
             raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
