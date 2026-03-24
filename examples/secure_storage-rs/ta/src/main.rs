@@ -132,7 +132,7 @@ pub fn read_raw_object(params: &mut Parameters) -> Result<()> {
     ) {
         Err(e) => Err(e),
 
-        Ok(object) => {
+        Ok(mut object) => {
             let obj_info = object.info()?;
 
             if obj_info.data_size() > p1.buffer().len() {

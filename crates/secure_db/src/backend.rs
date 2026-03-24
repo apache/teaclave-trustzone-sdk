@@ -51,7 +51,7 @@ pub fn load_from_secure_storage(obj_id: &[u8]) -> Result<Option<Vec<u8>>> {
             }
         },
 
-        Ok(object) => {
+        Ok(mut object) => {
             let obj_info = object.info()?;
             let mut buf = vec![0u8; obj_info.data_size()];
 
