@@ -176,8 +176,8 @@ impl PersistentObject {
         // Move as much code as possible out of unsafe blocks to maximize Rust’s
         // safety checks.
         let handle_mut = &mut handle;
-        let attributes = match attributes {
-            Some(a) => a.handle(),
+        let attributes = match attributes.as_ref() {
+            Some(a) => unsafe { *a.as_raw_ref() },
             None => core::ptr::null_mut(),
         };
         match unsafe {
@@ -250,7 +250,7 @@ impl PersistentObject {
     /// # Ok(())
     /// # }
     pub fn close_and_delete(self) -> Result<()> {
-        let result = match unsafe { raw::TEE_CloseAndDeletePersistentObject1(self.0.handle()) } {
+        let result = match unsafe { raw::TEE_CloseAndDeletePersistentObject1(*self.as_raw_ref()) } {
             raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
         };
@@ -314,7 +314,7 @@ impl PersistentObject {
     pub fn rename(&mut self, new_object_id: &[u8]) -> Result<()> {
         match unsafe {
             raw::TEE_RenamePersistentObject(
-                self.0.handle(),
+                *self.0.as_raw_ref(),
                 new_object_id.as_ptr() as _,
                 new_object_id.len(),
             )
@@ -370,7 +370,7 @@ impl PersistentObject {
     pub fn read(&self, buf: &mut [u8]) -> Result<u32> {
         let mut count: usize = 0;
         match unsafe {
-            raw::TEE_ReadObjectData(self.handle(), buf.as_mut_ptr() as _, buf.len(), &mut count)
+            raw::TEE_ReadObjectData(*self.as_raw_ref(), buf.as_mut_ptr() as _, buf.len(), &mut count)
         } {
             raw::TEE_SUCCESS => Ok(count as u32),
             code => Err(Error::from_raw_error(code)),
@@ -425,7 +425,7 @@ impl PersistentObject {
     ///    function which is not explicitly associated with a defined return
     ///    code for this function.
     pub fn write(&mut self, buf: &[u8]) -> Result<()> {
-        match unsafe { raw::TEE_WriteObjectData(self.handle(), buf.as_ptr() as _, buf.len()) } {
+        match unsafe { raw::TEE_WriteObjectData(*self.as_raw_ref(), buf.as_ptr() as _, buf.len()) } {
             raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
         }
@@ -470,7 +470,7 @@ impl PersistentObject {
     ///    function which is not explicitly associated with a defined return
     ///    code for this function.
     pub fn truncate(&self, size: u32) -> Result<()> {
-        match unsafe { raw::TEE_TruncateObjectData(self.handle(), size as usize) } {
+        match unsafe { raw::TEE_TruncateObjectData(*self.as_raw_ref(), size as usize) } {
             raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
         }
@@ -519,7 +519,7 @@ impl PersistentObject {
     ///    function which is not explicitly associated with a defined return
     ///    code for this function.
     pub fn seek(&self, offset: i32, whence: Whence) -> Result<()> {
-        match unsafe { raw::TEE_SeekObjectData(self.handle(), offset.into(), whence.into()) } {
+        match unsafe { raw::TEE_SeekObjectData(*self.as_raw_ref(), offset.into(), whence.into()) } {
             raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
         }
@@ -527,8 +527,8 @@ impl PersistentObject {
 }
 
 impl GenericObject for PersistentObject {
-    fn handle(&self) -> raw::TEE_ObjectHandle {
-        self.0.handle()
+    unsafe fn as_raw_ref(&self) -> &optee_utee_sys::TEE_ObjectHandle {
+        self.0.as_raw_ref()
     }
 }
 

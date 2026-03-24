@@ -24,8 +24,16 @@ use optee_utee_sys as raw;
 
 /// A generic trait for an object (transient or persistent).
 pub trait GenericObject {
-    /// Return the handle of an object.
-    fn handle(&self) -> raw::TEE_ObjectHandle;
+    /// Returns the raw handle of the object.
+    ///
+    /// This returns a reference to ensure the `GenericObject` is not dropped,
+    /// which prevents the raw pointer from being cleaned up and the handle
+    /// from becoming a dangling pointer.
+    ///
+    /// # Safety
+    /// Use of a raw C pointer is inherently unsafe, and the caller might modify
+    /// the object through this pointer.
+    unsafe fn as_raw_ref(&self) -> &raw::TEE_ObjectHandle;
 
     /// Return the characteristics of an object.
     ///
@@ -47,7 +55,7 @@ pub trait GenericObject {
     ///   for this function.
     fn info(&self) -> Result<ObjectInfo> {
         let mut raw_info: raw::TEE_ObjectInfo = unsafe { mem::zeroed() };
-        match unsafe { raw::TEE_GetObjectInfo1(self.handle(), &mut raw_info) } {
+        match unsafe { raw::TEE_GetObjectInfo1(*self.as_raw_ref(), &mut raw_info) } {
             raw::TEE_SUCCESS => Ok(ObjectInfo::from_raw(raw_info)),
             code => Err(Error::from_raw_error(code)),
         }
@@ -73,7 +81,7 @@ pub trait GenericObject {
     ///   function that is not explicitly associated with a defined return code
     ///   for this function.
     fn restrict_usage(&mut self, obj_usage: UsageFlag) -> Result<()> {
-        match unsafe { raw::TEE_RestrictObjectUsage1(self.handle(), obj_usage.bits()) } {
+        match unsafe { raw::TEE_RestrictObjectUsage1(*self.as_raw_ref(), obj_usage.bits()) } {
             raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
         }
@@ -114,7 +122,7 @@ pub trait GenericObject {
         let mut size = buffer.len();
         match unsafe {
             raw::TEE_GetObjectBufferAttribute(
-                self.handle(),
+                *self.as_raw_ref(),
                 id as u32,
                 buffer as *mut _ as _,
                 &mut size,
@@ -161,7 +169,7 @@ pub trait GenericObject {
         let mut value_b: u32 = 0;
         match unsafe {
             raw::TEE_GetObjectValueAttribute(
-                self.handle(),
+                *self.as_raw_ref(),
                 id,
                 &mut value_a as *mut _,
                 &mut value_b as *mut _,
