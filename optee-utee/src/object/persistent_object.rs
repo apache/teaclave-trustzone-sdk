@@ -534,6 +534,8 @@ impl GenericObject for PersistentObject {
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
+
     use optee_utee_sys::{
         mock_api,
         mock_utils::{object::MockHandle, SERIAL_TEST_LOCK},
@@ -566,6 +568,52 @@ mod tests {
             &[],
             DataFlag::ACCESS_WRITE,
             None,
+            &[],
+        )
+        .expect("it should be ok");
+    }
+
+    #[test]
+    // https://github.com/apache/teaclave-trustzone-sdk/issues/288
+    fn test_create_with_attribute() {
+        use std::sync::{Arc, Mutex};
+
+        let _lock = SERIAL_TEST_LOCK.lock().expect("should get the lock");
+
+        let mut raw_handle = MockHandle::new();
+        let mut attr_raw_handle = MockHandle::new();
+        let handle = raw_handle.as_handle();
+        let attr_handle = attr_raw_handle.as_handle();
+        let fn1 = mock_api::TEE_CreatePersistentObject_context();
+        let fn2 = mock_api::TEE_CloseObject_context();
+        let attribute_has_drop = Arc::new(Mutex::new(false));
+
+        fn1.expect().return_once_st({
+            let attribute_has_drop = attribute_has_drop.clone();
+            move |_, _, _, _, attr, _, _, obj| {
+                assert_eq!(attr, attr_handle);
+                let value: bool = *attribute_has_drop.lock().unwrap();
+                assert!(!value);
+                unsafe { *obj = handle.clone() };
+                raw::TEE_SUCCESS
+            }
+        });
+        fn2.expect()
+            .returning_st(move |obj| {
+                if obj == attr_handle {
+                    let mut value = attribute_has_drop.lock().unwrap();
+                    *value = true;
+                    return;
+                }
+                assert_eq!(obj, handle);
+            })
+            .times(2);
+
+        let _obj = PersistentObject::create(
+            ObjectStorageConstants::Private,
+            &[],
+            DataFlag::ACCESS_WRITE,
+            Some(ObjectHandle::from_raw(attr_handle).unwrap()),
             &[],
         )
         .expect("it should be ok");
