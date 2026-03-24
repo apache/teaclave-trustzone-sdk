@@ -31,10 +31,6 @@ impl ObjectHandle {
         Ok(Self(raw))
     }
 
-    pub fn handle(&self) -> raw::TEE_ObjectHandle {
-        self.0
-    }
-
     /// Forget the inner handle to prevent a double-free, this function would be
     /// called when the inner handle is(or will be) freed externally.
     ///
@@ -77,14 +73,14 @@ impl ObjectHandle {
 impl Drop for ObjectHandle {
     fn drop(&mut self) {
         if !self.is_null() {
-            unsafe { raw::TEE_CloseObject(self.handle()) }
+            unsafe { raw::TEE_CloseObject(self.0) }
         }
     }
 }
 
 impl GenericObject for ObjectHandle {
-    fn handle(&self) -> raw::TEE_ObjectHandle {
-        self.handle()
+    unsafe fn as_raw_ref(&self) -> &raw::TEE_ObjectHandle {
+        &self.0
     }
 }
 
@@ -114,7 +110,7 @@ mod tests {
         });
 
         let obj = ObjectHandle::from_raw(handle.clone()).expect("it should be ok");
-        assert_eq!(obj.handle(), handle);
+        assert_eq!(unsafe { *obj.as_raw_ref() }, handle);
     }
 
     /// Ensures `ObjectHandle` can call `forget` to prevent automatically
@@ -127,7 +123,7 @@ mod tests {
         let handle = raw_handle.as_handle();
 
         let obj = ObjectHandle::from_raw(handle.clone()).expect("it should be ok");
-        assert_eq!(obj.handle(), handle);
+        assert_eq!(unsafe { *obj.as_raw_ref() }, handle);
 
         obj.forget();
     }

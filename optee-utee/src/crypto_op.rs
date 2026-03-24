@@ -217,7 +217,7 @@ impl OperationHandle {
     }
 
     fn set_key<T: GenericObject>(&self, object: &T) -> Result<()> {
-        match unsafe { raw::TEE_SetOperationKey(self.handle(), object.handle()) } {
+        match unsafe { raw::TEE_SetOperationKey(self.handle(), *object.as_raw_ref()) } {
             raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
         }
@@ -254,6 +254,8 @@ impl Drop for OperationHandle {
 
 /// A trait for a crypto operation to return its handle.
 pub trait OpHandle {
+    // TODO: returning raw value without lifetime constrait is not a good idea
+    // see https://github.com/apache/teaclave-trustzone-sdk/issues/288
     /// Return the handle of an operation.
     fn handle(&self) -> raw::TEE_OperationHandle;
 }
@@ -747,7 +749,7 @@ impl Cipher {
         object2: &D,
     ) -> Result<()> {
         match unsafe {
-            raw::TEE_SetOperationKey2(self.handle(), object1.handle(), object2.handle())
+            raw::TEE_SetOperationKey2(self.handle(), *object1.as_raw_ref(), *object2.as_raw_ref())
         } {
             raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
@@ -1581,7 +1583,7 @@ impl DeriveKey {
                 self.handle(),
                 p.as_ptr() as _,
                 params.len() as u32,
-                object.handle(),
+                *object.as_raw_ref(),
             )
         };
     }

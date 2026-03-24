@@ -191,7 +191,7 @@ impl TransientObject {
     /// The object is then uninitialized again.
     pub fn reset(&mut self) {
         unsafe {
-            raw::TEE_ResetTransientObject(self.handle());
+            raw::TEE_ResetTransientObject(*self.as_raw_ref());
         }
     }
 
@@ -250,7 +250,7 @@ impl TransientObject {
     pub fn populate(&mut self, attrs: &[Attribute]) -> Result<()> {
         let p: Vec<raw::TEE_Attribute> = attrs.iter().map(|p| p.raw()).collect();
         match unsafe {
-            raw::TEE_PopulateTransientObject(self.0.handle(), p.as_ptr() as _, attrs.len() as u32)
+            raw::TEE_PopulateTransientObject(*self.0.as_raw_ref(), p.as_ptr() as _, attrs.len() as u32)
         } {
             raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
@@ -311,7 +311,7 @@ impl TransientObject {
     ///    function which is not explicitly associated with a defined return
     ///    code for this function.
     pub fn copy_attribute_from<T: GenericObject>(&mut self, src_object: &T) -> Result<()> {
-        match unsafe { raw::TEE_CopyObjectAttributes1(self.handle(), src_object.handle()) } {
+        match unsafe { raw::TEE_CopyObjectAttributes1(*self.as_raw_ref(), *src_object.as_raw_ref()) } {
             raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
         }
@@ -362,7 +362,7 @@ impl TransientObject {
         let p: Vec<raw::TEE_Attribute> = params.iter().map(|p| p.raw()).collect();
         unsafe {
             match raw::TEE_GenerateKey(
-                self.handle(),
+                *self.as_raw_ref(),
                 key_size as u32,
                 p.as_slice().as_ptr() as _,
                 p.len() as u32,
@@ -375,8 +375,8 @@ impl TransientObject {
 }
 
 impl GenericObject for TransientObject {
-    fn handle(&self) -> raw::TEE_ObjectHandle {
-        self.0.handle()
+    unsafe fn as_raw_ref(&self) -> &optee_utee_sys::TEE_ObjectHandle {
+        self.0.as_raw_ref()
     }
 }
 
