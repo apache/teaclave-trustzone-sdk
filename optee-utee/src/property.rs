@@ -299,6 +299,12 @@ define_property_key!(
     "gpd.ta.instanceKeepAlive",
     bool
 );
+define_property_key!(
+    TaInstanceKeepCrashed,
+    CurrentTa,
+    "gpd.ta.instanceKeepCrashed",
+    bool
+);
 define_property_key!(TaDataSize, CurrentTa, "gpd.ta.dataSize", u32);
 define_property_key!(TaStackSize, CurrentTa, "gpd.ta.stackSize", u32);
 define_property_key!(TaVersion, CurrentTa, "gpd.ta.version", String);
