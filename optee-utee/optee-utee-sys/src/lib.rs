@@ -44,19 +44,9 @@ mod user_ta_header;
 mod utee_syscalls;
 mod utee_types;
 
-// Currently, the libc crate does not support optee_os, and patching it in
-// build-std within the TA project does not affect optee-utee-sys. Therefore,
-// we need to define the type directly in the crate to ensure compatibility.
-#[cfg(feature = "std")]
-mod libc_compat {
-    pub type size_t = usize;
-    pub type intmax_t = i64;
-}
-
-#[cfg(not(feature = "std"))]
-mod libc_compat {
-    pub use libc::{intmax_t, size_t};
-}
+pub type size_t = usize;
+// https://github.com/OP-TEE/optee_os/blob/c2b0684fcd89929976a8726e6e3af922b48dd2c7/lib/libutils/isoc/include/stdint.h#L92
+pub type intmax_t = i64;
 
 #[cfg(feature = "mock")]
 pub mod mock_api {

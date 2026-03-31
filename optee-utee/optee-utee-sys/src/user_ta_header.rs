@@ -37,7 +37,7 @@ pub struct ta_head {
     pub depr_entry: u64,
 }
 
-extern "C" {
+unsafe extern "C" {
     pub fn __utee_entry(
         func: c_ulong,
         session_id: c_ulong,
@@ -52,16 +52,16 @@ extern "C" {
 /// is a raw pointer that must point to a valid `utee_params` structure initialized
 /// by the OP-TEE runtime environment. This function should never be called directly
 /// from user code - it is only exported for the OP-TEE OS loader.
-#[no_mangle]
+#[unsafe(no_mangle)]
 unsafe fn __ta_entry(
     func: c_ulong,
     session_id: c_ulong,
     up: *mut utee_params,
     cmd_id: c_ulong,
 ) -> ! {
-    let res: u32 = __utee_entry(func, session_id, up, cmd_id);
+    let res: u32 = unsafe { __utee_entry(func, session_id, up, cmd_id) };
 
-    _utee_return(res.into());
+    unsafe { _utee_return(res.into()) };
 }
 
 unsafe impl Sync for ta_head {}

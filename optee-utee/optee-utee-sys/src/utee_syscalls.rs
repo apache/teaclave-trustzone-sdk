@@ -17,10 +17,10 @@
 
 use super::utee_types::utee_object_info;
 use super::*;
-use crate::libc_compat::size_t;
+use crate::size_t;
 use core::ffi::*;
 
-extern "C" {
+unsafe extern "C" {
     pub fn _utee_return(ret: c_ulong) -> !;
     pub fn _utee_log(buf: *const c_void, len: size_t);
     pub fn _utee_panic(code: c_ulong);

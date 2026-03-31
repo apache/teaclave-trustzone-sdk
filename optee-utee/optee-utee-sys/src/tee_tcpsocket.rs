@@ -26,7 +26,7 @@ pub struct TEE_tcpSocket_Setup_s {
     pub server_port: u16,
 }
 
-extern "C" {
+unsafe extern "C" {
     pub static TEE_tcpSocket: *const TEE_iSocket;
 }
 

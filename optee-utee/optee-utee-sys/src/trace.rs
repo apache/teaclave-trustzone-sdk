@@ -17,7 +17,7 @@
 
 use core::ffi::*;
 
-extern "C" {
+unsafe extern "C" {
     pub fn trace_ext_puts(str: *const c_char);
     pub fn trace_ext_get_thread_id() -> c_int;
     pub fn trace_set_level(level: c_int);
