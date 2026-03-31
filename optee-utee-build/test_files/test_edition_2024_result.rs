@@ -34,48 +34,69 @@ pub static trace_ext_prefix: &[u8] = b"TA\0";
 pub unsafe extern "C" fn tahead_get_trace_level() -> c_int {
     unsafe { trace_level }
 }
-static FLAG_BOOL: bool = (TA_FLAGS & optee_utee_sys::TA_FLAG_SINGLE_INSTANCE) != 0;
-static FLAG_MULTI: bool = (TA_FLAGS & optee_utee_sys::TA_FLAG_MULTI_SESSION) != 0;
-static FLAG_INSTANCE: bool = (TA_FLAGS & optee_utee_sys::TA_FLAG_INSTANCE_KEEP_ALIVE)
+const IS_SINGLE_INSTANCE: bool = (TA_FLAGS & optee_utee_sys::TA_FLAG_SINGLE_INSTANCE)
     != 0;
+const IS_MULTI_SESSION: bool = (TA_FLAGS & optee_utee_sys::TA_FLAG_MULTI_SESSION) != 0;
+const IS_KEEP_ALIVE: bool = (TA_FLAGS & optee_utee_sys::TA_FLAG_INSTANCE_KEEP_ALIVE)
+    != 0;
+const IS_KEEP_CRASHED: bool = (TA_FLAGS & optee_utee_sys::TA_FLAG_INSTANCE_KEEP_CRASHED)
+    != 0;
+const TA_ENDIAN: u32 = 0;
+const DONT_CLOSE_HANDLE_ON_CORRUPT_OBJECT: bool = (TA_FLAGS
+    & optee_utee_sys::TA_FLAG_DONT_CLOSE_HANDLE_ON_CORRUPT_OBJECT) != 0;
 #[unsafe(no_mangle)]
-pub static ta_num_props: usize = 7usize;
+pub static ta_num_props: usize = 10usize;
 #[unsafe(no_mangle)]
-pub static ta_props: [optee_utee_sys::user_ta_property; 7usize] = [
+pub static ta_props: [optee_utee_sys::user_ta_property; 10usize] = [
     optee_utee_sys::user_ta_property {
         name: optee_utee_sys::TA_PROP_STR_SINGLE_INSTANCE,
         prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
-        value: &FLAG_BOOL as *const bool as *mut _,
+        value: &IS_SINGLE_INSTANCE as *const bool as _,
     },
     optee_utee_sys::user_ta_property {
         name: optee_utee_sys::TA_PROP_STR_MULTI_SESSION,
         prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
-        value: &FLAG_MULTI as *const bool as *mut _,
+        value: &IS_MULTI_SESSION as *const bool as _,
     },
     optee_utee_sys::user_ta_property {
         name: optee_utee_sys::TA_PROP_STR_KEEP_ALIVE,
         prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
-        value: &FLAG_INSTANCE as *const bool as *mut _,
+        value: &IS_KEEP_ALIVE as *const bool as _,
+    },
+    optee_utee_sys::user_ta_property {
+        name: optee_utee_sys::TA_PROP_STR_KEEP_CRASHED,
+        prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
+        value: &IS_KEEP_CRASHED as *const bool as _,
     },
     optee_utee_sys::user_ta_property {
         name: optee_utee_sys::TA_PROP_STR_DATA_SIZE,
         prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
-        value: &TA_DATA_SIZE as *const u32 as *mut _,
+        value: &TA_DATA_SIZE as *const u32 as _,
     },
     optee_utee_sys::user_ta_property {
         name: optee_utee_sys::TA_PROP_STR_STACK_SIZE,
         prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
-        value: &TA_STACK_SIZE as *const u32 as *mut _,
+        value: &TA_STACK_SIZE as *const u32 as _,
     },
     optee_utee_sys::user_ta_property {
         name: optee_utee_sys::TA_PROP_STR_VERSION,
         prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_STRING,
-        value: TA_VERSION as *const [u8] as *mut _,
+        value: TA_VERSION as *const [u8] as _,
     },
     optee_utee_sys::user_ta_property {
         name: optee_utee_sys::TA_PROP_STR_DESCRIPTION,
         prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_STRING,
-        value: TA_DESCRIPTION as *const [u8] as *mut _,
+        value: TA_DESCRIPTION as *const [u8] as _,
+    },
+    optee_utee_sys::user_ta_property {
+        name: optee_utee_sys::TA_PROP_STR_ENDIAN,
+        prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
+        value: &TA_ENDIAN as *const u32 as _,
+    },
+    optee_utee_sys::user_ta_property {
+        name: optee_utee_sys::TA_PROP_STR_DOES_NOT_CLOSE_HANDLE_ON_CORRUPT_OBJECT,
+        prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
+        value: &DONT_CLOSE_HANDLE_ON_CORRUPT_OBJECT as *const bool as _,
     },
 ];
 #[unsafe(no_mangle)]
