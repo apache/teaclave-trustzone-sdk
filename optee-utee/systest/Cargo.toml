@@ -22,12 +22,12 @@ authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
 license = "Apache-2.0"
 repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
 description = "Automatic testing of FFI bindings for the libutee library."
-edition = "2018"
+edition = "2024"
 
 [dependencies]
 optee-utee-sys = { path = "../optee-utee-sys" }
-libc = "0.2.59"
+libc = "0.2"
 
 [build-dependencies]
-ctest = "0.4"
+ctest = "0.5"
 cc = "1.2.19"

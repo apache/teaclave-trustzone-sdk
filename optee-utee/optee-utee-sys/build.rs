@@ -19,22 +19,10 @@ use std::env::{self, VarError};
 use std::path::PathBuf;
 
 fn main() -> Result<(), VarError> {
-    if !is_feature_enable("no_link")? {
+    if !cfg!(feature = "no_link") {
         link();
     }
     Ok(())
-}
-
-// Check if feature enabled.
-// Refer to: https://doc.rust-lang.org/cargo/reference/features.html#build-scripts
-fn is_feature_enable(feature: &str) -> Result<bool, VarError> {
-    let feature_env = format!("CARGO_FEATURE_{}", feature.to_uppercase().replace("-", "_"));
-
-    match env::var(feature_env) {
-        Err(VarError::NotPresent) => Ok(false),
-        Ok(_) => Ok(true),
-        Err(err) => Err(err),
-    }
 }
 
 fn link() {

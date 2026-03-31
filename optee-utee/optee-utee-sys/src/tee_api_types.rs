@@ -17,7 +17,7 @@
 
 // Common Definitions
 
-use crate::libc_compat::size_t;
+use crate::size_t;
 use core::ffi::*;
 
 #[allow(non_camel_case_types)]

@@ -21,7 +21,6 @@ use std::io::Write;
 use std::path::PathBuf;
 
 fn main() {
-    let mut cfg = ctest::TestGenerator::new();
     let ta_include_path = {
         let ta_dev_kit_dir = env::var("TA_DEV_KIT_DIR").expect("TA_DEV_KIT_DIR not set");
         let include_path = PathBuf::from(ta_dev_kit_dir).join("include");
@@ -33,7 +32,21 @@ fn main() {
         }
         include_path
     };
-    cfg.header("tee_api_types.h")
+    let mut cfg = generate_cfg(ta_include_path.clone());
+    ctest::generate_test(&mut cfg, "../optee-utee-sys/src/lib.rs", "all.rs").unwrap();
+    println!("cargo:rustc-link-lib=static=mbedtls");
+    println!("cargo:rustc-link-lib=static=utee");
+    println!("cargo:rustc-link-lib=static=utils");
+    println!("cargo:rustc-link-lib=static=dl");
+
+    build_and_link_undefined(ta_include_path);
+}
+
+fn generate_cfg(ta_include_path: PathBuf) -> ctest::TestGenerator {
+    let mut cfg = ctest::TestGenerator::new();
+    cfg.edition(2024)
+        .language(ctest::Language::C)
+        .header("tee_api_types.h")
         .header("tee_api_defines.h")
         .header("utee_types.h")
         .header("user_ta_header.h")
@@ -41,51 +54,70 @@ fn main() {
         .header("utee_syscalls.h")
         .header("tee_tcpsocket.h")
         .header("tee_udpsocket.h")
+        .header("tee_internal_api.h")
         .header("tee_internal_api_extensions.h")
         .header("__tee_tcpsocket_defines_extensions.h")
         .include(ta_include_path.display().to_string())
-        .type_name(|s, _is_struct, _is_union| {
-            if s == "utee_params"
-                || s == "ta_head"
-                || s == "utee_attribute"
-                || s == "utee_object_info"
-                || s == "user_ta_property"
-                || s == "TEE_tcpSocket_Setup_s"
-                || s == "TEE_udpSocket_Setup_s"
-            {
-                return format!("struct {}", s);
+        .rename_type(|s| match s {
+            "u64" => Some("uint64_t".to_string()),
+            "u32" => Some("uint32_t".to_string()),
+            "u16" => Some("uint16_t".to_string()),
+            "c_char" => Some("char".to_string()),
+            _ => None,
+        })
+        .rename_struct_ty(|ty| {
+            if ty.starts_with("TEE") {
+                return Some(ty.to_string());
             }
-            s.to_string()
+            None
+        })
+        .skip_struct(|s| {
+            let s = s.ident();
+            match s {
+                "Memref"
+                | "Value"
+                | "ta_prop"
+                | "user_ta_property"
+                | "TEE_iSocket_s"
+                | "TEE_udpSocket_Setup_s"
+                | "TEE_tcpSocket_Setup_s"
+                | "TEE_SEReaderProperties"
+                | "TEE_SEAID" => true,
+                _ => s.ends_with("Handle"),
+            }
+        })
+        .skip_struct_field(|s, field| {
+            let s = s.ident();
+            let field = field.ident();
+            (s == "ta_head" && field == "entry") 
+                || (s == "TEE_OperationInfoMultiple" && field == "keyInformation") // va_list
+                || (s == "TEE_Attribute" && field == "content") // anonymous union fields
+        })
+        .skip_fn(|s| {
+            let s = s.ident();
+            match s {
+                "__utee_entry" => true,
+                _ => false,
+            }
+        })
+        .skip_union(|s| match s.ident() {
+            "content" => true,
+            _ => false,
+        })
+        .skip_union_field(|s, _field| {
+            let s = s.ident();
+            s == "TEE_Param" // TEE_Param only have anonymous fields
+        })
+        .rename_union_ty(|s| match s {
+            "TEE_Param" => Some(s.to_string()),
+            _ => None,
         });
-    cfg.skip_struct(|s| {
-        s == "Memref"
-            || s == "Value"
-            || s == "content"
-            || s.ends_with("Handle")
-            || s == "ta_prop"
-            || s == "user_ta_property"
-            || s == "TEE_iSocket_s" // untestable due to `const struct`
-    });
-    cfg.skip_field(|s, field| {
-        (s == "ta_head" && field == "entry")
-            || field == "content"
-            || field == "value"
-            || field == "memref"
-            || field == "keyInformation"
-    });
-    cfg.skip_type(|s| s == "Memref" || s == "Value");
-    cfg.skip_fn(|s| s == "TEE_BigIntFMMConvertToBigInt" || s == "__utee_entry");
-    cfg.skip_const(|s| s.starts_with("TA_PROP_STR") || s == "TEE_HANDLE_NULL");
-    cfg.skip_roundtrip(|s| s.starts_with("TEE_") || s.starts_with("utee_") || s == "ta_head");
-    cfg.skip_static(|s| s == "TEE_tcpSocket" || s == "TEE_udpSocket");
-    cfg.generate("../optee-utee-sys/src/lib.rs", "all.rs");
-    println!("cargo:rustc-link-lib=static=mbedtls");
-    println!("cargo:rustc-link-lib=static=utee");
-    println!("cargo:rustc-link-lib=static=utils");
-    println!("cargo:rustc-link-lib=static=dl");
+    cfg
+}
 
-    let out_dir = env::var("OUT_DIR").unwrap();
-    let undefined_path = PathBuf::from(&out_dir).join("undefined.c");
+fn build_and_link_undefined(ta_include_path: PathBuf) {
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let undefined_path = out_dir.join("undefined.c");
 
     let mut buffer = File::create(&undefined_path).unwrap();
     write!(
@@ -131,6 +163,6 @@ fn main() {
         .file(&undefined_path.display().to_string())
         .compile("undefined");
 
-    println!("cargo:rustc-link-search=native={}", out_dir);
+    println!("cargo:rustc-link-search=native={}", out_dir.display());
     println!("cargo:rustc-link-lib=static=undefined");
 }

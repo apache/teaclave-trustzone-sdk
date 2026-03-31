@@ -17,11 +17,10 @@
 
 #[cfg_attr(feature = "mock", mockall::automock)]
 pub mod api {
-    use crate::libc_compat::{intmax_t, size_t};
     use crate::*;
     use core::ffi::*;
 
-    extern "C" {
+    unsafe extern "C" {
         // Property access functions
 
         pub fn TEE_GetPropertyAsString(
@@ -579,12 +578,6 @@ pub mod api {
             context: *const TEE_BigIntFMMContext,
         ) -> c_void;
         pub fn TEE_BigIntConvertFromFMM(
-            dest: *mut TEE_BigInt,
-            src: *const TEE_BigIntFMM,
-            n: *const TEE_BigInt,
-            context: *const TEE_BigIntFMMContext,
-        ) -> c_void;
-        pub fn TEE_BigIntFMMConvertToBigInt(
             dest: *mut TEE_BigInt,
             src: *const TEE_BigIntFMM,
             n: *const TEE_BigInt,
