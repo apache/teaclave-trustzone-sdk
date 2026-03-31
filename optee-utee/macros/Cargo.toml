@@ -22,7 +22,10 @@ authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
 license = "Apache-2.0"
 repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
 description = "Procedural macros for TEE internal core API."
-edition = "2018"
+# Do not upgrade to 2024, as it would require all TAs using these macros to
+# wrap them with unsafe (e.g., #[ta_create] → #[unsafe(ta_create)]), which
+# would have a significant impact.
+edition = "2021"
 
 [lib]
 proc-macro = true

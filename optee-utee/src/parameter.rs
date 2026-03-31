@@ -112,7 +112,7 @@ impl Parameter {
         match self.param_type {
             ParamType::ValueInput | ParamType::ValueInout | ParamType::ValueOutput => {
                 Ok(ParamValue {
-                    raw: &mut (*self.raw).value,
+                    raw: unsafe { &mut (*self.raw).value },
                     param_type: self.param_type,
                     _marker: marker::PhantomData,
                 })
@@ -127,7 +127,7 @@ impl Parameter {
         match self.param_type {
             ParamType::MemrefInout | ParamType::MemrefInput | ParamType::MemrefOutput => {
                 Ok(ParamMemref {
-                    raw: &mut (*self.raw).memref,
+                    raw: unsafe { &mut (*self.raw).memref },
                     param_type: self.param_type,
                     _marker: marker::PhantomData,
                 })

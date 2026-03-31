@@ -90,7 +90,7 @@ mod tests {
 
     use optee_utee_sys::{
         mock_api,
-        mock_utils::{object::MockHandle, SERIAL_TEST_LOCK},
+        mock_utils::{SERIAL_TEST_LOCK, object::MockHandle},
     };
 
     use super::*;

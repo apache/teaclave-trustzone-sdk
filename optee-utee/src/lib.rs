@@ -16,13 +16,6 @@
 // under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![cfg_attr(all(
-    not(feature = "std"),
-    // A temporary workaround to let optee-utee build on stable Rust. We should
-    // remove it once we upgrade to a newer toolchain, though that’s currently
-    // blocked by our patched STD.
-    not(optee_utee_rustc_has_stable_error_in_core),
-), feature(error_in_core))]
 
 // Requires `alloc`.
 #[macro_use]
@@ -49,12 +42,12 @@ fn panic(_info: &core::panic::PanicInfo) -> ! {
 // `-C panic=abort`, but the linker requires the symbols to be present.
 #[cfg(all(not(feature = "std"), feature = "unwind_stubs"))]
 mod unwind_stubs {
-    #[no_mangle]
+    #[unsafe(no_mangle)]
     extern "C" fn _Unwind_Resume() -> ! {
         loop {}
     }
 
-    #[no_mangle]
+    #[unsafe(no_mangle)]
     extern "C" fn rust_eh_personality() {}
 }
 

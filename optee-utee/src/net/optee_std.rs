@@ -17,8 +17,8 @@
 
 use optee_utee_sys as raw;
 
-use super::optee::Setup;
 use super::SocketError;
+use super::optee::Setup;
 use super::{TcpStream, UdpSocket};
 use alloc::format;
 
