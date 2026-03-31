@@ -149,7 +149,7 @@ impl ErrorKind {
             ErrorKind::TimeNotSet => "The persistent time has not been set.",
             ErrorKind::TimeNeedsReset => {
                 "The persistent time has been set but may have been corrupted and SHALL no longer be trusted."
-            },
+            }
             ErrorKind::Unknown => "Unknown error.",
         }
     }

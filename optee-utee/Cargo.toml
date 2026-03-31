@@ -22,7 +22,7 @@ authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
 license = "Apache-2.0"
 repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
 description = "TEE internal core API."
-edition = "2018"
+edition = "2024"
 
 [dependencies]
 optee-utee-sys = { version = "0.8.0", path = "optee-utee-sys" }
@@ -50,6 +50,3 @@ unwind_stubs = []
 [workspace]
 resolver = "2"
 members = ['systest']
-
-[build-dependencies]
-rustc_version = "0.4.1"

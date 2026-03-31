@@ -370,7 +370,12 @@ impl PersistentObject {
     pub fn read(&mut self, buf: &mut [u8]) -> Result<u32> {
         let mut count: usize = 0;
         match unsafe {
-            raw::TEE_ReadObjectData(*self.as_raw_ref(), buf.as_mut_ptr() as _, buf.len(), &mut count)
+            raw::TEE_ReadObjectData(
+                *self.as_raw_ref(),
+                buf.as_mut_ptr() as _,
+                buf.len(),
+                &mut count,
+            )
         } {
             raw::TEE_SUCCESS => Ok(count as u32),
             code => Err(Error::from_raw_error(code)),
@@ -425,7 +430,8 @@ impl PersistentObject {
     ///    function which is not explicitly associated with a defined return
     ///    code for this function.
     pub fn write(&mut self, buf: &[u8]) -> Result<()> {
-        match unsafe { raw::TEE_WriteObjectData(*self.as_raw_ref(), buf.as_ptr() as _, buf.len()) } {
+        match unsafe { raw::TEE_WriteObjectData(*self.as_raw_ref(), buf.as_ptr() as _, buf.len()) }
+        {
             raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
         }
@@ -528,7 +534,7 @@ impl PersistentObject {
 
 impl GenericObject for PersistentObject {
     unsafe fn as_raw_ref(&self) -> &optee_utee_sys::TEE_ObjectHandle {
-        self.0.as_raw_ref()
+        unsafe { self.0.as_raw_ref() }
     }
 }
 
@@ -538,7 +544,7 @@ mod tests {
 
     use optee_utee_sys::{
         mock_api,
-        mock_utils::{object::MockHandle, SERIAL_TEST_LOCK},
+        mock_utils::{SERIAL_TEST_LOCK, object::MockHandle},
     };
 
     use super::*;

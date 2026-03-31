@@ -61,10 +61,10 @@ impl PropertyValue for String {
 
         // The first call is to get the size of the string
         // So we pass a null pointer and a size of 0
-        let res = {
+        let res = unsafe {
             raw::TEE_GetPropertyAsString(
                 set,
-                key.as_ptr() as *const core::ffi::c_char,
+                key.as_ptr() as *const _,
                 core::ptr::null_mut(),
                 &mut out_size,
             )
@@ -81,11 +81,11 @@ impl PropertyValue for String {
             raw::TEE_ERROR_SHORT_BUFFER => {
                 // Resize the string to the actual size
                 let mut out_buffer = vec![0; out_size];
-                let res = {
+                let res = unsafe {
                     raw::TEE_GetPropertyAsString(
                         set,
-                        key.as_ptr() as *const core::ffi::c_char,
-                        out_buffer.as_mut_ptr() as *mut core::ffi::c_char,
+                        key.as_ptr() as *const _,
+                        out_buffer.as_mut_ptr() as *mut _,
                         &mut out_size,
                     )
                 };
@@ -110,7 +110,7 @@ impl PropertyValue for bool {
     unsafe fn from_raw(set: raw::TEE_PropSetHandle, key: CString) -> Result<Self> {
         let mut b: bool = false;
 
-        let res = raw::TEE_GetPropertyAsBool(set, key.as_ptr() as *const core::ffi::c_char, &mut b);
+        let res = unsafe { raw::TEE_GetPropertyAsBool(set, key.as_ptr() as *const _, &mut b) };
         if res != 0 {
             return Err(Error::from_raw_error(res));
         }
@@ -123,8 +123,7 @@ impl PropertyValue for u32 {
     unsafe fn from_raw(set: raw::TEE_PropSetHandle, key: CString) -> Result<Self> {
         let mut value = 0;
 
-        let res =
-            raw::TEE_GetPropertyAsU32(set, key.as_ptr() as *const core::ffi::c_char, &mut value);
+        let res = unsafe { raw::TEE_GetPropertyAsU32(set, key.as_ptr() as *const _, &mut value) };
         if res != 0 {
             return Err(Error::from_raw_error(res));
         }
@@ -137,8 +136,7 @@ impl PropertyValue for u64 {
     unsafe fn from_raw(set: raw::TEE_PropSetHandle, key: CString) -> Result<Self> {
         let mut value = 0;
 
-        let res =
-            raw::TEE_GetPropertyAsU64(set, key.as_ptr() as *const core::ffi::c_char, &mut value);
+        let res = unsafe { raw::TEE_GetPropertyAsU64(set, key.as_ptr() as *const _, &mut value) };
         if res != 0 {
             return Err(Error::from_raw_error(res));
         }
@@ -153,10 +151,10 @@ impl PropertyValue for Vec<u8> {
 
         // The first call is to get the size of the binary block
         // So we pass a null pointer and a size of 0
-        let res = {
+        let res = unsafe {
             raw::TEE_GetPropertyAsBinaryBlock(
                 set,
-                key.as_ptr() as *const core::ffi::c_char,
+                key.as_ptr() as *const _,
                 core::ptr::null_mut(),
                 &mut out_size,
             )
@@ -174,11 +172,11 @@ impl PropertyValue for Vec<u8> {
             raw::TEE_ERROR_SHORT_BUFFER => {
                 let mut buf = vec![0; out_size];
 
-                let res = {
+                let res = unsafe {
                     raw::TEE_GetPropertyAsBinaryBlock(
                         set,
-                        key.as_ptr() as *const core::ffi::c_char,
-                        buf.as_mut_ptr() as *mut core::ffi::c_void,
+                        key.as_ptr() as *const _,
+                        buf.as_mut_ptr() as *mut _,
                         &mut out_size,
                     )
                 };
@@ -202,11 +200,8 @@ impl PropertyValue for Uuid {
             clockSeqAndNode: [0; 8],
         };
 
-        let res = raw::TEE_GetPropertyAsUUID(
-            set,
-            key.as_ptr() as *const core::ffi::c_char,
-            &mut raw_uuid,
-        );
+        let res =
+            unsafe { raw::TEE_GetPropertyAsUUID(set, key.as_ptr() as *const _, &mut raw_uuid) };
         if res != 0 {
             return Err(Error::from_raw_error(res));
         }
@@ -228,11 +223,8 @@ impl PropertyValue for Identity {
             },
         };
 
-        let res = raw::TEE_GetPropertyAsIdentity(
-            set,
-            key.as_ptr() as *const core::ffi::c_char,
-            &mut raw_id,
-        );
+        let res =
+            unsafe { raw::TEE_GetPropertyAsIdentity(set, key.as_ptr() as *const _, &mut raw_id) };
         if res != 0 {
             return Err(Error::from_raw_error(res));
         }

@@ -250,7 +250,11 @@ impl TransientObject {
     pub fn populate(&mut self, attrs: &[Attribute]) -> Result<()> {
         let p: Vec<raw::TEE_Attribute> = attrs.iter().map(|p| p.raw()).collect();
         match unsafe {
-            raw::TEE_PopulateTransientObject(*self.0.as_raw_ref(), p.as_ptr() as _, attrs.len() as u32)
+            raw::TEE_PopulateTransientObject(
+                *self.0.as_raw_ref(),
+                p.as_ptr() as _,
+                attrs.len() as u32,
+            )
         } {
             raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
@@ -311,7 +315,9 @@ impl TransientObject {
     ///    function which is not explicitly associated with a defined return
     ///    code for this function.
     pub fn copy_attribute_from<T: GenericObject>(&mut self, src_object: &T) -> Result<()> {
-        match unsafe { raw::TEE_CopyObjectAttributes1(*self.as_raw_ref(), *src_object.as_raw_ref()) } {
+        match unsafe {
+            raw::TEE_CopyObjectAttributes1(*self.as_raw_ref(), *src_object.as_raw_ref())
+        } {
             raw::TEE_SUCCESS => Ok(()),
             code => Err(Error::from_raw_error(code)),
         }
@@ -376,7 +382,7 @@ impl TransientObject {
 
 impl GenericObject for TransientObject {
     unsafe fn as_raw_ref(&self) -> &optee_utee_sys::TEE_ObjectHandle {
-        self.0.as_raw_ref()
+        unsafe { self.0.as_raw_ref() }
     }
 }
 
@@ -384,7 +390,7 @@ impl GenericObject for TransientObject {
 mod tests {
     use optee_utee_sys::{
         mock_api,
-        mock_utils::{object::MockHandle, SERIAL_TEST_LOCK},
+        mock_utils::{SERIAL_TEST_LOCK, object::MockHandle},
     };
 
     use super::*;
