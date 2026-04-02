@@ -19,7 +19,7 @@ use std::env::{self, VarError};
 use std::path::PathBuf;
 
 fn main() -> Result<(), VarError> {
-    if !is_feature_enabled("no_link")? {
+    if !cfg!(feature = "no_link") {
         link(is_env_present("TEEC_STATIC")?);
     }
     Ok(())
@@ -32,13 +32,6 @@ fn is_env_present(var: &str) -> Result<bool, VarError> {
         Ok(_) => Ok(true),
         Err(err) => Err(err),
     }
-}
-
-/// Checks if feature is enabled.
-/// Refer to: https://doc.rust-lang.org/cargo/reference/features.html#build-scripts
-fn is_feature_enabled(feature: &str) -> Result<bool, VarError> {
-    let feature_env = format!("CARGO_FEATURE_{}", feature.to_uppercase().replace("-", "_"));
-    is_env_present(&feature_env)
 }
 
 fn link(static_linkage: bool) {

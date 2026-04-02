@@ -22,12 +22,11 @@ version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-edition = "2018"
+edition.workspace = true
 publish = false
 
 [dependencies]
 optee-teec-sys.workspace = true
-libc.workspace = true
 
 [build-dependencies]
-ctest = "0.4"
+ctest = "0.5"

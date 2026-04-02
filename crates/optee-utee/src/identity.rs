@@ -17,7 +17,6 @@
 
 use crate::Uuid;
 use optee_utee_sys as raw;
-use strum_macros::Display;
 
 #[derive(Copy, Clone)]
 pub struct Identity {
@@ -49,7 +48,7 @@ impl From<raw::TEE_Identity> for Identity {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Display)]
+#[derive(Copy, Clone, PartialEq, Eq, strum::Display)]
 #[repr(u32)]
 pub enum LoginType {
     Public = raw::TEE_LOGIN_PUBLIC,

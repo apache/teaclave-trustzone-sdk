@@ -18,5 +18,6 @@
 #![allow(non_camel_case_types, non_snake_case)]
 
 pub use tee_client_api::*;
+pub type size_t = usize;
 
 mod tee_client_api;

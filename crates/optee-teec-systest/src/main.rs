@@ -15,12 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#![allow(bad_style)]
-
-extern crate optee_teec_sys;
-extern crate libc;
-
-use libc::*;
+use core::ffi::*;
 use optee_teec_sys::*;
 
 include!(concat!(env!("OUT_DIR"), "/all.rs"));

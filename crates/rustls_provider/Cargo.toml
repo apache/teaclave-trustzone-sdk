@@ -30,7 +30,5 @@ optee-utee.workspace = true
 rustls = { version = "0.23.12", default-features = false, features = ["std"] }
 rustls-rustcrypto = "0.0.2-alpha"
 getrandom = "0.2" 
-
-# Pin these crates for compatibility with our Rustc version nightly-2024-05-15
-base64ct = "=1.6.0"
-ed25519-dalek = "=2.1.0"
+base64ct = "1.8.3"
+ed25519-dalek = "2.2.0"

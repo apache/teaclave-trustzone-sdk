@@ -71,15 +71,14 @@ pub fn plugin_init(_args: TokenStream, input: TokenStream) -> TokenStream {
 
 // check if return_type of the function is `optee_teec::Result<()>`
 fn check_return_type(item_fn: &syn::ItemFn) -> bool {
-    if let syn::ReturnType::Type(_, return_type) = item_fn.sig.output.to_owned() {
-        if let syn::Type::Path(path) = return_type.as_ref() {
+    if let syn::ReturnType::Type(_, return_type) = item_fn.sig.output.to_owned()
+        && let syn::Type::Path(path) = return_type.as_ref() {
             let expected_type = quote! { optee_teec::Result<()> };
             let actual_type = path.path.to_token_stream();
             if expected_type.to_string() == actual_type.to_string() {
                 return true;
             }
         }
-    }
     false
 }
 
