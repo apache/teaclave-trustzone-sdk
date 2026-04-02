@@ -62,7 +62,7 @@ run_in_qemu() {
 }
 
 run_in_qemu_with_timeout_secs() {
-    timeout "$2" \
+    time timeout "$2" \
         ssh $SSH_TARGET -p $SSH_PORT $SSH_OPTIONS "$1"
 }
 
