@@ -26,7 +26,6 @@ edition.workspace = true
 
 [dependencies]
 optee-utee-sys.workspace = true
-libc.workspace = true
 
 [build-dependencies]
 ctest = "0.5"

@@ -180,11 +180,12 @@ pub mod test_loadable_plugin {
     use super::*;
     use alloc::string::ToString;
     use optee_utee_sys::{mock_api, mock_utils::SERIAL_TEST_LOCK};
-    use rand::Rng;
-    use rand::distributions::Alphanumeric;
+    use rand::distr::Alphanumeric;
 
     fn generate_random_bytes(len: usize) -> Vec<u8> {
-        rand::thread_rng()
+        use rand::RngExt;
+
+        rand::rng()
             .sample_iter(&Alphanumeric)
             .take(len)
             .collect()

@@ -31,7 +31,7 @@ bitflags.workspace = true
 uuid.workspace = true
 hex.workspace = true
 libc_alloc = "1.0.5"
-strum_macros = "0.26"
+strum = { version = "0.28", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
 rand.workspace = true

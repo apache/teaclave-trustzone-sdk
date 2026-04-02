@@ -15,7 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use libc::*;
+use core::ffi::*;
+use crate::size_t;
 
 pub fn TEEC_PARAM_TYPES(p0:u32, p1:u32, p2:u32, p3:u32) -> u32 {
     let tmp = p1 << 4 | p2 << 8 | p3 << 12;
@@ -168,7 +169,7 @@ pub struct TEEC_Operation {
     pub imp: TEEC_Operation__Imp,
 }
 
-extern "C" {
+unsafe extern "C" {
     pub fn TEEC_InitializeContext(name: *const c_char, context: *mut TEEC_Context) -> TEEC_Result;
     pub fn TEEC_FinalizeContext(context: *mut TEEC_Context);
     pub fn TEEC_OpenSession(context: *mut TEEC_Context,

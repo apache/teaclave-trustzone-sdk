@@ -22,7 +22,7 @@ version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-edition = "2018"
+edition.workspace = true
 
 [dependencies]
 quote.workspace = true

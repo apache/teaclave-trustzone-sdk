@@ -24,29 +24,47 @@ fn main() {
         tmp.push("usr/include");
         tmp
     };
-    cfg.language(ctest::Lang::C)
+    cfg.language(ctest::Language::C)
+        .edition(2024)
         .target("aarch64-unknown-linux-gnu")
         .header("tee_client_api.h")
         .include(path.display().to_string())
-        .type_name(|s, _is_struct, _is_union| s.to_string())
-        .field_name(|_s, field| {
-            if field.starts_with("imp__") {
-                return format!("imp.{}", field.strip_prefix("imp__").expect("must ok"));
+        .rename_struct_ty(|ty| {
+            if ty.starts_with("TEEC") {
+                return Some(ty.to_string());
             }
-            field.to_string()
+            None
         })
-        .skip_struct(|s| s.ends_with("__Imp"))
+        .rename_union_ty(|ty| {
+            if ty.starts_with("TEEC") {
+                return Some(ty.to_string());
+            }
+            None
+        })
+        .rename_struct_field(|_s, field| {
+            let field = field.ident();
+            if field.starts_with("imp__") {
+                return Some(format!(
+                    "imp.{}",
+                    field.strip_prefix("imp__").expect("must ok")
+                ));
+            }
+            None
+        })
+        .skip_struct(|s| s.ident().ends_with("__Imp"))
         // The roundtrip implementation in ctest doesn't work with nested
         // structs —it treats all bytes of TEEC_Session as if there’s no
         // padding, which causes a mismatch in the last 4 padding bytes
         // during the roundtrip test.
         .skip_roundtrip(|s| s == "TEEC_Session")
-        .skip_field_type(|s, field| {
+        .skip_struct_field_type(|s, field| {
+            let s = s.ident();
+            let field = field.ident();
             (s == "TEEC_SharedMemory"
                 || s == "TEEC_Context"
                 || s == "TEEC_Session"
                 || s == "TEEC_Operation")
                 && field == "imp"
         });
-    cfg.generate("../optee-teec-sys/src/lib.rs", "all.rs");
+    ctest::generate_test(&mut cfg, "../optee-teec-sys/src/lib.rs", "all.rs").unwrap();
 }
