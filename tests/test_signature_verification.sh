@@ -27,7 +27,7 @@ copy_ta_to_qemu ../examples/signature_verification-rs/ta/target/$TARGET_TA/relea
 copy_ca_to_qemu ../examples/signature_verification-rs/host/target/$TARGET_HOST/release/signature_verification-rs
 
 # Run script specific commands in QEMU
-OUTPUT=$(run_in_qemu "signature_verification-rs") || print_detail_and_exit
+OUTPUT=$(run_in_qemu_with_timeout_secs "signature_verification-rs" 20s) || print_detail_and_exit
 
 # Script specific checks
 {

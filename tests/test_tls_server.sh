@@ -32,7 +32,7 @@ run_in_qemu "nohup tls_server-rs > /tmp/tls_server.log 2>&1 &"
 (sleep 5 && run_in_qemu "cat /tmp/tls_server.log" | grep -q "listening") || (echo " [TIMEOUT] Server failed to start." && print_detail_and_exit)
 # Outside the QEMU: connect the server using openssl, accept the self-signed CA cert
 # || true because we want to continue testing even if the connection fails, and check the log later
-OPENSSL_OUTPUT=$(echo "Q" | openssl s_client -connect 127.0.0.1:54433 -CAfile ../examples/tls_server-rs/ta/test-ca/ecdsa/ca.cert -debug 2>&1) || true
+OPENSSL_OUTPUT=$(echo "Q" | timeout 10s openssl s_client -connect 127.0.0.1:54433 -CAfile ../examples/tls_server-rs/ta/test-ca/ecdsa/ca.cert -debug 2>&1) || true
 run_in_qemu "kill \$(pidof tls_server-rs)" || print_detail_and_exit
 
 # Script specific checks
