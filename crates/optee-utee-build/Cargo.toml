@@ -16,25 +16,17 @@
 # under the License.
 
 [package]
-name = "optee-teec"
-version = "0.8.0"
-authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
-license = "Apache-2.0"
-repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
-description = "TEE client API."
+name = "optee-utee-build"
+description = "Build tool for TA"
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 edition = "2018"
 
 [dependencies]
-optee-teec-sys = { version = "0.8.0", path = "optee-teec-sys" }
-optee-teec-macros = { version = "0.8.0", path = "macros" }
-uuid = "1.22.0"
-hex = "0.3"
-num_enum = { version = "0.7.3", default-features = false }
-
-[dev-dependencies]
-# disable linking when running unit tests
-optee-teec-sys = { version = "0.8.0", path = "optee-teec-sys", features = ["no_link"] }
-
-[workspace]
-resolver = "2"
-members = ['systest']
+quote.workspace = true
+proc-macro2 = "1.0.92"
+syn.workspace = true
+prettyplease = "0.2.25"
+uuid.workspace = true

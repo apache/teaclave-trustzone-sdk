@@ -62,8 +62,7 @@ jobs:
           source environment
           # Run systest
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OPTEE_DIR/optee_client/export_arm64/usr/lib
-          (cd optee-teec && cargo run -p systest)
-          (cd optee-utee && cargo build -p systest)
+          (cd crates && cargo run -p optee-teec-systest && cargo build -p optee-utee-systest)
 
   # Test build no-std examples on dev docker container
   test-nostd-build-on-dev-docker:

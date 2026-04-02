@@ -16,18 +16,18 @@
 # under the License.
 
 [package]
-name = "systest"
-version = "0.8.0"
-authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
-license = "Apache-2.0"
-repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
-description = "Automatic testing of FFI bindings for the libutee library."
-edition = "2024"
+name = "optee-teec-systest"
+description = "Automatic testing of FFI bindings for the libteec library."
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition = "2018"
+publish = false
 
 [dependencies]
-optee-utee-sys = { path = "../optee-utee-sys" }
-libc = "0.2"
+optee-teec-sys.workspace = true
+libc.workspace = true
 
 [build-dependencies]
-ctest = "0.5"
-cc = "1.2.19"
+ctest = "0.4"

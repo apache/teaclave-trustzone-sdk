@@ -26,7 +26,7 @@ edition = "2018"
 
 [dependencies]
 proto = { path = "../proto" }
-optee-teec = { path = "../../../../optee-teec" }
+optee-teec = { path = "../../../../crates/optee-teec" }
 
 structopt = "0.3"
 bincode = "1.3.3"

@@ -16,20 +16,18 @@
 # under the License.
 
 [package]
-name = "optee-utee-sys"
-version = "0.8.0"
-authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
-license = "Apache-2.0"
-repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
-description = "Native bindings to the libutee library."
-edition = "2024"
-links = "utee"
+name = "optee-utee-systest"
+description = "Automatic testing of FFI bindings for the libutee library."
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
 
 [dependencies]
-mockall = { version = "0.14.0", optional = true }
+optee-utee-sys.workspace = true
+libc.workspace = true
 
-[features]
-default = []
-std = []
-no_link = []
-mock = ["dep:mockall", "std", "no_link"]
+[build-dependencies]
+ctest = "0.5"
+cc = "1.2.19"

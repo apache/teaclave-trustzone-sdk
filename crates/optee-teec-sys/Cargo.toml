@@ -16,19 +16,18 @@
 # under the License.
 
 [package]
-name = "optee-utee-build"
-version = "0.8.0"
-authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
-license = "Apache-2.0"
-repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
+name = "optee-teec-sys"
+description = "Native bindings to the libteec library."
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
 edition = "2018"
-description = "Build tool for TA"
+links = "teec"
 
 [dependencies]
-quote = "1.0.37"
-proc-macro2 = "1.0.92"
-syn = "2.0.90"
-prettyplease = "0.2.25"
-uuid = "1.22.0"
+libc.workspace = true
 
-
+[features]
+default=[]
+no_link=[]
