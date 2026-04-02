@@ -27,7 +27,7 @@ edition = "2018"
 [dependencies]
 libc = "0.2.48"
 proto = { path = "../proto" }
-optee-teec = { path = "../../../optee-teec" }
+optee-teec = { path = "../../../crates/optee-teec" }
 tiny_http = "0.12.0"
 
 [profile.release]

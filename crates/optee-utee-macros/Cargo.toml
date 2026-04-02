@@ -16,18 +16,24 @@
 # under the License.
 
 [package]
-name = "acipher-rs"
-version = "0.4.0"
-authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
-license = "Apache-2.0"
-repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
-description = "An example of Rust OP-TEE TrustZone SDK."
-edition = "2018"
+name = "optee-utee-macros"
+description = "Procedural macros for TEE internal core API."
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+# Do not upgrade to 2024, as it would require all TAs using these macros to
+# wrap them with unsafe (e.g., #[ta_create] → #[unsafe(ta_create)]), which
+# would have a significant impact.
+edition = "2021"
+
+[lib]
+proc-macro = true
 
 [dependencies]
-libc = "0.2.48"
-proto = { path = "../proto" }
-optee-teec = { path = "../../../crates/optee-teec" }
+quote.workspace = true
+syn.workspace = true
 
-[profile.release]
-lto = true
+[features]
+default = []
+std = []

@@ -30,8 +30,8 @@ std = ["optee-utee/std", "optee-utee-sys/std"]
 
 [dependencies]
 proto = { path = "../proto" }
-optee-utee-sys = { path = "../../../optee-utee/optee-utee-sys", features = ["std"] }
-optee-utee = { path = "../../../optee-utee", features = ["std"] }
+optee-utee-sys = { path = "../../../crates/optee-utee-sys", features = ["std"] }
+optee-utee = { path = "../../../crates/optee-utee", features = ["std"] }
 secure_db = { path = "../../../crates/secure_db" }
 
 anyhow = "1.0"
@@ -39,7 +39,7 @@ serde = { version = "1.0", features = ["derive"] }
 
 [build-dependencies]
 proto = { path = "../proto" }
-optee-utee-build = { path = "../../../optee-utee-build" }
+optee-utee-build = { path = "../../../crates/optee-utee-build" }
 
 [profile.release]
 panic = "abort"

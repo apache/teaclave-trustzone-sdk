@@ -26,8 +26,8 @@ edition = "2018"
 
 [dependencies]
 proto = { path = "../proto" }
-optee-utee-sys = { path = "../../../optee-utee/optee-utee-sys" }
-optee-utee = { path = "../../../optee-utee" }
+optee-utee-sys = { path = "../../../crates/optee-utee-sys" }
+optee-utee = { path = "../../../crates/optee-utee" }
 
 [features]
 default = []
@@ -35,7 +35,7 @@ std = ["optee-utee/std", "optee-utee-sys/std"]
 
 [build-dependencies]
 proto = { path = "../proto" }
-optee-utee-build = { path = "../../../optee-utee-build" }
+optee-utee-build = { path = "../../../crates/optee-utee-build" }
 
 [profile.release]
 panic = "abort"

@@ -27,7 +27,7 @@ publish = false
 
 [dependencies]
 proto = { path = "../proto" }
-optee-teec = { path = "../../../optee-teec" }
+optee-teec = { path = "../../../crates/optee-teec" }
 clap = { version = "4.5.31", features = ["derive"] }
 rand = "0.9.0"
 rust-mnist = "0.2.0"

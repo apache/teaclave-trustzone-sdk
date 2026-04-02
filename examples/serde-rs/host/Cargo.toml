@@ -27,7 +27,7 @@ edition = "2018"
 [dependencies]
 serde_json = "1.0"
 proto = { path = "../proto" }
-optee-teec = { path = "../../../optee-teec" }
+optee-teec = { path = "../../../crates/optee-teec" }
 
 [profile.release]
 lto = true

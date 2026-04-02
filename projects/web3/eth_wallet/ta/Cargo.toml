@@ -27,8 +27,8 @@ edition = "2018"
 [dependencies]
 libc = { path = "../../../../rust/libc" }
 proto = { path = "../proto" }
-optee-utee-sys = { path = "../../../../optee-utee/optee-utee-sys", features = ["std"] }
-optee-utee = { path = "../../../../optee-utee", features = ["std"] }
+optee-utee-sys = { path = "../../../../crates/optee-utee-sys", features = ["std"] }
+optee-utee = { path = "../../../../crates/optee-utee", features = ["std"] }
 secure_db = { path = "../../../../crates/secure_db" }
 
 anyhow = "1.0"
@@ -44,7 +44,7 @@ uuid = { version = "1.22.0", default-features = false }
 [build-dependencies]
 uuid = { version = "1.8", default-features = false }
 proto = { path = "../proto" }
-optee-utee-build = { path = "../../../../optee-utee-build" }
+optee-utee-build = { path = "../../../../crates/optee-utee-build" }
 
 [profile.release]
 lto = false

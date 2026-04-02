@@ -26,7 +26,7 @@ edition = "2018"
 
 [dependencies]
 proto = { path = "../proto" }
-optee-teec = { path = "../../../optee-teec" }
+optee-teec = { path = "../../../crates/optee-teec" }
 r2d2 = "0.8.10"
 clap = { version = "4.5.32", features = ["derive"] }
 anyhow = "1.0.97"

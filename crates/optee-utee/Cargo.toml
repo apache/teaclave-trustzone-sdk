@@ -16,17 +16,32 @@
 # under the License.
 
 [package]
-name = "systest"
-version = "0.8.0"
-authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
-license = "Apache-2.0"
-repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
-description = "Automatic testing of FFI bindings for the libteec library."
-edition = "2018"
+name = "optee-utee"
+description = "TEE internal core API."
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
 
 [dependencies]
-optee-teec-sys = { path = "../optee-teec-sys" }
-libc = "0.2"
+optee-utee-sys.workspace = true
+optee-utee-macros.workspace = true
+bitflags.workspace = true
+uuid.workspace = true
+hex.workspace = true
+libc_alloc = "1.0.5"
+strum_macros = "0.26"
 
-[build-dependencies]
-ctest = "0.4"
+[dev-dependencies]
+rand.workspace = true
+once_cell.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+optee-utee-sys = { workspace = true, features = ["mock"] }
+
+[features]
+default = []
+std = ["optee-utee-sys/std", "optee-utee-macros/std"]
+no_panic_handler = []
+unwind_stubs = []

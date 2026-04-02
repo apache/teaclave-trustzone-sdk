@@ -29,7 +29,7 @@ edition = "2018"
 # once we upgrade our STD rustc.
 url = "=2.5.0"
 proto = { path = "../proto" }
-optee-teec = { path = "../../../optee-teec" }
+optee-teec = { path = "../../../crates/optee-teec" }
 serde_json = "1.0"
 
 [profile.release]

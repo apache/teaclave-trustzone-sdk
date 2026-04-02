@@ -30,13 +30,13 @@ std = ["optee-utee/std", "optee-utee-sys/std"]
 
 [dependencies]
 proto = { path = "../proto" }
-optee-utee-sys = { path = "../../../optee-utee/optee-utee-sys" }
-optee-utee = { path = "../../../optee-utee", features = ["unwind_stubs"] }
+optee-utee-sys = { path = "../../../crates/optee-utee-sys" }
+optee-utee = { path = "../../../crates/optee-utee", features = ["unwind_stubs"] }
 cfg_block = "0.2.0"
 
 [build-dependencies]
 proto = { path = "../proto" }
-optee-utee-build = { path = "../../../optee-utee-build" }
+optee-utee-build = { path = "../../../crates/optee-utee-build" }
 
 [profile.release]
 panic = "abort"

@@ -16,24 +16,20 @@
 # under the License.
 
 [package]
-name = "optee-utee-macros"
-version = "0.8.0"
-authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
-license = "Apache-2.0"
-repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
-description = "Procedural macros for TEE internal core API."
-# Do not upgrade to 2024, as it would require all TAs using these macros to
-# wrap them with unsafe (e.g., #[ta_create] → #[unsafe(ta_create)]), which
-# would have a significant impact.
-edition = "2021"
-
-[lib]
-proc-macro = true
+name = "optee-utee-sys"
+description = "Native bindings to the libutee library."
+version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+links = "utee"
 
 [dependencies]
-quote = "1.0"
-syn = { version = "2.0", features = ["full"] }
+mockall = { version = "0.14.0", optional = true }
 
 [features]
 default = []
 std = []
+no_link = []
+mock = ["dep:mockall", "std", "no_link"]
