@@ -151,7 +151,7 @@ echo "==========================================="
 # Step 1: Build cargo-optee tool
 echo ""
 echo "Step 1: Building cargo-optee tool..."
-cd crates
+cd tools
 cargo build -p cargo-optee --release
 CARGO_OPTEE="$(pwd)/target/release/cargo-optee"
 cd ..
