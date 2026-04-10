@@ -20,13 +20,6 @@ use crate::{PropertyValue, TaConfig};
 use quote::{format_ident, quote};
 use std::str::FromStr;
 
-/// Start from rust edition 2024, `no_mangle` and `link_section` must be wrapped with unsafe
-#[derive(Clone)]
-pub enum RustEdition {
-    Before2024,
-    Edition2024,
-}
-
 /// Generator of head file, use it to generate a header file and then include it in user codes.
 ///
 /// Use only if you just want to generate a header file, and do the linking job yourself,
@@ -34,25 +27,23 @@ pub enum RustEdition {
 ///
 /// Examples:
 /// ```rust
-/// use optee_utee_build::{HeaderFileGenerator, TaConfig, RustEdition};
+/// use optee_utee_build::{HeaderFileGenerator, TaConfig};
 /// # use optee_utee_build::Error;
 /// # fn main() -> Result<(), Error> {
 /// const UUID: &str = "26509cec-4a2b-4935-87ab-762d89fbf0b0";
 /// let ta_config = TaConfig::new_default(UUID, "0.1.0", "example")?;
-/// let codes = HeaderFileGenerator::new(RustEdition::Before2024).generate(&ta_config)?;
+/// let codes = HeaderFileGenerator::new().generate(&ta_config)?;
 /// # Ok(())
 /// # }
 /// ```
 pub struct HeaderFileGenerator {
     code: proc_macro2::TokenStream,
-    edition: RustEdition,
 }
 
 impl HeaderFileGenerator {
-    pub fn new(edition: RustEdition) -> Self {
+    pub fn new() -> Self {
         Self {
             code: quote!(),
-            edition,
         }
     }
     pub fn generate(mut self, conf: &TaConfig) -> Result<String, Error> {
@@ -85,7 +76,7 @@ impl HeaderFileGenerator {
     fn write_trace(&mut self, conf: &TaConfig) {
         let trace_ext = string_to_binary_codes(&conf.trace_ext_prefix);
         let trace_level = conf.trace_level;
-        let no_mangle_attribute = self.edition.no_mangle_attribute_codes();
+        let no_mangle_attribute = no_mangle_attribute_codes();
         self.code.extend(quote! {
         #no_mangle_attribute
         pub static mut trace_level: c_int = #trace_level;
@@ -141,7 +132,7 @@ impl HeaderFileGenerator {
 
         const ORIGIN_PROPERTY_LEN: usize = 10;
         let property_len = ORIGIN_PROPERTY_LEN + conf.ext_properties.len();
-        let no_mangle_attribute = self.edition.no_mangle_attribute_codes();
+        let no_mangle_attribute = no_mangle_attribute_codes();
         self.code.extend(quote! {
         const IS_SINGLE_INSTANCE: bool = (TA_FLAGS & optee_utee_sys::TA_FLAG_SINGLE_INSTANCE) != 0;
         const IS_MULTI_SESSION: bool = (TA_FLAGS & optee_utee_sys::TA_FLAG_MULTI_SESSION) != 0;
@@ -212,8 +203,8 @@ impl HeaderFileGenerator {
     fn write_ta_head(&mut self, conf: &TaConfig) -> Result<(), Error> {
         let uuid_value_codes = uuid_to_tee_uuid_value_codes(&conf.uuid)?;
         let stack_size = conf.ta_stack_size + conf.ta_framework_stack_size;
-        let no_mangle_attribute = self.edition.no_mangle_attribute_codes();
-        let ta_head_session_attribute = self.edition.link_section_attribute_codes(".ta_head");
+        let no_mangle_attribute = no_mangle_attribute_codes();
+        let ta_head_session_attribute = link_section_attribute_codes(".ta_head");
         self.code.extend(quote! {
         #no_mangle_attribute
         #ta_head_session_attribute
@@ -228,8 +219,8 @@ impl HeaderFileGenerator {
         Ok(())
     }
     fn write_ta_heap(&mut self) {
-        let no_mangle_attribute = self.edition.no_mangle_attribute_codes();
-        let bss_session_attribute = self.edition.link_section_attribute_codes(".bss");
+        let no_mangle_attribute = no_mangle_attribute_codes();
+        let bss_session_attribute = link_section_attribute_codes(".bss");
         self.code.extend(quote! {
         #no_mangle_attribute
         #bss_session_attribute
@@ -339,19 +330,11 @@ fn string_to_binary_codes(s: &str) -> proc_macro2::TokenStream {
     proc_macro2::TokenStream::from_str(&wrapped).unwrap()
 }
 
-impl RustEdition {
-    fn no_mangle_attribute_codes(&self) -> proc_macro2::TokenStream {
-        match self {
-            RustEdition::Before2024 => quote! { #[no_mangle] },
-            RustEdition::Edition2024 => quote! { #[unsafe(no_mangle)] },
-        }
-    }
-    fn link_section_attribute_codes(&self, session_name: &str) -> proc_macro2::TokenStream {
-        match self {
-            RustEdition::Before2024 => quote! { #[link_section = #session_name] },
-            RustEdition::Edition2024 => quote! { #[unsafe(link_section = #session_name)] },
-        }
-    }
+fn no_mangle_attribute_codes() -> proc_macro2::TokenStream {
+    quote! { #[unsafe(no_mangle)] }
+}
+fn link_section_attribute_codes(session_name: &str) -> proc_macro2::TokenStream {
+    quote! { #[unsafe(link_section = #session_name)] }
 }
 
 #[cfg(test)]
@@ -359,23 +342,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_edition_before_2024() {
+    fn test_header_generation() {
         let uuid = "26509cec-4a2b-4935-87ab-762d89fbf0b0";
-        let conf = TaConfig::new_default(uuid, "0.1.0", "test_before_2024")
-            .unwrap()
-            .ta_data_size(1024 * 1024);
-        let generator = HeaderFileGenerator::new(RustEdition::Before2024);
+        let conf = TaConfig::new_default(uuid, "0.1.0", "test").unwrap();
+        let generator = HeaderFileGenerator::new();
         let codes = generator.generate(&conf).unwrap();
-        let exp_result = include_str!("../test_files/test_edition_before_2024_result.rs");
-        assert_eq!(codes, exp_result);
-    }
-    #[test]
-    fn test_edition_2024() {
-        let uuid = "26509cec-4a2b-4935-87ab-762d89fbf0b0";
-        let conf = TaConfig::new_default(uuid, "0.1.0", "test_edition_2024").unwrap();
-        let generator = HeaderFileGenerator::new(RustEdition::Edition2024);
-        let codes = generator.generate(&conf).unwrap();
-        let exp_result = include_str!("../test_files/test_edition_2024_result.rs");
+        let exp_result = include_str!("../test_files/test_result.rs");
         assert_eq!(codes, exp_result);
     }
 }

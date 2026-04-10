@@ -31,17 +31,17 @@ pub use uuid::Uuid;
 /// a build method, use it for TA compilation
 /// Usage:
 /// ```no_run
-/// use optee_utee_build::{TaConfig, RustEdition};
+/// use optee_utee_build::TaConfig;
 /// # use optee_utee_build::Error;
 /// # fn main() -> Result<(), Error> {
 /// const UUID: &str = "d93c2970-b1a6-4b86-90ac-b42830e78d9b";
 /// let ta_config = TaConfig::new_default(UUID, "0.1.0", "example")?;
-/// optee_utee_build::build(RustEdition::Before2024, ta_config)?;
+/// optee_utee_build::build(ta_config)?;
 /// # Ok(())
 /// # }
 /// ```
 ///
 /// You may check the Builder struct if you need some customizations.
-pub fn build(edition: RustEdition, config: TaConfig) -> Result<(), Error> {
-    Builder::new(edition, config).build()
+pub fn build(config: TaConfig) -> Result<(), Error> {
+    Builder::new(config).build()
 }

@@ -22,7 +22,7 @@ const TA_FLAGS: u32 = 0u32;
 const TA_DATA_SIZE: u32 = 32768u32;
 const TA_STACK_SIZE: u32 = 2048u32;
 const TA_VERSION: &[u8] = b"0.1.0\0";
-const TA_DESCRIPTION: &[u8] = b"test_edition_2024\0";
+const TA_DESCRIPTION: &[u8] = b"test\0";
 #[unsafe(no_mangle)]
 pub static mut trace_level: c_int = 4i32;
 #[unsafe(no_mangle)]

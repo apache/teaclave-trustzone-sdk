@@ -21,7 +21,6 @@ use std::path::PathBuf;
 
 use crate::Error;
 use crate::HeaderFileGenerator;
-use crate::RustEdition;
 use crate::TaConfig;
 use crate::{Linker, LinkerType};
 
@@ -32,24 +31,24 @@ const DEFAULT_HEADER_FILE_NAME: &str = "user_ta_header.rs";
 /// Usage:
 ///
 /// ```no_run
-/// use optee_utee_build::{TaConfig, Builder, RustEdition};
+/// use optee_utee_build::{TaConfig, Builder};
 /// # use optee_utee_build::Error;
 /// # fn main() -> Result<(), Error> {
 /// const UUID: &str = "d93c2970-b1a6-4b86-90ac-b42830e78d9b";
 /// let ta_config = TaConfig::new_default(UUID, "0.1.0", "example")?;
-/// Builder::new(RustEdition::Before2024, ta_config).build()?;
+/// Builder::new(ta_config).build()?;
 /// # Ok(())
 /// # }
 /// ```
 ///
 /// Or you can just use the build method, it's simpler
 /// ```no_run
-/// use optee_utee_build::{TaConfig, RustEdition};
+/// use optee_utee_build::TaConfig;
 /// # use optee_utee_build::Error;
 /// # fn main() -> Result<(), Error> {
 /// const UUID: &str = "d93c2970-b1a6-4b86-90ac-b42830e78d9b";
 /// let ta_config = TaConfig::new_default(UUID, "0.1.0", "example")?;
-/// optee_utee_build::build(RustEdition::Before2024, ta_config)?;
+/// optee_utee_build::build(ta_config)?;
 /// # Ok(())
 /// # }
 /// ```
@@ -58,30 +57,28 @@ const DEFAULT_HEADER_FILE_NAME: &str = "user_ta_header.rs";
 /// to detect the linker automatically, you can set it manually if you met
 /// some problems with it.
 /// ```no_run
-/// use optee_utee_build::{TaConfig, Builder, RustEdition, LinkerType};
+/// use optee_utee_build::{TaConfig, Builder, LinkerType};
 /// # use optee_utee_build::Error;
 /// # fn main() -> Result<(), Error> {
 /// const UUID: &str = "d93c2970-b1a6-4b86-90ac-b42830e78d9b";
 /// let ta_config = TaConfig::new_default(UUID, "0.1.0", "example")?;
-/// Builder::new(RustEdition::Before2024, ta_config).linker_type(LinkerType::Ld).build()?;
+/// Builder::new(ta_config).linker_type(LinkerType::Ld).build()?;
 /// # Ok(())
 /// # }
 /// ```
 pub struct Builder {
     out_dir: Option<PathBuf>,
-    edition: RustEdition,
     header_file_name: Option<String>,
     ta_config: TaConfig,
     linker_type: Option<LinkerType>,
 }
 
 impl Builder {
-    pub fn new(edition: RustEdition, ta_config: TaConfig) -> Self {
+    pub fn new(ta_config: TaConfig) -> Self {
         Self {
             out_dir: Option::None,
             header_file_name: Option::None,
             linker_type: Option::None,
-            edition,
             ta_config,
         }
     }
@@ -115,8 +112,7 @@ impl Builder {
             None => DEFAULT_HEADER_FILE_NAME,
         });
         let mut buffer = File::create(out_header_file_name.clone())?;
-        let header_codes =
-            HeaderFileGenerator::new(self.edition.clone()).generate(&self.ta_config)?;
+        let header_codes = HeaderFileGenerator::new().generate(&self.ta_config)?;
         buffer.write_all(header_codes.as_bytes())?;
         Ok(())
     }
