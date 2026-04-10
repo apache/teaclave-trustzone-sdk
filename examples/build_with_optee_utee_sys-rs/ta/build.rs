@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use optee_utee_build::{Error, RustEdition, TaConfig};
+use optee_utee_build::{Error, TaConfig};
 
 fn main() -> Result<(), Error> {
     // For Rust editions 2018 and earlier, You must set workspace.resolver = "2"
@@ -33,5 +33,5 @@ fn main() -> Result<(), Error> {
         | optee_utee_sys::TA_FLAG_INSTANCE_KEEP_ALIVE;
 
     let config = TaConfig::new_default_with_cargo_env(proto::UUID)?.ta_flags(flags);
-    optee_utee_build::build(RustEdition::Before2024, config)
+    optee_utee_build::build(config)
 }

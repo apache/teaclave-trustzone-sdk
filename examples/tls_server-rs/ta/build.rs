@@ -15,11 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use optee_utee_build::{Error, RustEdition, TaConfig};
+use optee_utee_build::{Error, TaConfig};
 
 fn main() -> Result<(), Error> {
     let ta_config = TaConfig::new_default_with_cargo_env(proto::UUID)?
         .ta_data_size(18 * 1024 * 1024)
         .ta_stack_size(2 * 1024 * 1024);
-    optee_utee_build::build(RustEdition::Before2024, ta_config)
+    optee_utee_build::build(ta_config)
 }
