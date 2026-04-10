@@ -55,7 +55,7 @@ pub fn ta_create(_args: TokenStream, input: TokenStream) -> TokenStream {
     }
 
     quote!(
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub extern "C" fn TA_CreateEntryPoint() -> optee_utee_sys::TEE_Result {
             match #f_ident() {
                 Ok(_) => optee_utee_sys::TEE_SUCCESS,
@@ -101,7 +101,7 @@ pub fn ta_destroy(_args: TokenStream, input: TokenStream) -> TokenStream {
     }
 
     quote!(
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub extern "C" fn TA_DestroyEntryPoint() {
             #f_ident()
         }
@@ -150,7 +150,7 @@ pub fn ta_open_session(_args: TokenStream, input: TokenStream) -> TokenStream {
 
     match f_sig.inputs.len() {
         1 => quote!(
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn TA_OpenSessionEntryPoint(
                 param_types: optee_utee::RawParamTypes,
                 params: &mut optee_utee::RawParams,
@@ -176,7 +176,7 @@ pub fn ta_open_session(_args: TokenStream, input: TokenStream) -> TokenStream {
             quote!(
                 // To eliminate the clippy error: this public function might dereference a raw pointer but is not marked `unsafe`
                 // we just expand the unsafe block, but the session-related macros need refactoring in the future
-                #[no_mangle]
+                #[unsafe(no_mangle)]
                 pub unsafe extern "C" fn TA_OpenSessionEntryPoint(
                     param_types: optee_utee::RawParamTypes,
                     params: &mut optee_utee::RawParams,
@@ -240,7 +240,7 @@ pub fn ta_close_session(_args: TokenStream, input: TokenStream) -> TokenStream {
 
     match f_sig.inputs.len() {
         0 => quote!(
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn TA_CloseSessionEntryPoint(_: *mut core::ffi::c_void) {
                 #f_ident()
             }
@@ -257,7 +257,7 @@ pub fn ta_close_session(_args: TokenStream, input: TokenStream) -> TokenStream {
             quote!(
                 // To eliminate the clippy error: this public function might dereference a raw pointer but is not marked `unsafe`
                 // we just expand the unsafe block, but the session-related macros need refactoring in the future
-                #[no_mangle]
+                #[unsafe(no_mangle)]
                 pub unsafe extern "C" fn TA_CloseSessionEntryPoint(sess_ctx: *mut core::ffi::c_void) {
                     if sess_ctx.is_null() {
                         panic!("sess_ctx is null");
@@ -312,7 +312,7 @@ pub fn ta_invoke_command(_args: TokenStream, input: TokenStream) -> TokenStream 
 
     match f_sig.inputs.len() {
         2 => quote!(
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn TA_InvokeCommandEntryPoint(
                 _: *mut core::ffi::c_void,
                 cmd_id: u32,
@@ -340,7 +340,7 @@ pub fn ta_invoke_command(_args: TokenStream, input: TokenStream) -> TokenStream 
             quote!(
                 // To eliminate the clippy error: this public function might dereference a raw pointer but is not marked `unsafe`
                 // we just expand the unsafe block, but the session-related macros need refactoring in the future
-                #[no_mangle]
+                #[unsafe(no_mangle)]
                 pub unsafe extern "C" fn TA_InvokeCommandEntryPoint(
                     sess_ctx: *mut core::ffi::c_void,
                     cmd_id: u32,
@@ -373,13 +373,11 @@ pub fn ta_invoke_command(_args: TokenStream, input: TokenStream) -> TokenStream 
 }
 
 fn extract_fn_arg_mut_ref_type(fn_arg: &syn::FnArg) -> Result<&syn::Type, syn::parse::Error> {
-    if let syn::FnArg::Typed(ty) = fn_arg {
-        if let syn::Type::Reference(type_ref) = ty.ty.as_ref() {
-            if type_ref.mutability.is_some() {
+    if let syn::FnArg::Typed(ty) = fn_arg
+        && let syn::Type::Reference(type_ref) = ty.ty.as_ref()
+            && type_ref.mutability.is_some() {
                 return Ok(&*type_ref.elem);
-            }
-        }
-    };
+            };
     Err(syn::parse::Error::new(
         fn_arg.span(),
         "this argument should have signature `_: &mut T`",
