@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{raw, ConnectionMethods, Error, Operation, Param, ParamNone, Result, Session, Uuid};
+use crate::{ConnectionMethods, Error, Operation, Param, ParamNone, Result, Session, Uuid, raw};
 use std::{cell::RefCell, ptr, rc::Rc};
 
 pub struct InnerContext(pub raw::TEEC_Context);

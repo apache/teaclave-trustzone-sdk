@@ -19,10 +19,10 @@ use crate::SecureStorageDb;
 use crate::Storable;
 use anyhow::{anyhow, Result};
 use std::{
-    string::ToString,
     collections::HashMap,
     convert::TryFrom,
     hash::Hash,
+    string::ToString,
     sync::{Arc, RwLock},
 };
 

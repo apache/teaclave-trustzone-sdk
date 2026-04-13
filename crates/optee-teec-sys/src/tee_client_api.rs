@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use core::ffi::*;
 use crate::size_t;
+use core::ffi::*;
 
-pub fn TEEC_PARAM_TYPES(p0:u32, p1:u32, p2:u32, p3:u32) -> u32 {
+pub fn TEEC_PARAM_TYPES(p0: u32, p1: u32, p2: u32, p3: u32) -> u32 {
     let tmp = p1 << 4 | p2 << 8 | p3 << 12;
     p0 | tmp
 }
@@ -27,52 +27,52 @@ pub const TEEC_CONFIG_PAYLOAD_REF_COUNT: u32 = 4;
 
 pub const TEEC_CONFIG_SHAREDMEM_MAX_SIZE: c_ulong = -1 as c_long as c_ulong;
 
-pub const TEEC_NONE: u32                  = 0x00000000;
-pub const TEEC_VALUE_INPUT: u32           = 0x00000001;
-pub const TEEC_VALUE_OUTPUT: u32          = 0x00000002;
-pub const TEEC_VALUE_INOUT: u32           = 0x00000003;
-pub const TEEC_MEMREF_TEMP_INPUT: u32     = 0x00000005;
-pub const TEEC_MEMREF_TEMP_OUTPUT: u32    = 0x00000006;
-pub const TEEC_MEMREF_TEMP_INOUT: u32     = 0x00000007;
-pub const TEEC_MEMREF_WHOLE: u32          = 0x0000000C;
-pub const TEEC_MEMREF_PARTIAL_INPUT: u32  = 0x0000000D;
+pub const TEEC_NONE: u32 = 0x00000000;
+pub const TEEC_VALUE_INPUT: u32 = 0x00000001;
+pub const TEEC_VALUE_OUTPUT: u32 = 0x00000002;
+pub const TEEC_VALUE_INOUT: u32 = 0x00000003;
+pub const TEEC_MEMREF_TEMP_INPUT: u32 = 0x00000005;
+pub const TEEC_MEMREF_TEMP_OUTPUT: u32 = 0x00000006;
+pub const TEEC_MEMREF_TEMP_INOUT: u32 = 0x00000007;
+pub const TEEC_MEMREF_WHOLE: u32 = 0x0000000C;
+pub const TEEC_MEMREF_PARTIAL_INPUT: u32 = 0x0000000D;
 pub const TEEC_MEMREF_PARTIAL_OUTPUT: u32 = 0x0000000E;
-pub const TEEC_MEMREF_PARTIAL_INOUT: u32  = 0x0000000F;
+pub const TEEC_MEMREF_PARTIAL_INOUT: u32 = 0x0000000F;
 
-pub const TEEC_MEM_INPUT: u32  = 0x00000001;
+pub const TEEC_MEM_INPUT: u32 = 0x00000001;
 pub const TEEC_MEM_OUTPUT: u32 = 0x00000002;
 
-pub const TEEC_SUCCESS: u32               = 0x00000000;
-pub const TEEC_ERROR_GENERIC: u32         = 0xFFFF0000;
-pub const TEEC_ERROR_ACCESS_DENIED: u32   = 0xFFFF0001;
-pub const TEEC_ERROR_CANCEL: u32          = 0xFFFF0002;
+pub const TEEC_SUCCESS: u32 = 0x00000000;
+pub const TEEC_ERROR_GENERIC: u32 = 0xFFFF0000;
+pub const TEEC_ERROR_ACCESS_DENIED: u32 = 0xFFFF0001;
+pub const TEEC_ERROR_CANCEL: u32 = 0xFFFF0002;
 pub const TEEC_ERROR_ACCESS_CONFLICT: u32 = 0xFFFF0003;
-pub const TEEC_ERROR_EXCESS_DATA: u32     = 0xFFFF0004;
-pub const TEEC_ERROR_BAD_FORMAT: u32      = 0xFFFF0005;
-pub const TEEC_ERROR_BAD_PARAMETERS: u32  = 0xFFFF0006;
-pub const TEEC_ERROR_BAD_STATE: u32       = 0xFFFF0007;
-pub const TEEC_ERROR_ITEM_NOT_FOUND: u32  = 0xFFFF0008;
+pub const TEEC_ERROR_EXCESS_DATA: u32 = 0xFFFF0004;
+pub const TEEC_ERROR_BAD_FORMAT: u32 = 0xFFFF0005;
+pub const TEEC_ERROR_BAD_PARAMETERS: u32 = 0xFFFF0006;
+pub const TEEC_ERROR_BAD_STATE: u32 = 0xFFFF0007;
+pub const TEEC_ERROR_ITEM_NOT_FOUND: u32 = 0xFFFF0008;
 pub const TEEC_ERROR_NOT_IMPLEMENTED: u32 = 0xFFFF0009;
-pub const TEEC_ERROR_NOT_SUPPORTED: u32   = 0xFFFF000A;
-pub const TEEC_ERROR_NO_DATA: u32         = 0xFFFF000B;
-pub const TEEC_ERROR_OUT_OF_MEMORY: u32   = 0xFFFF000C;
-pub const TEEC_ERROR_BUSY: u32            = 0xFFFF000D;
-pub const TEEC_ERROR_COMMUNICATION: u32   = 0xFFFF000E;
-pub const TEEC_ERROR_SECURITY: u32        = 0xFFFF000F;
-pub const TEEC_ERROR_SHORT_BUFFER: u32    = 0xFFFF0010;
+pub const TEEC_ERROR_NOT_SUPPORTED: u32 = 0xFFFF000A;
+pub const TEEC_ERROR_NO_DATA: u32 = 0xFFFF000B;
+pub const TEEC_ERROR_OUT_OF_MEMORY: u32 = 0xFFFF000C;
+pub const TEEC_ERROR_BUSY: u32 = 0xFFFF000D;
+pub const TEEC_ERROR_COMMUNICATION: u32 = 0xFFFF000E;
+pub const TEEC_ERROR_SECURITY: u32 = 0xFFFF000F;
+pub const TEEC_ERROR_SHORT_BUFFER: u32 = 0xFFFF0010;
 pub const TEEC_ERROR_EXTERNAL_CANCEL: u32 = 0xFFFF0011;
-pub const TEEC_ERROR_TARGET_DEAD: u32     = 0xFFFF3024;
+pub const TEEC_ERROR_TARGET_DEAD: u32 = 0xFFFF3024;
 
-pub const TEEC_ORIGIN_API: u32         = 0x00000001;
-pub const TEEC_ORIGIN_COMMS: u32       = 0x00000002;
-pub const TEEC_ORIGIN_TEE: u32         = 0x00000003;
+pub const TEEC_ORIGIN_API: u32 = 0x00000001;
+pub const TEEC_ORIGIN_COMMS: u32 = 0x00000002;
+pub const TEEC_ORIGIN_TEE: u32 = 0x00000003;
 pub const TEEC_ORIGIN_TRUSTED_APP: u32 = 0x00000004;
 
-pub const TEEC_LOGIN_PUBLIC: u32            = 0x00000000;
-pub const TEEC_LOGIN_USER: u32              = 0x00000001;
-pub const TEEC_LOGIN_GROUP: u32             = 0x00000002;
-pub const TEEC_LOGIN_APPLICATION: u32       = 0x00000004;
-pub const TEEC_LOGIN_USER_APPLICATION: u32  = 0x00000005;
+pub const TEEC_LOGIN_PUBLIC: u32 = 0x00000000;
+pub const TEEC_LOGIN_USER: u32 = 0x00000001;
+pub const TEEC_LOGIN_GROUP: u32 = 0x00000002;
+pub const TEEC_LOGIN_APPLICATION: u32 = 0x00000004;
+pub const TEEC_LOGIN_USER_APPLICATION: u32 = 0x00000005;
 pub const TEEC_LOGIN_GROUP_APPLICATION: u32 = 0x00000006;
 
 #[allow(non_camel_case_types)]
@@ -172,22 +172,30 @@ pub struct TEEC_Operation {
 unsafe extern "C" {
     pub fn TEEC_InitializeContext(name: *const c_char, context: *mut TEEC_Context) -> TEEC_Result;
     pub fn TEEC_FinalizeContext(context: *mut TEEC_Context);
-    pub fn TEEC_OpenSession(context: *mut TEEC_Context,
-                            session: *mut TEEC_Session,
-                            destination: *const TEEC_UUID,
-                            connectionMethod: u32,
-                            connectionData: *const c_void,
-                            operation: *mut TEEC_Operation,
-                            returnOrigin: *mut u32) -> TEEC_Result;
+    pub fn TEEC_OpenSession(
+        context: *mut TEEC_Context,
+        session: *mut TEEC_Session,
+        destination: *const TEEC_UUID,
+        connectionMethod: u32,
+        connectionData: *const c_void,
+        operation: *mut TEEC_Operation,
+        returnOrigin: *mut u32,
+    ) -> TEEC_Result;
     pub fn TEEC_CloseSession(session: *mut TEEC_Session);
-    pub fn TEEC_InvokeCommand(session: *mut TEEC_Session,
-                              commandID: u32,
-                              operation: *mut TEEC_Operation,
-                              returnOrigin: *mut u32) -> TEEC_Result;
-    pub fn TEEC_RegisterSharedMemory(context: *mut TEEC_Context,
-                                     sharedMem: *mut TEEC_SharedMemory) -> TEEC_Result;
-    pub fn TEEC_AllocateSharedMemory(context: *mut TEEC_Context,
-                                     sharedMem: *mut TEEC_SharedMemory) -> TEEC_Result;
+    pub fn TEEC_InvokeCommand(
+        session: *mut TEEC_Session,
+        commandID: u32,
+        operation: *mut TEEC_Operation,
+        returnOrigin: *mut u32,
+    ) -> TEEC_Result;
+    pub fn TEEC_RegisterSharedMemory(
+        context: *mut TEEC_Context,
+        sharedMem: *mut TEEC_SharedMemory,
+    ) -> TEEC_Result;
+    pub fn TEEC_AllocateSharedMemory(
+        context: *mut TEEC_Context,
+        sharedMem: *mut TEEC_SharedMemory,
+    ) -> TEEC_Result;
     pub fn TEEC_ReleaseSharedMemory(sharedMemory: *mut TEEC_SharedMemory);
     pub fn TEEC_RequestCancellation(operation: *mut TEEC_Operation);
 }

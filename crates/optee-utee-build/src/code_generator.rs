@@ -36,15 +36,14 @@ use std::str::FromStr;
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Default)]
 pub struct HeaderFileGenerator {
     code: proc_macro2::TokenStream,
 }
 
 impl HeaderFileGenerator {
     pub fn new() -> Self {
-        Self {
-            code: quote!(),
-        }
+        Default::default()
     }
     pub fn generate(mut self, conf: &TaConfig) -> Result<String, Error> {
         self.write_includes();
@@ -240,9 +239,7 @@ fn property_value_data_codes(value: &PropertyValue) -> Result<proc_macro2::Token
         PropertyValue::Uuid(v) => uuid_to_tee_uuid_value_codes(v),
         PropertyValue::Str(v) => Ok(string_to_binary_codes(v)),
         PropertyValue::BinaryBlock(v) => Ok(string_to_binary_codes(v)),
-        PropertyValue::Identity(login, uuid) => {
-            identity_to_tee_identity_value_codes(*login, uuid)
-        }
+        PropertyValue::Identity(login, uuid) => identity_to_tee_identity_value_codes(*login, uuid),
     }
 }
 

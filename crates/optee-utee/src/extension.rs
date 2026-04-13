@@ -185,10 +185,7 @@ pub mod test_loadable_plugin {
     fn generate_random_bytes(len: usize) -> Vec<u8> {
         use rand::RngExt;
 
-        rand::rng()
-            .sample_iter(&Alphanumeric)
-            .take(len)
-            .collect()
+        rand::rng().sample_iter(&Alphanumeric).take(len).collect()
     }
 
     fn generate_test_pairs(

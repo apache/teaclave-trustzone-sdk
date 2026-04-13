@@ -20,7 +20,7 @@
 extern crate proc_macro;
 
 use proc_macro::TokenStream;
-use quote::{quote, ToTokens};
+use quote::{ToTokens, quote};
 use syn::parse_macro_input;
 use syn::spanned::Spanned;
 
@@ -72,13 +72,14 @@ pub fn plugin_init(_args: TokenStream, input: TokenStream) -> TokenStream {
 // check if return_type of the function is `optee_teec::Result<()>`
 fn check_return_type(item_fn: &syn::ItemFn) -> bool {
     if let syn::ReturnType::Type(_, return_type) = item_fn.sig.output.to_owned()
-        && let syn::Type::Path(path) = return_type.as_ref() {
-            let expected_type = quote! { optee_teec::Result<()> };
-            let actual_type = path.path.to_token_stream();
-            if expected_type.to_string() == actual_type.to_string() {
-                return true;
-            }
+        && let syn::Type::Path(path) = return_type.as_ref()
+    {
+        let expected_type = quote! { optee_teec::Result<()> };
+        let actual_type = path.path.to_token_stream();
+        if expected_type.to_string() == actual_type.to_string() {
+            return true;
         }
+    }
     false
 }
 
@@ -158,7 +159,7 @@ pub fn plugin_invoke(_args: TokenStream, input: TokenStream) -> TokenStream {
         /// - **Buffer overflow attempt**: if inner logic (developer code) tries to return
         ///   more bytes than `in_len` → rejected by `set_buf_from_slice`, error returned with required `out_len`
         /// - **Invalid pointers**: null pointers are checked, but other invalid cases of pointers
-        ///   such as dangling, misaligned, or read-only pointers will cause undefined behavior 
+        ///   such as dangling, misaligned, or read-only pointers will cause undefined behavior
         ///   and must be prevented by the caller
         pub unsafe fn _plugin_invoke(
             cmd: u32,
