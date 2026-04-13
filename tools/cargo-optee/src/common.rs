@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use clap::ValueEnum;
 use std::env;
 use std::fs;

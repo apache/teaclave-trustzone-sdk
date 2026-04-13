@@ -35,7 +35,7 @@ cargo_metadata = "0.18"
 serde.workspace = true
 serde_json.workspace = true
 toml = "0.8"
-indexmap = "=2.11.4"
+indexmap = "2.11.4"
 env_logger = "0.11"
 log = "0.4"
 tempfile = "3.8"
