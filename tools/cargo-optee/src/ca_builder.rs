@@ -18,13 +18,13 @@
 use crate::cargo_command;
 use crate::common;
 use crate::common::{
-    get_package_name, get_target_and_cross_compile, get_target_directory_from_metadata,
-    print_cargo_command, print_output_and_bail, read_uuid_from_file, BuildMode,
-    ChangeDirectoryGuard,
+    BuildMode, ChangeDirectoryGuard, get_package_name, get_target_and_cross_compile,
+    get_target_directory_from_metadata, print_cargo_command, print_output_and_bail,
+    read_uuid_from_file,
 };
 use crate::config::CaBuildConfig;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::path::{Path, PathBuf};
 
 // Main function to build the CA, optionally installing to a target directory

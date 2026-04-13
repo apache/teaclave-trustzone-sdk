@@ -18,13 +18,13 @@
 use crate::cargo_command;
 use crate::common;
 use crate::common::{
-    get_package_name, get_target_and_cross_compile, get_target_directory_from_metadata,
-    print_cargo_command, print_output_and_bail, read_uuid_from_file, BuildMode,
-    ChangeDirectoryGuard,
+    BuildMode, ChangeDirectoryGuard, get_package_name, get_target_and_cross_compile,
+    get_target_directory_from_metadata, print_cargo_command, print_output_and_bail,
+    read_uuid_from_file,
 };
 use crate::config::TaBuildConfig;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -267,8 +267,8 @@ fn check_toolchain_exists(cross_compile_prefix: &str) -> Result<()> {
     // Check if objcopy exists
     let objcopy_check = Command::new("which").arg(&objcopy_command).output();
 
-    let gcc_exists = gcc_check.map_or(false, |output| output.status.success());
-    let objcopy_exists = objcopy_check.map_or(false, |output| output.status.success());
+    let gcc_exists = gcc_check.is_ok_and(|output| output.status.success());
+    let objcopy_exists = objcopy_check.is_ok_and(|output| output.status.success());
 
     if !gcc_exists || !objcopy_exists {
         let missing_tools: Vec<&str> = [
@@ -388,11 +388,13 @@ fn setup_build_command(
     if config.std {
         let rust_src = env::var("__CARGO_TESTS_ONLY_SRC_ROOT")
             .map(PathBuf::from)
-            .map_err(|_| anyhow::anyhow!(
-                "__CARGO_TESTS_ONLY_SRC_ROOT is not set.\n\
+            .map_err(|_| {
+                anyhow::anyhow!(
+                    "__CARGO_TESTS_ONLY_SRC_ROOT is not set.\n\
                 For std TA builds, set it to the Rust library source directory, e.g.:\n\
                   export __CARGO_TESTS_ONLY_SRC_ROOT=/path/to/rust/library"
-            ))?;
+                )
+            })?;
         if !rust_src.exists() {
             anyhow::bail!(
                 "__CARGO_TESTS_ONLY_SRC_ROOT points to a non-existent path: {:?}",

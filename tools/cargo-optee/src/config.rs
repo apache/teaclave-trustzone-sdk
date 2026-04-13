@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use cargo_metadata::MetadataCommand;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
@@ -279,13 +279,13 @@ impl CaBuildConfig {
         println!("  Arch: {:?}", self.arch);
         println!("  Debug: {}", self.debug);
         println!("  OP-TEE client export: {:?}", self.optee_client_export);
-        if self.plugin {
-            if let Some(ref uuid_path) = self.uuid_path {
-                let absolute_uuid_path = uuid_path
-                    .canonicalize()
-                    .unwrap_or_else(|_| uuid_path.clone());
-                println!("  UUID path: {:?}", absolute_uuid_path);
-            }
+        if self.plugin
+            && let Some(ref uuid_path) = self.uuid_path
+        {
+            let absolute_uuid_path = uuid_path
+                .canonicalize()
+                .unwrap_or_else(|_| uuid_path.clone());
+            println!("  UUID path: {:?}", absolute_uuid_path);
         }
         if !self.env.is_empty() {
             println!("  Environment variables: {} set", self.env.len());
@@ -433,11 +433,7 @@ fn extract_build_config_with_arch(
                     arch_value.as_str()
                 } else {
                     // Architecture key missing, try fallback to non-specific
-                    if v.is_string() {
-                        v.as_str()
-                    } else {
-                        None
-                    }
+                    if v.is_string() { v.as_str() } else { None }
                 }
             })
             .filter(|s| !s.is_empty())
@@ -458,11 +454,7 @@ fn extract_build_config_with_arch(
                         arch_value.as_str()
                     } else {
                         // Architecture key missing, try fallback to non-specific
-                        if v.is_string() {
-                            v.as_str()
-                        } else {
-                            None
-                        }
+                        if v.is_string() { v.as_str() } else { None }
                     }
                 })
                 .filter(|s| !s.is_empty())
