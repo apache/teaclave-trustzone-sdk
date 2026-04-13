@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#![allow(bad_style)]
+#![allow(clippy::all)]
 
 use optee_utee_sys::*;
 

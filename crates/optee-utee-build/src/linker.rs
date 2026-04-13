@@ -216,7 +216,10 @@ impl Linker {
 
     fn generate_new_link_script(&self, ta_dev_kit_dir: PathBuf) -> Result<String, Error> {
         let link_script_template_path = ta_dev_kit_dir.join("src/ta.ld.S");
-        println!("cargo:rerun-if-changed={}", link_script_template_path.display());
+        println!(
+            "cargo:rerun-if-changed={}",
+            link_script_template_path.display()
+        );
 
         let link_script_output = {
             const ENV_CC: &str = "CC";

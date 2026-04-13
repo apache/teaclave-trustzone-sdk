@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{raw, Param, ParamTypes};
+use crate::{Param, ParamTypes, raw};
 use std::{marker::PhantomData, mem};
 
 /// This type defines the payload of either an open session operation or an

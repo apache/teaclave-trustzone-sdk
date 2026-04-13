@@ -16,7 +16,7 @@
 // under the License.
 
 use super::context::InnerContext;
-use crate::{raw, Context, Error, Operation, Param, Result, Uuid};
+use crate::{Context, Error, Operation, Param, Result, Uuid, raw};
 use std::{cell::RefCell, ptr, rc::Rc};
 
 /// Session login methods.

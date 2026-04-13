@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#![allow(clippy::all)]
+
 use core::ffi::*;
 use optee_teec_sys::*;
 

@@ -65,8 +65,13 @@ jobs:
 
           # Clippy checks
           (cd crates && \
-            cargo clippy -p optee-utee --target aarch64-unknown-linux-gnu -- -D warnings && \
-            cargo clippy -p optee-teec --target aarch64-unknown-linux-gnu -- -D warnings)
+            cargo clippy --workspace \
+              --exclude secure_db \
+              --exclude rustls_provider \
+              --target aarch64-unknown-linux-gnu -- -D warnings)
+
+          # fmt checks
+          (cd crates && cargo fmt --all --check)
 
   build-and-test-examples-for-32bit-no-std-TAs:
     uses: ./.github/workflows/reuse_host_build_and_qemu_run.yml

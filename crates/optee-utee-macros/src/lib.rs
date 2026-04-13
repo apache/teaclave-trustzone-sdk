@@ -375,9 +375,10 @@ pub fn ta_invoke_command(_args: TokenStream, input: TokenStream) -> TokenStream 
 fn extract_fn_arg_mut_ref_type(fn_arg: &syn::FnArg) -> Result<&syn::Type, syn::parse::Error> {
     if let syn::FnArg::Typed(ty) = fn_arg
         && let syn::Type::Reference(type_ref) = ty.ty.as_ref()
-            && type_ref.mutability.is_some() {
-                return Ok(&*type_ref.elem);
-            };
+        && type_ref.mutability.is_some()
+    {
+        return Ok(&*type_ref.elem);
+    };
     Err(syn::parse::Error::new(
         fn_arg.span(),
         "this argument should have signature `_: &mut T`",

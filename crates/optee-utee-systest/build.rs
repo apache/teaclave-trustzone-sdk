@@ -95,14 +95,11 @@ fn generate_cfg(ta_include_path: PathBuf) -> ctest::TestGenerator {
         })
         .skip_fn(|s| {
             let s = s.ident();
-            match s {
-                "__utee_entry" => true,
-                _ => false,
-            }
+            matches!(s, "__utee_entry")
         })
-        .skip_union(|s| match s.ident() {
-            "content" => true,
-            _ => false,
+        .skip_union(|s| {
+            let s = s.ident();
+            matches!(s, "content")
         })
         .skip_union_field(|s, _field| {
             let s = s.ident();
@@ -160,7 +157,7 @@ fn build_and_link_undefined(ta_include_path: PathBuf) {
     let mut builder = cc::Build::new();
     builder
         .include(ta_include_path.display().to_string())
-        .file(&undefined_path.display().to_string())
+        .file(undefined_path.display().to_string())
         .compile("undefined");
 
     println!("cargo:rustc-link-search=native={}", out_dir.display());
