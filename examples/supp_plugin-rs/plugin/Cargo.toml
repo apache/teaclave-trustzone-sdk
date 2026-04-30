@@ -27,10 +27,11 @@ edition = "2018"
 [dependencies]
 libc = "0.2.48"
 proto = { path = "../proto" }
-optee-teec = { path = "../../../crates/optee-teec" }
+optee-teec = { path = "../../../crates/optee-teec", features = ["macros"] }
 
 [build-dependencies]
-uuid = { version = "0.8" }
+optee-teec-build = { path = "../../../crates/optee-teec-build" }
+uuid = { version = "1.23" }
 proto = { path = "../proto" }
 anyhow = "1.0"
 

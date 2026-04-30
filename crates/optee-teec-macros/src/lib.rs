@@ -15,19 +15,22 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#![recursion_limit = "128"]
-
 extern crate proc_macro;
 
+use optee_teec_build::{DEFAULT_INIT_FN_NAME, DEFAULT_INVOKE_FN_NAME};
 use proc_macro::TokenStream;
-use quote::{ToTokens, quote};
-use syn::parse_macro_input;
+use quote::quote;
 use syn::spanned::Spanned;
+use syn::{FnArg, parse_macro_input};
 
-/// Attribute to declare the init function of a plugin
+/// Attribute to derive the injected init function from an existing function
 /// ``` no_run
+/// use optee_teec_macros::plugin_init;
+///
 /// #[plugin_init]
-/// fn plugin_init() -> Result<()> {}
+/// fn plugin_init() -> optee_teec::Result<()> {
+///     Ok(())
+/// }
 /// ```
 #[proc_macro_attribute]
 pub fn plugin_init(_args: TokenStream, input: TokenStream) -> TokenStream {
@@ -55,12 +58,15 @@ pub fn plugin_init(_args: TokenStream, input: TokenStream) -> TokenStream {
         .into();
     }
 
+    let bindgen_fn_name = quote::format_ident!("{}", DEFAULT_INIT_FN_NAME);
+    let origin_fn_name = &f_sig.ident;
     quote!(
-        pub fn _plugin_init() -> optee_teec::raw::TEEC_Result {
-            fn inner() -> optee_teec::Result<()> {
-                #f_block
-            }
-            match inner() {
+        #f_vis #f_sig {
+            #f_block
+        }
+        const _: fn() -> optee_teec::Result<()> = #origin_fn_name;
+        unsafe extern "C" fn #bindgen_fn_name() -> optee_teec::raw::TEEC_Result {
+            match #origin_fn_name() {
                 Ok(()) => optee_teec::raw::TEEC_SUCCESS,
                 Err(err) => err.raw_code(),
             }
@@ -71,22 +77,51 @@ pub fn plugin_init(_args: TokenStream, input: TokenStream) -> TokenStream {
 
 // check if return_type of the function is `optee_teec::Result<()>`
 fn check_return_type(item_fn: &syn::ItemFn) -> bool {
+    const EXPECTED: [&str; 2] = ["optee_teec", "Result"];
     if let syn::ReturnType::Type(_, return_type) = item_fn.sig.output.to_owned()
         && let syn::Type::Path(path) = return_type.as_ref()
     {
-        let expected_type = quote! { optee_teec::Result<()> };
-        let actual_type = path.path.to_token_stream();
-        if expected_type.to_string() == actual_type.to_string() {
-            return true;
-        }
+        return check_path_might_match(&path.path, &EXPECTED);
     }
     false
 }
 
-/// Attribute to declare the invoke function of a plugin
+// check path match the expected values
+// it might still fail if developers re-export crate as other name.
+fn check_path_might_match(path: &syn::Path, exp: &[&str]) -> bool {
+    path.segments.len() <= exp.len()
+        && path
+            .segments
+            .iter()
+            .zip(&exp[exp.len() - path.segments.len()..])
+            .all(|(seg, exp)| seg.ident == *exp)
+}
+
+fn check_invoke_fn_params(item_fn: &syn::ItemFn) -> bool {
+    if item_fn.sig.inputs.len() != 1 {
+        return false;
+    }
+
+    let arg = item_fn.sig.inputs.first().expect("Infallible");
+    if let FnArg::Typed(typ) = arg
+        && let syn::Type::Reference(typ_ref) = typ.ty.as_ref()
+        && typ_ref.mutability.is_some()
+        && let syn::Type::Path(inner_type) = typ_ref.elem.as_ref()
+    {
+        const EXPECTED: [&str; 2] = ["optee_teec", "PluginParameters"];
+        return check_path_might_match(&inner_type.path, &EXPECTED);
+    }
+    false
+}
+
+/// Attribute to derive the injected invoke function from an existing function
 /// ``` no_run
+/// use optee_teec_macros::plugin_invoke;
+///
 /// #[plugin_invoke]
-/// fn plugin_invoke(params: &mut PluginParameters) {}
+/// fn plugin_invoke(params: &mut optee_teec::PluginParameters) -> optee_teec::Result<()> {
+///     Ok(())
+/// }
 /// ```
 #[proc_macro_attribute]
 pub fn plugin_invoke(_args: TokenStream, input: TokenStream) -> TokenStream {
@@ -103,7 +138,8 @@ pub fn plugin_invoke(_args: TokenStream, input: TokenStream) -> TokenStream {
         && f_inputs.len() == 1
         && f_sig.generics.where_clause.is_none()
         && f_sig.variadic.is_none()
-        && check_return_type(&f);
+        && check_return_type(&f)
+        && check_invoke_fn_params(&f);
 
     if !valid_signature {
         return syn::parse::Error::new(
@@ -117,97 +153,38 @@ pub fn plugin_invoke(_args: TokenStream, input: TokenStream) -> TokenStream {
         .into();
     }
 
-    let params = f_inputs
-        .first()
-        .expect("we have already verified its len")
-        .into_token_stream();
+    let bindgen_fn_name = quote::format_ident!("{}", DEFAULT_INVOKE_FN_NAME);
+    let origin_fn_name = &f_sig.ident;
 
     quote!(
-        /// # Safety
-        ///
-        /// The `_plugin_invoke` function is the `extern "C"` entrypoint called by OP-TEE OS.
-        /// This SDK allows developers to implement the inner logic for a Normal World plugin in Rust.
-        /// More about plugins:
-        /// https://optee.readthedocs.io/en/latest/architecture/globalplatform_api.html#loadable-plugins-framework
-        ///
-        /// According to Clippy checks, any FFI function taking raw pointers as parameters
-        /// must be marked `unsafe`. This applies here because the function directly
-        /// dereferences `data` and `out_len`.
-        ///
-        /// ## Security Assumptions
-        /// The caller (OP-TEE OS) must ensure:
-        /// - `data` points to valid memory for reads and writes of at least `in_len` bytes
-        /// - `out_len` is a valid, writable, and properly aligned pointer to a `u32` (cannot be null)
-        /// - If `in_len == 0`, `data` may be null; otherwise it must be non-null
-        /// - The memory region pointed to by `data` must not be modified by other threads
-        ///   or processes during plugin execution
-        ///
-        /// Additional guarantees enforced by `PluginParameters` in this SDK:
-        /// - If `data` is null and `in_len` is 0, it is treated as an empty input buffer;
-        ///   the inner logic (developer code) should consider this case
-        /// - If the output length exceeds `in_len`, it will be rejected and a short buffer
-        ///   error returned, with the required `out_len` set
-        /// - Input and output share the same buffer, so overlap is intentional and safely
-        ///   handled by [`PluginParameters::set_buf_from_slice`] when `out_len <= in_len`
-        /// - If no output is set for a success call, `out_len` will be `0`
-        ///
-        /// ## Usage Scenarios
-        /// - **Valid empty call**: `data = null`, `in_len = 0` → allowed (empty input to inner)
-        /// - **Normal call**: `data` points to a buffer of size `in_len`; if `out_len <= in_len`,
-        ///   the plugin writes up to `in_len` bytes and updates `*out_len`; if `out_len > in_len`,
-        ///   it is rejected with a short buffer error
-        /// - **Buffer overflow attempt**: if inner logic (developer code) tries to return
-        ///   more bytes than `in_len` → rejected by `set_buf_from_slice`, error returned with required `out_len`
-        /// - **Invalid pointers**: null pointers are checked, but other invalid cases of pointers
-        ///   such as dangling, misaligned, or read-only pointers will cause undefined behavior
-        ///   and must be prevented by the caller
-        pub unsafe fn _plugin_invoke(
+        #f_vis #f_sig {
+            #f_block
+        }
+        const _: fn(_: &mut optee_teec::PluginParameters) -> optee_teec::Result<()> = #origin_fn_name;
+
+        unsafe extern "C" fn #bindgen_fn_name(
             cmd: u32,
             sub_cmd: u32,
-            data: *mut core::ffi::c_char,
-            in_len: u32,
-            out_len: *mut u32,
+            data: *mut core::ffi::c_void,
+            in_len: optee_teec::raw::size_t,
+            out_len: *mut optee_teec::raw::size_t,
         ) -> optee_teec::raw::TEEC_Result {
-            fn inner(#params) -> optee_teec::Result<()> {
-                #f_block
-            }
-
-            // Check for null pointers
-            if data.is_null() && in_len != 0 {
-                return optee_teec::raw::TEEC_ERROR_BAD_PARAMETERS;
-            }
-            if out_len.is_null() {
-                return optee_teec::raw::TEEC_ERROR_BAD_PARAMETERS;
-            }
-
-            // Prepare input buffer
-            // `data` is guaranteed to be non-null if `in_len > 0` (checked above)
-            // If `data` is null, `in_len` must be 0, so we create an empty slice
-            // Otherwise, we create a mutable slice from the raw pointer and length
-            let inbuf = if data.is_null() {
-                &mut []
-            } else {
-                // SAFETY: from_raw_parts_mut() is unsafe, but avoids copying the memory
-                // (which is unacceptable for large io buffers).
-                // Note that the caller must ensure the memory is consistent during the plugin execution.
-                std::slice::from_raw_parts_mut(data, in_len as usize)
+            let mut parameter = match unsafe {
+                optee_teec::PluginParameters::from_raw(
+                    cmd,
+                    sub_cmd,
+                    data,
+                    in_len,
+                    out_len,
+                )
+            } {
+                Ok(v) => v,
+                Err(err) => return err.raw_code(),
             };
 
-            let mut params = optee_teec::PluginParameters::new(cmd, sub_cmd, inbuf);
-            match inner(&mut params) {
-                Ok(()) => {
-                    *out_len = params.get_required_out_len() as u32;
-                    optee_teec::raw::TEEC_SUCCESS
-                }
-                Err(err) => {
-                    if err.kind() == optee_teec::ErrorKind::ShortBuffer {
-                        // Inform the caller about the required buffer size
-                        *out_len = params.get_required_out_len() as u32;
-                        optee_teec::raw::TEEC_ERROR_SHORT_BUFFER
-                    } else {
-                        err.raw_code()
-                    }
-                }
+            match #origin_fn_name(&mut parameter) {
+                Ok(()) => optee_teec::raw::TEEC_SUCCESS,
+                Err(err) => err.raw_code(),
             }
         }
     )

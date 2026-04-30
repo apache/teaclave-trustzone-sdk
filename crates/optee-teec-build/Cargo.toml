@@ -16,8 +16,8 @@
 # under the License.
 
 [package]
-name = "optee-utee-build"
-description = "Build tool for TA"
+name = "optee-teec-build"
+description = "build tool for teec"
 version.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -27,6 +27,5 @@ edition.workspace = true
 [dependencies]
 quote.workspace = true
 proc-macro2.workspace = true
-syn.workspace = true
-prettyplease = "0.2.25"
 uuid.workspace = true
+syn.workspace = true
