@@ -28,10 +28,14 @@ fn main() {
         .edition(2024)
         .target("aarch64-unknown-linux-gnu")
         .header("tee_client_api.h")
+        .header("tee_plugin_method.h")
         .include(path.display().to_string())
         .rename_struct_ty(|ty| {
             if ty.starts_with("TEEC") {
                 return Some(ty.to_string());
+            }
+            if ty.eq("PluginMethod") {
+                return Some("struct plugin_method".to_string());
             }
             None
         })

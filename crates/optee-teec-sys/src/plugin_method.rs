@@ -14,12 +14,20 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-use optee_teec_build::{uuid::Uuid, PluginConfig};
 
-fn main() -> anyhow::Result<()> {
-    PluginConfig::new(Uuid::parse_str(proto::PLUGIN_UUID)?)
-        .with_name("syslog")
-        .build()?;
+use crate::{TEEC_Result, TEEC_UUID, size_t};
+use core::ffi::{c_char, c_void};
 
-    Ok(())
+#[repr(C)]
+pub struct PluginMethod {
+    pub name: *const c_char,
+    pub uuid: TEEC_UUID,
+    pub init: unsafe extern "C" fn() -> TEEC_Result,
+    pub invoke: unsafe extern "C" fn(
+        cmd: u32,
+        sub_cmd: u32,
+        data: *mut c_void,
+        in_len: size_t,
+        out_len: *mut size_t,
+    ) -> TEEC_Result,
 }

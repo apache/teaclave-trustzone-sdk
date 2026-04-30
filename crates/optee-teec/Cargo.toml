@@ -24,12 +24,17 @@ license.workspace = true
 repository.workspace = true
 edition.workspace = true
 
+[features]
+default = []
+macros = ["dep:optee-teec-macros"]
+
 [dependencies]
 optee-teec-sys.workspace = true
-optee-teec-macros.workspace = true
+optee-teec-macros = { workspace = true, optional = true }
 uuid.workspace = true
 hex.workspace = true
 num_enum.workspace = true
+log.workspace = true
 
 [dev-dependencies]
 optee-teec-sys = { workspace = true, features = ["no_link"] }

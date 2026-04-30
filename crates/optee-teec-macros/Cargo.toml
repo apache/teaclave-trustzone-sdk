@@ -30,3 +30,7 @@ proc-macro = true
 [dependencies]
 quote.workspace = true
 syn.workspace = true
+optee-teec-build.workspace = true
+
+[dev-dependencies]
+optee-teec.workspace = true

@@ -15,13 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#[no_mangle]
-pub static mut plugin_method: optee_teec::PluginMethod = optee_teec::PluginMethod {
-    name: plugin_name.as_ptr(),
-    uuid: PLUGIN_UUID_STRUCT,
-    init: _plugin_init,
-    invoke: _plugin_invoke,
-};
+mod plugin;
+pub use uuid;
 
-#[no_mangle]
-pub static plugin_name: &[u8] = b"syslog\0";
+pub use plugin::{DEFAULT_INIT_FN_NAME, DEFAULT_INVOKE_FN_NAME, PluginConfig};

@@ -22,10 +22,16 @@ pub use self::operation::Operation;
 pub use self::parameter::{Param, ParamNone, ParamTmpRef, ParamType, ParamTypes, ParamValue};
 pub use self::session::{ConnectionMethods, Session};
 pub use self::uuid::Uuid;
-pub use optee_teec_macros::{plugin_init, plugin_invoke};
 // Re-export optee_teec_sys so developers don't have to add it to their cargo
 // dependencies.
 pub use optee_teec_sys as raw;
+
+// Re-export optee_teec_macros so developers don't have to add it as a separate
+// cargo dependency.
+// Gate it behind a feature flag to avoid unnecessary build-time overhead when
+// it’s not needed (see #283).
+#[cfg(feature = "macros")]
+pub use optee_teec_macros as macros;
 
 mod context;
 mod error;
