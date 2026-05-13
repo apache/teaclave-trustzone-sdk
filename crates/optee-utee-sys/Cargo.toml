@@ -27,9 +27,23 @@ links = "utee"
 
 [dependencies]
 mockall = { version = "0.14.0", optional = true }
+document-features.workspace = true
 
 [features]
+## enables nothing.
 default = []
+## enables the standard library. Without it, the crate is compiled as `no_std`
 std = []
+## prevents the build script from emitting linker directives for the OP-TEE
+## native libraries (libutee, libutils, libmbedtls). This is needed for
+## environments where those libraries are not available, such as docs.rs or
+## host-side testing.
 no_link = []
+## enables host-side unit testing of TA code by using the `mockall` crate to
+## auto-generate mock implementations of the TEE internal API FFI declarations.
+## It implicitly enables `std` (required by mockall) and `no_link` (no real TEE
+## libraries should be linked during host-side tests).
 mock = ["dep:mockall", "std", "no_link"]
+
+[package.metadata.docs.rs]
+features = ["no_link"]

@@ -15,6 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#![cfg_attr(doc, doc = concat!(
+    env!("CARGO_PKG_DESCRIPTION"),
+    "\n",
+    "## Feature flags\n",
+    document_features::document_features!(),
+))]
+
 pub use self::context::Context;
 pub use self::error::{Error, ErrorKind, ErrorOrigin, Result};
 pub use self::extension::*;

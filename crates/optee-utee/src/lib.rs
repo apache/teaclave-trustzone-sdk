@@ -16,6 +16,12 @@
 // under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(doc, doc = concat!(
+    env!("CARGO_PKG_DESCRIPTION"),
+    "\n",
+    "## Feature flags\n",
+    document_features::document_features!(),
+))]
 
 // Requires `alloc`.
 #[macro_use]

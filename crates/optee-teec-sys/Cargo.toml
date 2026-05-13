@@ -26,5 +26,15 @@ edition.workspace = true
 links = "teec"
 
 [features]
-default=[]
-no_link=[]
+## enables nothing.
+default = []
+## prevents the build script from emitting linker directives for the native
+## `libteec` library. This is needed for environments where the OP-TEE client
+## library is not available, such as docs.rs or host-side testing.
+no_link = []
+
+[package.metadata.docs.rs]
+features = ["no_link"]
+
+[dependencies]
+document-features.workspace = true

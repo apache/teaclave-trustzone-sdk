@@ -17,6 +17,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(non_camel_case_types, non_snake_case)]
+#![cfg_attr(doc, doc = concat!(
+    env!("CARGO_PKG_DESCRIPTION"),
+    "\n",
+    "## Feature flags\n",
+    document_features::document_features!(),
+))]
 
 pub use tee_api::api::*;
 pub use tee_api_defines::*;

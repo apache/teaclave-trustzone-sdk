@@ -18,9 +18,17 @@
 use std::path::PathBuf;
 pub use uuid;
 
+/// Default name for the plugin init function.
 pub const DEFAULT_INIT_FN_NAME: &str = "__plugin_bindgen_init";
+/// Default name for the plugin invoke function.
 pub const DEFAULT_INVOKE_FN_NAME: &str = "__plugin_bindgen_invoke";
 
+/// Configuration for building an OP-TEE supplicant plugin binding.
+///
+/// Holds the plugin name, UUID, init/invoke function names, and optional
+/// output destination. Use the builder-style API (`with_*` methods) to
+/// customize defaults, then call [`PluginConfig::build`] to generate the
+/// `plugin_static.rs` file.
 pub struct PluginConfig {
     name: String,
     uuid: uuid::Uuid,
@@ -30,6 +38,11 @@ pub struct PluginConfig {
 }
 
 impl PluginConfig {
+    /// Creates a new `PluginConfig` with the given UUID.
+    ///
+    /// The plugin name defaults to `CARGO_PKG_NAME`, and the init/invoke
+    /// function names default to [`DEFAULT_INIT_FN_NAME`] and
+    /// [`DEFAULT_INVOKE_FN_NAME`] respectively.
     pub fn new(uuid: uuid::Uuid) -> Self {
         Self {
             name: env!("CARGO_PKG_NAME").to_string(),
@@ -39,18 +52,30 @@ impl PluginConfig {
             dest: None,
         }
     }
+    /// Sets a custom plugin name.
     pub fn with_name(mut self, name: &str) -> Self {
         self.name = name.to_string();
         self
     }
+    /// Sets a custom init function name (overriding [`DEFAULT_INIT_FN_NAME`]).
     pub fn with_init_fn_name(mut self, fn_name: &str) -> Self {
         self.init_fn_name = fn_name.to_string();
         self
     }
+    /// Sets a custom invoke function name (overriding [`DEFAULT_INVOKE_FN_NAME`]).
     pub fn with_invoke_fn_name(mut self, fn_name: &str) -> Self {
         self.invoke_fn_name = fn_name.to_string();
         self
     }
+    /// Sets a custom output file path
+    pub fn with_dest(mut self, out_path: PathBuf) -> Self {
+        self.dest = Some(out_path);
+        self
+    }
+    /// Generates the plugin binding source and writes it to the output file.
+    ///
+    /// If the output file already exists with identical content, the write is
+    /// skipped. The default output path is `$OUT_DIR/plugin_static.rs`.
     pub fn build(&self) -> std::io::Result<()> {
         let codes = generate_binding(
             &self.name,
@@ -74,6 +99,10 @@ impl PluginConfig {
 }
 
 impl PluginConfig {
+    /// Returns the output file path for the generated binding.
+    ///
+    /// Uses the custom destination if set, otherwise defaults to
+    /// `$OUT_DIR/plugin_static.rs`.
     fn get_out_path(&self) -> PathBuf {
         match self.dest.as_ref() {
             Some(v) => v.clone(),

@@ -15,6 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
+//! Build-time helper for OP-TEE supplicant plugins.
+//!
+//! This crate provides [`PluginConfig`] which generates a Rust source file
+//! containing the static `plugin_method` symbol required by the OP-TEE
+//! plugin ABI. It is intended to be used in a `build.rs` script.
+
 mod plugin;
 pub use uuid;
 
