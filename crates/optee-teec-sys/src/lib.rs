@@ -15,6 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#![cfg_attr(doc, doc = concat!(
+    env!("CARGO_PKG_DESCRIPTION"),
+    "\n",
+    "## Feature flags\n",
+    document_features::document_features!(),
+))]
 #![allow(non_camel_case_types, non_snake_case)]
 
 pub use plugin_method::*;

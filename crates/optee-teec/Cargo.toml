@@ -25,8 +25,13 @@ repository.workspace = true
 edition.workspace = true
 
 [features]
+## enables nothing.
 default = []
+## re-exports the `optee-teec-macros` crate as `optee_teec::macros`, providing
+## the `#[plugin_init]` and `#[plugin_invoke]` proc-macro attributes.
 macros = ["dep:optee-teec-macros"]
+## used for docs.rs to generate docs. It disables native `libteec` linking.
+doc = ["optee-teec-sys/no_link"]
 
 [dependencies]
 optee-teec-sys.workspace = true
@@ -35,6 +40,10 @@ uuid.workspace = true
 hex.workspace = true
 num_enum.workspace = true
 log.workspace = true
+document-features.workspace = true
 
 [dev-dependencies]
 optee-teec-sys = { workspace = true, features = ["no_link"] }
+
+[package.metadata.docs.rs]
+features = ["doc"]
