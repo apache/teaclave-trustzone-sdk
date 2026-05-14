@@ -436,7 +436,7 @@ define_property_key!(
     TeeTrustedOsImplementationBinaryVersion,
     TeeImplementation,
     "gpd.tee.trustedos.implementation.binaryversion",
-    Vec<u8>
+    u32
 );
 define_property_key!(
     TeeTrustedOsManufacturer,
@@ -454,7 +454,7 @@ define_property_key!(
     TeeFirmwareImplementationBinaryVersion,
     TeeImplementation,
     "gpd.tee.firmware.implementation.binaryversion",
-    Vec<u8>
+    u32
 );
 define_property_key!(
     TeeFirmwareManufacturer,
