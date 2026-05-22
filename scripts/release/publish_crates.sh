@@ -20,14 +20,15 @@
 set -e
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-ROOT_DIR="$SCRIPT_DIR/../.."
+ROOT_DIR="$SCRIPT_DIR/../../crates"
 CRATES_DIR=(
-    "optee-utee/optee-utee-sys"
-    "optee-utee/macros"
+    "optee-utee-sys"
+    "optee-utee-macros"
     "optee-utee-build"
     "optee-utee"
-    "optee-teec/optee-teec-sys"
-    "optee-teec/macros"
+    "optee-teec-sys"
+    "optee-teec-build"
+    "optee-teec-macros"
     "optee-teec"
 )
 
