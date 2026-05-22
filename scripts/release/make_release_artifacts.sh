@@ -106,16 +106,17 @@ case "$1" in
         mv "${REPO_NAME}-${RELEASE_VERSION}-rc.${RC_NUMBER}" "${TAR_TOP_DIR_NAME}"
 
         echo "[INFO] Normalizing tarball metadata..."
-        MTIME=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "${TAR_TOP_DIR_NAME}/LICENSE")
 
         # On macOS, use gnu-tar
         if [[ $(uname) == "Darwin" ]]; then
+            MTIME=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "${TAR_TOP_DIR_NAME}/LICENSE")
             if ! command -v gtar &> /dev/null; then
                 echo "[ERROR] GNU tar (gtar) is required. Please run: brew install gnu-tar"
                 exit 1
             fi
             TAR_CMD=gtar
         else
+            MTIME=$(date -d "$(stat -c %y "${TAR_TOP_DIR_NAME}/LICENSE")" "+%Y-%m-%d %H:%M:%S")
             TAR_CMD=tar
         fi
 
