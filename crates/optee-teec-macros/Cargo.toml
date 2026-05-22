@@ -32,5 +32,7 @@ quote.workspace = true
 syn.workspace = true
 optee-teec-build.workspace = true
 
-[dev-dependencies]
-optee-teec.workspace = true
+# Avoid adding `optee-teec` as a dev-dependency, since it would create a cyclic
+# dependency during crate publishing.
+# [dev-dependencies]
+# optee-teec.workspace = true

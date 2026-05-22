@@ -24,7 +24,10 @@ use syn::spanned::Spanned;
 use syn::{FnArg, parse_macro_input};
 
 /// Attribute to derive the injected init function from an existing function
-/// ``` no_run
+/// ``` ignore
+/// # /// NOTE: This example uses `optee_teec`, but including it as a
+/// # /// dev-dependency would introduce a cyclic dependency when publishing the
+/// # /// crate. Therefore, the example is intentionally marked as `ignore`.
 /// use optee_teec_macros::plugin_init;
 ///
 /// #[plugin_init]
@@ -115,7 +118,10 @@ fn check_invoke_fn_params(item_fn: &syn::ItemFn) -> bool {
 }
 
 /// Attribute to derive the injected invoke function from an existing function
-/// ``` no_run
+/// ``` ignore
+/// # /// NOTE: This example uses `optee_teec`, but including it as a
+/// # /// dev-dependency would introduce a cyclic dependency when publishing the
+/// # /// crate. Therefore, the example is intentionally marked as `ignore`.
 /// use optee_teec_macros::plugin_invoke;
 ///
 /// #[plugin_invoke]
