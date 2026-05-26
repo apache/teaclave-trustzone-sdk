@@ -113,6 +113,22 @@ impl BigInt {
         unsafe { raw::TEE_BigIntGetBitCount(self.data_ptr()) }
     }
 
+    pub fn set_bit(&mut self, bit_index: u32, set: bool) -> Result<()> {
+        match unsafe { raw::TEE_BigIntSetBit(self.0.as_mut_ptr(), bit_index, set) } {
+            raw::TEE_SUCCESS => Ok(()),
+            code => Err(Error::from_raw_error(code)),
+        }
+    }
+
+    pub fn abs(&self) -> Result<Self> {
+        let bits = Self::get_bit_count(self);
+        let mut res = Self::new(bits);
+        match unsafe { raw::TEE_BigIntAbs(res.0.as_mut_ptr(), self.data_ptr()) } {
+            raw::TEE_SUCCESS => Ok(res),
+            code => Err(Error::from_raw_error(code)),
+        }
+    }
+
     pub fn add(op1: &Self, op2: &Self) -> Self {
         let bits = max(Self::get_bit_count(op1), Self::get_bit_count(op2)) + 1;
         let mut res = Self::new(bits);
@@ -146,12 +162,8 @@ impl BigInt {
         res
     }
 
-    // document defines wrong size for result quotient
     pub fn divide(op1: &Self, op2: &Self) -> (Self, Self) {
-        let q_bits = match op1.compare_big_int(op2) {
-            d if d >= 0 => max(1, Self::get_bit_count(op1) - Self::get_bit_count(op2)),
-            _ => 0,
-        };
+        let q_bits = max(1, Self::get_bit_count(op1) - Self::get_bit_count(op2) + 1);
         let r_bits = Self::get_bit_count(op2);
         let mut quotient = Self::new(q_bits);
         let mut remainder = Self::new(r_bits);
@@ -224,26 +236,62 @@ impl BigInt {
         res
     }
 
+    pub fn exp_mod(op1: &Self, op2: &Self, n: &Self, context: &BigIntFMMContext) -> Result<Self> {
+        let mut res = Self::new(Self::get_bit_count(n));
+        match unsafe {
+            raw::TEE_BigIntExpMod(
+                res.0.as_mut_ptr(),
+                op1.data_ptr(),
+                op2.data_ptr(),
+                n.data_ptr(),
+                context.data_ptr(),
+            )
+        } {
+            raw::TEE_SUCCESS => Ok(res),
+            code => Err(Error::from_raw_error(code)),
+        }
+    }
+
     pub fn relative_prime(op1: &Self, op2: &Self) -> bool {
         unsafe { raw::TEE_BigIntRelativePrime(op1.data_ptr(), op2.data_ptr()) }
     }
 
-    /* pub fn compute_extended_gcd(op1: &Self, op2: &Self) -> (Self, Self, Self)
-     * This function is implemented in OP-TEE, while the output size needs to be calculated based
-     * on the missing function TEE_BigIntAbs, so we do not port it yet.*/
+    pub fn assign(&mut self, op2: &Self) -> Result<()> {
+        match unsafe { raw::TEE_BigIntAssign(self.0.as_mut_ptr(), op2.data_ptr()) } {
+            raw::TEE_SUCCESS => Ok(()),
+            code => Err(Error::from_raw_error(code)),
+        }
+    }
+
+    pub fn compute_extended_gcd(op1: &Self, op2: &Self) -> (Self, Self, Self) {
+        let gcd_bits = max(1, max(Self::get_bit_count(op1), Self::get_bit_count(op2)));
+        let mut gcd = Self::new(gcd_bits);
+        let mut u = Self::new(gcd_bits);
+        let mut v = Self::new(gcd_bits);
+        unsafe {
+            raw::TEE_BigIntComputeExtendedGcd(
+                gcd.0.as_mut_ptr(),
+                u.0.as_mut_ptr(),
+                v.0.as_mut_ptr(),
+                op1.data_ptr(),
+                op2.data_ptr(),
+            );
+        }
+        (gcd, u, v)
+    }
 
     pub fn is_probable_prime(&self, confidence_level: u32) -> i32 {
         unsafe { raw::TEE_BigIntIsProbablePrime(self.data_ptr(), confidence_level) }
     }
 
-    pub fn convert_from_big_int_fmm(
+    pub fn convert_to_big_int_from_fmm(
         &mut self,
         src: &BigIntFMM,
         n: &BigInt,
         context: BigIntFMMContext,
     ) {
         unsafe {
-            raw::TEE_BigIntConvertToFMM(
+            raw::TEE_BigIntConvertFromFMM(
                 self.0.as_mut_ptr(),
                 src.data_ptr(),
                 n.data_ptr(),
@@ -328,8 +376,3 @@ impl BigIntFMM {
         };
     }
 }
-//OP-TEE in version GP 1.1.1 does not implement function:
-//TEE_BigIntSetBit
-//TEE_BigIntAssign
-//TEE_BigIntAbs
-//TEE_BigIntExpMod
