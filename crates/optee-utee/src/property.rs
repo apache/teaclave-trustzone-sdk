@@ -252,6 +252,7 @@ pub trait PropertyKey {
 /// Macro to define a property key.
 /// This macro generates a struct that implements the
 /// PropertyKey trait.
+#[macro_export]
 macro_rules! define_property_key {
     (
         $name:ident,

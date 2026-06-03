@@ -223,6 +223,19 @@ impl OperationHandle {
         }
     }
 
+    fn set_key_2<T: GenericObject, D: GenericObject>(
+        &self,
+        object1: &T,
+        object2: &D,
+    ) -> Result<()> {
+        match unsafe {
+            raw::TEE_SetOperationKey2(self.handle(), *object1.as_raw_ref(), *object2.as_raw_ref())
+        } {
+            raw::TEE_SUCCESS => Ok(()),
+            code => Err(Error::from_raw_error(code)),
+        }
+    }
+
     fn copy<T: OpHandle>(&mut self, src: &T) {
         unsafe {
             raw::TEE_CopyOperation(self.handle(), src.handle());
@@ -748,12 +761,7 @@ impl Cipher {
         object1: &T,
         object2: &D,
     ) -> Result<()> {
-        match unsafe {
-            raw::TEE_SetOperationKey2(self.handle(), *object1.as_raw_ref(), *object2.as_raw_ref())
-        } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        self.0.set_key_2(object1, object2)
     }
 
     /// Function usage is similar to [Digest::copy](Digest::copy).
@@ -1616,6 +1624,15 @@ impl DeriveKey {
     /// Function usage is similar to [Cipher::set_key](Cipher::set_key).
     pub fn set_key<T: GenericObject>(&self, object: &T) -> Result<()> {
         self.0.set_key(object)
+    }
+
+    /// Function usage is similar to [Cipher::set_key_2](Cipher::set_key_2).
+    pub fn set_key_2<T: GenericObject, D: GenericObject>(
+        &self,
+        object1: &T,
+        object2: &D,
+    ) -> Result<()> {
+        self.0.set_key_2(object1, object2)
     }
 
     /// Function usage is similar to [Digest::copy](Digest::copy).
