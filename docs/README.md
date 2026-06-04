@@ -8,6 +8,9 @@ permalink: /trustzone-sdk-docs
 * [Quick Emulation And Development in Docker](emulate-and-dev-in-docker.md)
 * [Developing TAs with Rust Standard Library in Docker](emulate-and-dev-in-docker-std.md)
 
+## Security
+* [Security Model](security-model.md)
+
 ## Development
 * [TA Development Modes](ta-development-modes.md)
 * [Overview of OP-TEE Rust Examples](overview-of-optee-rust-examples.md)
