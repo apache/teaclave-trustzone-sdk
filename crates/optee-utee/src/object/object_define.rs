@@ -42,6 +42,8 @@ impl From<Whence> for raw::TEE_Whence {
 #[repr(u32)]
 pub enum ObjectStorageConstants {
     Private = 0x00000001,
+    PrivateRee = 0x80000000,
+    PrivateRpmb = 0x80000100,
     IllegalValue = 0x7FFFFFFF,
 }
 
