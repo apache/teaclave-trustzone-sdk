@@ -1,5 +1,11 @@
 # Security Policy
 
+## Security Model
+
+For the SDK's trust model, trust boundaries (Normal World vs. Secure World), and
+security assumptions — including guidance for developers and automated security
+reviewers — see [docs/security-model.md](docs/security-model.md).
+
 ## Reporting a Vulnerability
 
 We take a very active stance in eliminating security problems in Teaclave. We
