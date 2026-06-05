@@ -69,16 +69,20 @@ impl ObjectEnumHandle {
 
     /// Get the next object in an enumeration and returns information about the
     /// object: type, size, identifier, etc.
-    pub fn get_next<T>(
+    pub fn get_next(
         &mut self,
-        object_info: &mut ObjectInfo,
+        object_info: Option<&mut ObjectInfo>,
         object_id: &mut [u8],
     ) -> Result<u32> {
-        let mut object_id_len: usize = 0;
+        let mut object_id_len = object_id.len();
+        let object_info = match object_info {
+            Some(a) => &mut a.raw,
+            None => core::ptr::null_mut(),
+        };
         match unsafe {
             raw::TEE_GetNextPersistentObject(
                 *self.raw,
-                &mut object_info.raw,
+                object_info,
                 object_id.as_mut_ptr() as _,
                 &mut object_id_len,
             )
