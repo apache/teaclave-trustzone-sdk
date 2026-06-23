@@ -160,28 +160,16 @@ impl From<u32> for ParamTypes {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
+#[repr(u32)]
 pub enum ParamType {
-    None = 0,
-    ValueInput = 1,
-    ValueOutput = 2,
-    ValueInout = 3,
-    MemrefInput = 5,
-    MemrefOutput = 6,
-    MemrefInout = 7,
-}
-
-impl From<u32> for ParamType {
-    fn from(value: u32) -> Self {
-        match value {
-            0 => ParamType::None,
-            1 => ParamType::ValueInput,
-            2 => ParamType::ValueOutput,
-            3 => ParamType::ValueInout,
-            5 => ParamType::MemrefInput,
-            6 => ParamType::MemrefOutput,
-            7 => ParamType::MemrefInout,
-            _ => ParamType::None,
-        }
-    }
+    None = raw::TEE_PARAM_TYPE_NONE,
+    ValueInput = raw::TEE_PARAM_TYPE_VALUE_INPUT,
+    ValueOutput = raw::TEE_PARAM_TYPE_VALUE_OUTPUT,
+    ValueInout = raw::TEE_PARAM_TYPE_VALUE_INOUT,
+    MemrefInput = raw::TEE_PARAM_TYPE_MEMREF_INPUT,
+    MemrefOutput = raw::TEE_PARAM_TYPE_MEMREF_OUTPUT,
+    MemrefInout = raw::TEE_PARAM_TYPE_MEMREF_INOUT,
+    #[num_enum(catch_all)]
+    Unknown(u32),
 }
