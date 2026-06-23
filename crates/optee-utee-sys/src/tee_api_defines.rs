@@ -472,4 +472,8 @@ pub fn TEE_PARAM_TYPES(t0: u32, t1: u32, t2: u32, t3: u32) -> u32 {
     t0 | t1 << 4 | t2 << 8 | t3 << 12
 }
 
+pub fn TEE_PARAM_TYPE_GET(t: u32, i: usize) -> u32 {
+    (t >> (i * 4)) & 0xF
+}
+
 pub const TEE_NUM_PARAMS: u32 = 4;

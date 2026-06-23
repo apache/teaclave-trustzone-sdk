@@ -57,22 +57,32 @@ mod unwind_stubs {
     extern "C" fn rust_eh_personality() {}
 }
 
-pub use self::arithmetical::*;
-pub use self::crypto_op::*;
-pub use self::error::{Error, ErrorKind, Result};
-pub use self::extension::*;
-pub use self::identity::{Identity, LoginType};
-pub use self::object::*;
-pub use self::parameter::{
-    ParamType, ParamTypes, Parameter, Parameters, RawParamType, RawParamTypes, RawParams,
-};
-pub use self::ta_session::{TaSession, TaSessionBuilder};
-pub use self::tee_parameter::{ParamIndex, TeeParams};
-pub use self::time::*;
-pub use self::uuid::*;
+pub use arithmetical::*;
+pub use crypto_op::*;
+pub use error::{Error, ErrorKind, Result};
+pub use extension::*;
+pub use identity::{Identity, LoginType};
+pub use object::*;
 pub use optee_utee_macros::{
     ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session,
 };
+pub use parameter::{
+    FromRawParameter, FromRawParameters, ParamType, ParameterAny, ParametersAny, ParametersNone,
+    RawParamType, RawParamTypes, RawParams, deprecated,
+    memref::{
+        ParameterMemrefInout, ParameterMemrefInput, ParameterMemrefOutput, ParameterMemrefRead,
+        ParameterMemrefWrite,
+    },
+    none::ParameterNone,
+    value::{
+        ParameterValueInout, ParameterValueInput, ParameterValueOutput, ParameterValueRead,
+        ParameterValueWrite,
+    },
+};
+pub use ta_session::{TaSession, TaSessionBuilder};
+pub use tee_parameter::{ParamIndex, TeeParams};
+pub use time::*;
+pub use uuid::*;
 
 pub mod trace;
 #[macro_use]
@@ -90,3 +100,17 @@ mod ta_session;
 mod tee_parameter;
 pub mod time;
 pub mod uuid;
+
+// Re-export optee_utee_sys so developers don't have to add it to their cargo
+// dependencies.
+pub use optee_utee_sys as raw;
+
+pub mod prelude {
+    pub use crate::{
+        FromRawParameter, FromRawParameters, ParameterAny, ParameterMemrefInout,
+        ParameterMemrefInput, ParameterMemrefOutput, ParameterMemrefRead, ParameterMemrefWrite,
+        ParameterNone, ParameterValueInout, ParameterValueInput, ParameterValueOutput,
+        ParameterValueRead, ParameterValueWrite, ParametersAny, ParametersNone, ta_close_session,
+        ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_print, trace_println,
+    };
+}
