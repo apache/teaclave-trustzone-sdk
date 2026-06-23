@@ -15,14 +15,53 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{Error, ErrorKind, Result};
+//! Legacy raw-pointer-based parameter API (deprecated).
+//!
+//! The types in this module use raw `*mut TEE_Param` pointers and require
+//! manual unsafe casts at every call site. **New code should use the typed
+//! wrappers** instead:
+//!
+//! | Legacy type | Replacement |
+//! |---|---|
+//! | [`Parameters`] | Use [`FromRawParameters`] with a 4-tuple of typed wrappers (e.g. `(ParameterNone, ParameterMemrefInput, ParameterValueOutput, ParameterMemrefOutput)`) |
+//! | [`Parameter`] | Use the concrete types: [`ParameterValueInput`](crate::ParameterValueInput), [`ParameterValueOutput`](crate::ParameterValueOutput), [`ParameterMemrefInput`](crate::ParameterMemrefInput), etc. |
+//! | [`ParamValue`] | Use the concrete types: [`ParameterValueInput`](crate::ParameterValueInput), [`ParameterValueOutput`](crate::ParameterValueOutput), [`ParameterValueInout`](crate::ParameterValueInout), and the traits: [`ParameterValueRead`](crate::ParameterValueRead) and [`ParameterValueWrite`](crate::ParameterValueWrite) |
+//! | [`ParamMemref`] | Use the concrete types: [`ParameterMemrefInput`](crate::ParameterMemrefInput), [`ParameterMemrefOutput`](crate::ParameterMemrefOutput), [`ParameterMemrefInout`](crate::ParameterMemrefInout), and the traits: [`ParameterMemrefRead`](crate::ParameterMemrefRead) and [`ParameterMemrefWrite`](crate::ParameterMemrefWrite) |
+//!
+//! # Example migration
+//!
+//! **Old (deprecated) code:**
+//!
+//! ```rust,ignore
+//! fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
+//!     let mut p0 = unsafe { params.0.as_memref()? };
+//!     // extra codes here...
+//!     let data = p0.buffer();
+//!     data.copy_from_slice(&output);
+//!     p0.set_updated_size(output.len());
+//! }
+//! ```
+//!
+//! **New code:**
+//!
+//! ```rust,ignore
+//! use optee_utee::prelude::*;
+//!
+//! fn invoke_command(cmd_id: u32, params: &mut (ParameterMemrefInout, ...)) -> Result<()> {
+//!     let p0 = &mut params.0;
+//!     // extra codes here...
+//!     p0.write_at(0, output)
+//! }
+//! ```
+
+use super::{ParamType, RawParamTypes, RawParams};
+use crate::{Error, ErrorKind, FromRawParameters, Result, raw};
 use core::{marker, slice};
-use optee_utee_sys as raw;
 
-pub type RawParamType = u32;
-pub type RawParamTypes = u32;
-pub type RawParams = [raw::TEE_Param; 4];
-
+/// # Deprecated
+///
+/// Use the typed wrappers with [`super::FromRawParameters`] instead. See the
+/// [module-level documentation](self) for migration examples.
 pub struct Parameters(pub Parameter, pub Parameter, pub Parameter, pub Parameter);
 
 impl Parameters {
@@ -37,6 +76,11 @@ impl Parameters {
     }
 }
 
+/// # Deprecated
+///
+/// Use [`super::value::ParameterValueRead`] (for `get_a/get_b`) and
+/// [`super::value::ParameterValueWrite`] (for `set_a/set_b`) on the typed
+/// wrappers ([`super::value::ParameterValueInput`], etc.) instead.
 pub struct ParamValue<'parameter> {
     raw: *mut raw::Value,
     param_type: ParamType,
@@ -69,6 +113,13 @@ impl<'parameter> ParamValue<'parameter> {
     }
 }
 
+/// Lightweight accessor for a memory-reference TEE parameter.
+///
+/// # Deprecated
+///
+/// Use [`super::memref::ParameterMemrefRead`] (for `get_buffer`) and
+/// [`super::memref::ParameterMemrefWrite`] (for `get_buffer_mut`,
+/// `set_updated_size`, `write_at`) on the typed wrappers instead.
 pub struct ParamMemref<'parameter> {
     raw: *mut raw::Memref,
     param_type: ParamType,
@@ -93,6 +144,12 @@ impl<'parameter> ParamMemref<'parameter> {
     }
 }
 
+/// # Deprecated
+///
+/// Use the concrete typed wrappers
+/// ([`super::value::ParameterValueInput`], [`super::memref::ParameterMemrefInput`], etc.)
+/// instead. They encode the parameter type in the Rust type system, making
+/// mismatched-type errors impossible at compile time.
 pub struct Parameter {
     pub raw: *mut raw::TEE_Param,
     pub param_type: ParamType,
@@ -107,7 +164,9 @@ impl Parameter {
     }
 
     /// # Safety
-    /// The caller must ensure that the raw pointer is valid and points to a properly initialized TEE_Param.
+    ///
+    /// The caller must ensure that the raw pointer is valid and points to a
+    /// properly initialized `TEE_Param`.
     pub unsafe fn as_value(&mut self) -> Result<ParamValue<'_>> {
         match self.param_type {
             ParamType::ValueInput | ParamType::ValueInout | ParamType::ValueOutput => {
@@ -122,7 +181,9 @@ impl Parameter {
     }
 
     /// # Safety
-    /// The caller must ensure that the raw pointer is valid and points to a properly initialized TEE_Param.
+    ///
+    /// The caller must ensure that the raw pointer is valid and points to a
+    /// properly initialized `TEE_Param`.
     pub unsafe fn as_memref(&mut self) -> Result<ParamMemref<'_>> {
         match self.param_type {
             ParamType::MemrefInout | ParamType::MemrefInput | ParamType::MemrefOutput => {
@@ -141,6 +202,10 @@ impl Parameter {
     }
 }
 
+/// # Deprecated
+///
+/// Use the typed wrappers with [`super::FromRawParameters`] instead; they
+/// extract the types implicitly via `TEE_PARAM_TYPE_GET`.
 pub struct ParamTypes(u32);
 
 impl ParamTypes {
@@ -160,16 +225,8 @@ impl From<u32> for ParamTypes {
     }
 }
 
-#[derive(Copy, Clone, num_enum::FromPrimitive, num_enum::IntoPrimitive)]
-#[repr(u32)]
-pub enum ParamType {
-    None = raw::TEE_PARAM_TYPE_NONE,
-    ValueInput = raw::TEE_PARAM_TYPE_VALUE_INPUT,
-    ValueOutput = raw::TEE_PARAM_TYPE_VALUE_OUTPUT,
-    ValueInout = raw::TEE_PARAM_TYPE_VALUE_INOUT,
-    MemrefInput = raw::TEE_PARAM_TYPE_MEMREF_INPUT,
-    MemrefOutput = raw::TEE_PARAM_TYPE_MEMREF_OUTPUT,
-    MemrefInout = raw::TEE_PARAM_TYPE_MEMREF_INOUT,
-    #[num_enum(catch_all)]
-    Unknown(u32),
+impl<'a> FromRawParameters<'a> for Parameters {
+    unsafe fn from_raw(raw_types: RawParamTypes, raw_params: &'a mut RawParams) -> Result<Self> {
+        Ok(Self::from_raw(raw_params, raw_types))
+    }
 }

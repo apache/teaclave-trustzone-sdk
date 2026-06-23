@@ -109,7 +109,7 @@ impl<'a> Param<'a> {
     }
 
     fn get_raw_type(&self) -> u32 {
-        self.get_type() as u32
+        self.get_type().into()
     }
 
     fn as_raw(&mut self) -> raw::TEE_Param {
