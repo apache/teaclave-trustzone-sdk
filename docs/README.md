@@ -15,6 +15,7 @@ permalink: /trustzone-sdk-docs
 * [TA Development Modes](ta-development-modes.md)
 * [Overview of OP-TEE Rust Examples](overview-of-optee-rust-examples.md)
 * [Writing Rust TAs using optee-utee-build](writing-rust-tas-using-optee-utee-build.md)
+* [Migrating to the Typed optee-utee Parameter API](optee-utee-parameter-migration.md)
 * [OPTEE-UTEE: Writing Unit Tests with Mocks](optee-utee-writing-unit-tests-with-mocks.md)
 * [Building Rust CA as Android ELF](building-rust-ca-as-android-elf.md)
 
