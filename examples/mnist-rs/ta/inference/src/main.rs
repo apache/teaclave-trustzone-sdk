@@ -24,11 +24,9 @@ use burn::{
     tensor::cast::ToElement,
 };
 
-use common::{copy_to_output, Model};
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
-use optee_utee::{ErrorKind, Parameters, Result};
+use common::Model;
+use optee_utee::prelude::*;
+use optee_utee::{ErrorKind, Result};
 use proto::Image;
 use spin::Mutex;
 
@@ -43,14 +41,21 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref()? };
-
+fn open_session(
+    (p0, _, _, _): &mut (
+        ParameterMemrefInput<'_>,
+        ParameterNone,
+        ParameterNone,
+        ParameterNone,
+    ),
+) -> Result<()> {
     let mut model = MODEL.lock();
-    model.replace(Model::import(&DEVICE, p0.buffer().to_vec()).map_err(|err| {
-        trace_println!("import failed: {:?}", err);
-        ErrorKind::BadParameters
-    })?);
+    model.replace(
+        Model::import(&DEVICE, p0.get_buffer().to_vec()).map_err(|err| {
+            trace_println!("import failed: {:?}", err);
+            ErrorKind::BadParameters
+        })?,
+    );
 
     Ok(())
 }
@@ -66,10 +71,17 @@ fn destroy() {
 }
 
 #[ta_invoke_command]
-fn invoke_command(_cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(
+    _cmd_id: u32,
+    (p0, p1, _, _): &mut (
+        ParameterMemrefInput<'_>,
+        ParameterMemrefOutput<'_>,
+        ParameterNone,
+        ParameterNone,
+    ),
+) -> Result<()> {
     trace_println!("[+] TA invoke command");
-    let mut p0 = unsafe { params.0.as_memref()? };
-    let images: &[Image] = bytemuck::cast_slice(p0.buffer());
+    let images: &[Image] = bytemuck::cast_slice(p0.get_buffer());
     let input = NoStdModel::images_to_tensors(&DEVICE, images);
 
     let output = MODEL
@@ -84,8 +96,7 @@ fn invoke_command(_cmd_id: u32, params: &mut Parameters) -> Result<()> {
             data.argmax(1).into_scalar().to_u8()
         })
         .collect();
-
-    copy_to_output(&mut params.1, &result)
+    p1.set_output(result)
 }
 
 include!(concat!(env!("OUT_DIR"), "/user_ta_header.rs"));

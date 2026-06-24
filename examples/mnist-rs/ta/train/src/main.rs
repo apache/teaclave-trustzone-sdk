@@ -20,11 +20,8 @@
 extern crate alloc;
 
 use burn::backend::{ndarray::NdArrayDevice, Autodiff, NdArray};
-use common::copy_to_output;
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
-use optee_utee::{ErrorKind, Parameters, Result};
+use optee_utee::prelude::*;
+use optee_utee::{ErrorKind, Result};
 use proto::train::Command;
 use spin::Mutex;
 
@@ -42,10 +39,15 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref()? };
-
-    let learning_rate = f64::from_le_bytes(p0.buffer().try_into().map_err(|err| {
+fn open_session(
+    (p0, _, _, _): &mut (
+        ParameterMemrefInput<'_>,
+        ParameterNone,
+        ParameterNone,
+        ParameterNone,
+    ),
+) -> Result<()> {
+    let learning_rate = f64::from_le_bytes(p0.get_buffer().try_into().map_err(|err| {
         trace_println!("bad parameter {:?}", err);
         ErrorKind::BadParameters
     })?);
@@ -68,14 +70,11 @@ fn destroy() {
 }
 
 #[ta_invoke_command]
-fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(cmd_id: u32, (p0, p1, p2, _): &mut ParametersAny<'_>) -> Result<()> {
     match Command::try_from(cmd_id) {
         Ok(Command::Train) => {
-            let mut p0 = unsafe { params.0.as_memref()? };
-            let mut p1 = unsafe { params.1.as_memref()? };
-
-            let images = p0.buffer();
-            let labels = p1.buffer();
+            let images = p0.as_memref_input()?.get_buffer();
+            let labels = p1.as_memref_input()?.get_buffer();
 
             let mut trainer = TRAINER.lock();
             let result = trainer
@@ -86,15 +85,11 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
                 trace_println!("unexpected error: {:?}", err);
                 ErrorKind::BadState
             })?;
-
-            copy_to_output(&mut params.2, &bytes)
+            p2.as_memref_output()?.set_output(bytes)
         }
         Ok(Command::Valid) => {
-            let mut p0 = unsafe { params.0.as_memref()? };
-            let mut p1 = unsafe { params.1.as_memref()? };
-
-            let images = p0.buffer();
-            let labels = p1.buffer();
+            let images = p0.as_memref_input()?.get_buffer();
+            let labels = p1.as_memref_input()?.get_buffer();
 
             let trainer = TRAINER.lock();
             let result = trainer
@@ -106,7 +101,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
                 trace_println!("unexpected error: {:?}", err);
                 ErrorKind::BadState
             })?;
-            copy_to_output(&mut params.2, &bytes)
+            p2.as_memref_output()?.set_output(bytes)
         }
         Ok(Command::Export) => {
             let trainer = TRAINER.lock();
@@ -118,7 +113,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
                     trace_println!("unexpected error: {:?}", err);
                     ErrorKind::BadState
                 })?;
-            copy_to_output(&mut params.0, &result)
+            p0.as_memref_output()?.set_output(result)
         }
         Err(_) => Err(ErrorKind::BadParameters.into()),
     }

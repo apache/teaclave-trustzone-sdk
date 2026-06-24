@@ -20,12 +20,9 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
+use optee_utee::prelude::*;
 use optee_utee::{AlgorithmId, Digest};
-use optee_utee::{ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Result};
 use proto::Command;
 
 pub struct DigestOp {
@@ -50,7 +47,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters, _sess_ctx: &mut DigestOp) -> Result<()> {
+fn open_session(_params: &mut ParametersNone, _sess_ctx: &mut DigestOp) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -66,7 +63,11 @@ fn destroy() {
 }
 
 #[ta_invoke_command]
-fn invoke_command(sess_ctx: &mut DigestOp, cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(
+    sess_ctx: &mut DigestOp,
+    cmd_id: u32,
+    params: &mut ParametersAny<'_>,
+) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::Update => update(sess_ctx, params),
@@ -75,26 +76,23 @@ fn invoke_command(sess_ctx: &mut DigestOp, cmd_id: u32, params: &mut Parameters)
     }
 }
 
-pub fn update(digest: &mut DigestOp, params: &mut Parameters) -> Result<()> {
-    let mut p = unsafe { params.0.as_memref()? };
-    let buffer = p.buffer();
+pub fn update(digest: &mut DigestOp, (p0, _, _, _): &mut ParametersAny<'_>) -> Result<()> {
+    let buffer = p0.as_memref_input()?.get_buffer();
     digest.op.update(buffer);
     Ok(())
 }
 
-pub fn do_final(digest: &mut DigestOp, params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref()? };
-    let mut p1 = unsafe { params.1.as_memref()? };
-    let mut p2 = unsafe { params.2.as_value()? };
-    let input = p0.buffer();
-    let output = p1.buffer();
-    match digest.op.do_final(input, output) {
-        Err(e) => Err(e),
-        Ok(hash_length) => {
-            p2.set_a(hash_length as u32);
-            Ok(())
-        }
-    }
+pub fn do_final(digest: &mut DigestOp, (p0, p1, p2, _): &mut ParametersAny<'_>) -> Result<()> {
+    let (p0, p1, p2) = (
+        p0.as_memref_input()?,
+        p1.as_memref_output()?,
+        p2.as_value_output()?,
+    );
+    let input = p0.get_buffer();
+    let length = digest.op.do_final(input, p1.get_buffer_mut())?;
+    p2.set_a(length as u32);
+    p1.set_updated_size(length)?;
+    Ok(())
 }
 
 include!(concat!(env!("OUT_DIR"), "/user_ta_header.rs"));

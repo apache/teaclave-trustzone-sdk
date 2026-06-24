@@ -18,11 +18,9 @@
 #![no_main]
 
 use anyhow::Context;
+use optee_utee::prelude::*;
 use optee_utee::net::TcpStream;
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
-use optee_utee::{ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Result};
 use proto::Command;
 use rustls::RootCertStore;
 use std::convert::TryInto;
@@ -46,7 +44,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters) -> Result<()> {
+fn open_session(_params: &mut ParametersNone) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -62,7 +60,7 @@ fn destroy() {
 }
 
 #[ta_invoke_command]
-fn invoke_command(cmd_id: u32, _params: &mut Parameters) -> Result<()> {
+fn invoke_command(cmd_id: u32, _params: &mut ParametersNone) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::Start => match tls_client() {
@@ -91,7 +89,6 @@ fn tls_client() -> anyhow::Result<()> {
     let root_store = RootCertStore {
         roots: webpki_roots::TLS_SERVER_ROOTS.into(),
     };
-
     let config = rustls::ClientConfig::builder_with_details(crypto_provider, time_provider)
         .with_safe_default_protocol_versions()
         .context("Failed to create client config with safe default protocol versions")?

@@ -18,10 +18,10 @@
 mod cli;
 mod tests;
 
-use optee_teec::{Context, Operation, ParamType, Uuid};
-use optee_teec::{ParamNone, ParamTmpRef, ParamValue};
+use optee_teec::{Context, Operation, Uuid};
+use optee_teec::{ParamNone, ParamTmpRef};
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use structopt::StructOpt;
 
 const OUTPUT_MAX_SIZE: usize = 1024;
@@ -38,18 +38,16 @@ fn invoke_command(command: proto::Command, input: &[u8]) -> optee_teec::Result<V
     // output buffer
     let mut output = vec![0u8; OUTPUT_MAX_SIZE];
     let p1 = ParamTmpRef::new_output(output.as_mut_slice());
-    // output buffer size
-    let p2 = ParamValue::new(0, 0, ParamType::ValueInout);
 
-    let mut operation = Operation::new(0, p0, p1, p2, ParamNone);
+    let mut operation = Operation::new(0, p0, p1, ParamNone, ParamNone);
     match session.invoke_command(command as u32, &mut operation) {
         Ok(()) => {
             println!("CA: invoke_command success");
-            let output_len = operation.parameters().2.a() as usize;
+            let output_len = operation.parameters().1.updated_size();
             Ok(output[..output_len].to_vec())
         }
         Err(e) => {
-            let output_len = operation.parameters().2.a() as usize;
+            let output_len = operation.parameters().1.updated_size();
             let err_message = String::from_utf8_lossy(&output[..output_len]);
             println!("CA: invoke_command failed: {:?}", err_message);
             Err(e)
@@ -143,9 +141,6 @@ fn main() -> Result<()> {
         cli::Command::Test => {
             tests::tests::test_workflow();
             println!("Tests passed");
-        }
-        _ => {
-            bail!("Unsupported command");
         }
     }
     Ok(())

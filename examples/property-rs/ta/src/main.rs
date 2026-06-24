@@ -21,14 +21,13 @@
 extern crate alloc;
 use alloc::string::ToString;
 
+use optee_utee::prelude::*;
 use optee_utee::property::{
     ClientIdentity, PropertyKey, TaDescription, TaMultiSession, TeeInternalCoreVersion,
 };
 use optee_utee::LoginType;
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
-use optee_utee::{ErrorKind, Parameters, Result};
+
+use optee_utee::{ErrorKind, Result};
 use proto::Command;
 
 #[ta_create]
@@ -38,7 +37,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters) -> Result<()> {
+fn open_session(_params: &mut ParametersNone) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -96,7 +95,7 @@ fn get_properties() -> Result<()> {
 }
 
 #[ta_invoke_command]
-fn invoke_command(cmd_id: u32, _params: &mut Parameters) -> Result<()> {
+fn invoke_command(cmd_id: u32, _params: &mut ParametersNone) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::Test => {

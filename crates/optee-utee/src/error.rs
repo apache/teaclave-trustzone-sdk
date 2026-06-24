@@ -28,9 +28,9 @@ use std::error;
 /// # Examples
 ///
 /// ``` rust,no_run
-/// # use optee_utee::Parameters;
+/// # use optee_utee::prelude::*;
 /// use optee_utee::Result;
-/// fn open_session(params: &mut Parameters) -> Result<()> {
+/// fn open_session(params: &mut ParametersAny) -> Result<()> {
 ///     Ok(())
 /// }
 /// ````

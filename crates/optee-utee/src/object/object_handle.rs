@@ -38,7 +38,6 @@ impl ObjectHandle {
     /// ``` rust,no_run
     /// # use optee_utee::ObjectHandle;
     /// # use optee_utee_sys as raw;
-    /// # let external_handle: raw::TEE_ObjectHandle = core::ptr::null_mut();
     /// # fn main() -> optee_utee::Result<()> {
     /// # let external_handle = core::ptr::null_mut();
     /// // `external_handle` is a handle that is constructed and controlled

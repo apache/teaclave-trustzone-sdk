@@ -20,14 +20,10 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
-use alloc::vec;
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
-use optee_utee::{ErrorKind, Parameters, Result};
+use optee_utee::prelude::*;
+use optee_utee::{ErrorKind, Result};
 use proto::Command;
 
 pub struct SessionContext {
@@ -49,7 +45,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters, _sess_ctx: &mut SessionContext) -> Result<()> {
+fn open_session(_params: &mut ParametersNone, _sess_ctx: &mut SessionContext) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -68,7 +64,7 @@ fn destroy() {
 fn invoke_command(
     _sess_ctx: &mut SessionContext,
     cmd_id: u32,
-    _params: &mut Parameters,
+    _params: &mut ParametersNone,
 ) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {

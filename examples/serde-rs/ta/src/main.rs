@@ -20,11 +20,8 @@
 
 extern crate alloc;
 
-use alloc::string::String;
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
-use optee_utee::{ErrorKind, Parameters, Result};
+use optee_utee::prelude::*;
+use optee_utee::{ErrorKind, Result};
 use proto::{Command, Point};
 
 #[ta_create]
@@ -34,7 +31,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters) -> Result<()> {
+fn open_session(_params: &mut ParametersNone) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -50,34 +47,19 @@ fn destroy() {
 }
 
 #[ta_invoke_command]
-fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(cmd_id: u32, (p0, _, _, _): &mut ParametersAny<'_>) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::DefaultOp => {
-            let mut p = unsafe { params.0.as_memref()? };
-            let buffer = p.buffer();
+            let output = p0.as_memref_output()?;
             let point = Point { x: 1, y: 2 };
 
             // Convert the Point to a JSON string.
-            let serialized: String = serde_json::to_string(&point).map_err(|e| {
+            let serialized = serde_json::to_string(&point).map_err(|e| {
                 trace_println!("Failed to serialize point: {}", e);
                 ErrorKind::BadParameters
             })?;
-
-            let bytes = serialized.as_bytes();
-
-            // Ensure the buffer is large enough to hold the serialized data.
-            let len = bytes.len();
-            if len > buffer.len() {
-                trace_println!("Buffer too small, cannot copy all bytes");
-                return Err(ErrorKind::BadParameters.into());
-            }
-
-            // Copy the serialized JSON string into the buffer.
-            buffer[..len].copy_from_slice(bytes);
-
-            // update size of output buffer
-            p.set_updated_size(len);
+            output.set_output(serialized.as_bytes())?;
 
             // Prints serialized = {"x":1,"y":2}
             trace_println!("serialized = {}", serialized);

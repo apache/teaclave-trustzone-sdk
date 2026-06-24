@@ -20,13 +20,10 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
+use optee_utee::prelude::*;
 use optee_utee::{AlgorithmId, Mac};
 use optee_utee::{AttributeId, AttributeMemref, TransientObject, TransientObjectType};
-use optee_utee::{ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Result};
 use proto::Command;
 
 pub const SHA1_HASH_SIZE: usize = 20;
@@ -57,7 +54,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters, _sess_ctx: &mut HmacOtp) -> Result<()> {
+fn open_session(_params: &mut ParametersNone, _sess_ctx: &mut HmacOtp) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -73,7 +70,11 @@ fn destroy() {
 }
 
 #[ta_invoke_command]
-fn invoke_command(sess_ctx: &mut HmacOtp, cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(
+    sess_ctx: &mut HmacOtp,
+    cmd_id: u32,
+    params: &mut ParametersAny<'_>,
+) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::RegisterSharedKey => register_shared_key(sess_ctx, params),
@@ -82,15 +83,17 @@ fn invoke_command(sess_ctx: &mut HmacOtp, cmd_id: u32, params: &mut Parameters) 
     }
 }
 
-pub fn register_shared_key(hotp: &mut HmacOtp, params: &mut Parameters) -> Result<()> {
-    let mut p = unsafe { params.0.as_memref()? };
-    let buffer = p.buffer();
+pub fn register_shared_key(
+    hotp: &mut HmacOtp,
+    (p0, _, _, _): &mut ParametersAny<'_>,
+) -> Result<()> {
+    let buffer = p0.as_memref_input()?.get_buffer();
     hotp.key_len = buffer.len();
     hotp.key[..hotp.key_len].clone_from_slice(buffer);
     Ok(())
 }
 
-pub fn get_hotp(hotp: &mut HmacOtp, params: &mut Parameters) -> Result<()> {
+pub fn get_hotp(hotp: &mut HmacOtp, (p0, _, _, _): &mut ParametersAny<'_>) -> Result<()> {
     let mut mac: [u8; SHA1_HASH_SIZE] = [0x0; SHA1_HASH_SIZE];
 
     hmac_sha1(hotp, &mut mac)?;
@@ -102,8 +105,7 @@ pub fn get_hotp(hotp: &mut HmacOtp, params: &mut Parameters) -> Result<()> {
         }
     }
     let hotp_val = truncate(&mut mac);
-    let mut p = unsafe { params.0.as_value()? };
-    p.set_a(hotp_val);
+    p0.as_value_output()?.set_a(hotp_val);
     Ok(())
 }
 

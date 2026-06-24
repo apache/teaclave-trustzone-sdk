@@ -1283,7 +1283,7 @@ impl Asymmetric {
     ///             AlgorithmId::RsaesPkcs1V15,
     ///             OperationMode::Encrypt,
     ///             256) {
-    ///             Ok(operation) => {
+    ///             Ok(mut operation) => {
     ///                 operation.set_key(&key)?;
     ///                 match operation.encrypt(&[], &clear) {
     ///                     Ok(ciph_text) => {
@@ -1497,7 +1497,7 @@ impl Asymmetric {
     }
 
     /// Function usage is similar to [Cipher::set_key](Cipher::set_key).
-    pub fn set_key<T: GenericObject>(&self, object: &T) -> Result<()> {
+    pub fn set_key<T: GenericObject>(&mut self, object: &T) -> Result<()> {
         self.0.set_key(object)
     }
 
@@ -1556,7 +1556,7 @@ impl DeriveKey {
     ///     Ok(key_pair_2) => {
     ///         key_pair_2.generate_key(256, &[attr_prime.into(), attr_base.into()])?;
     ///         match DeriveKey::allocate(AlgorithmId::DhDeriveSharedSecret, 256) {
-    ///             Ok(operation) => {
+    ///             Ok(mut operation) => {
     ///                 operation.set_key(&key_pair_2)?;
     ///                 match TransientObject::allocate(TransientObjectType::GenericSecret, 256) {
     ///                     // Derived key is saved as an transient object
@@ -1622,7 +1622,7 @@ impl DeriveKey {
     }
 
     /// Function usage is similar to [Cipher::set_key](Cipher::set_key).
-    pub fn set_key<T: GenericObject>(&self, object: &T) -> Result<()> {
+    pub fn set_key<T: GenericObject>(&mut self, object: &T) -> Result<()> {
         self.0.set_key(object)
     }
 
