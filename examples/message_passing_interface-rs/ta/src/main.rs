@@ -21,11 +21,9 @@
 extern crate alloc;
 
 use alloc::format;
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
-use optee_utee::{ErrorKind, Parameters, Result};
-use proto::{self, Command};
+use optee_utee::prelude::*;
+use optee_utee::{ErrorKind, Result};
+use proto::Command;
 
 fn handle_invoke(command: Command, input: proto::EnclaveInput) -> Result<proto::EnclaveOutput> {
     match command {
@@ -52,7 +50,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters) -> Result<()> {
+fn open_session(_params: &mut ParametersNone) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -68,12 +66,17 @@ fn destroy() {
 }
 
 #[ta_invoke_command]
-fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(
+    cmd_id: u32,
+    (p0, p1, _, _): &mut (
+        ParameterMemrefInput<'_>,
+        ParameterMemrefOutput<'_>,
+        ParameterNone,
+        ParameterNone,
+    ),
+) -> Result<()> {
     trace_println!("[+] TA invoke command");
-    let mut p0 = unsafe { params.0.as_memref()? };
-    let mut p1 = unsafe { params.1.as_memref()? };
-
-    let input: proto::EnclaveInput = serde_json::from_slice(p0.buffer()).map_err(|e| {
+    let input: proto::EnclaveInput = serde_json::from_slice(p0.get_buffer()).map_err(|e| {
         trace_println!("Failed to deserialize input: {}", e);
         ErrorKind::BadFormat
     })?;
@@ -83,15 +86,7 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
         trace_println!("Failed to serialize output: {}", e);
         ErrorKind::BadFormat
     })?;
-
-    let len = output_vec.len();
-    if len > p1.buffer().len() {
-        trace_println!("Buffer too small, cannot copy all bytes");
-        return Err(ErrorKind::BadParameters.into());
-    }
-
-    p1.buffer()[..len].copy_from_slice(&output_vec);
-    p1.set_updated_size(len);
+    p1.set_output(output_vec)?;
 
     Ok(())
 }

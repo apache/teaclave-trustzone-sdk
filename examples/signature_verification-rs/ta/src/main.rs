@@ -21,11 +21,9 @@
 extern crate alloc;
 
 use alloc::vec;
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
+use optee_utee::prelude::*;
 use optee_utee::{AlgorithmId, Asymmetric, AttributeId, AttributeMemref, Digest, OperationMode};
-use optee_utee::{ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Result};
 use optee_utee::{GenericObject, TransientObject, TransientObjectType};
 use proto::Command;
 
@@ -48,7 +46,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters) -> Result<()> {
+fn open_session(_params: &mut ParametersNone) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -63,38 +61,24 @@ fn destroy() {
     trace_println!("[+] TA destroy");
 }
 
-fn sign(params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref()? };
-    let mut p1 = unsafe { params.1.as_memref()? };
-    let mut p2 = unsafe { params.2.as_memref()? };
-    let message = p0.buffer();
-    let mut pub_key_size: usize = 0;
-    trace_println!("[+] message: {:?}", &message);
+fn sign((p0, p1, p2, _): &mut ParametersAny<'_>) -> Result<()> {
+    let p0 = p0.as_memref_input()?;
+    let p1 = p1.as_memref_output()?;
+    let p2 = p2.as_memref_output()?;
+    let message = p0.get_buffer();
+    trace_println!("[+] message: {:?}", message);
 
     let rsa_key = TransientObject::allocate(TransientObjectType::RsaKeypair, 2048_usize)?;
 
     rsa_key.generate_key(2048_usize, &[])?;
 
-    match rsa_key.ref_attribute(AttributeId::RsaModulus, p1.buffer()) {
-        Ok(len) => {
-            pub_key_size += len;
-            Ok(())
-        }
-        Err(e) => Err(e),
-    }?;
-
-    match rsa_key.ref_attribute(
-        AttributeId::RsaPublicExponent,
-        &mut p1.buffer()[pub_key_size..],
-    ) {
-        Ok(len) => {
-            pub_key_size += len;
-            Ok(())
-        }
-        Err(e) => Err(e),
-    }?;
-
-    p1.set_updated_size(pub_key_size);
+    {
+        let buffer = p1.get_buffer_mut();
+        let modulus_len = rsa_key.ref_attribute(AttributeId::RsaModulus, buffer)?;
+        let exp_len =
+            rsa_key.ref_attribute(AttributeId::RsaPublicExponent, &mut buffer[modulus_len..])?;
+        p1.set_updated_size(modulus_len + exp_len)?;
+    };
 
     let mut hash = [0u8; 32];
     let dig = Digest::allocate(AlgorithmId::Sha256)?;
@@ -102,40 +86,31 @@ fn sign(params: &mut Parameters) -> Result<()> {
     dig.do_final(message, &mut hash)?;
 
     let key_info = rsa_key.info()?;
-    let signature = p2.buffer();
 
-    let rsa = Asymmetric::allocate(
+    let mut rsa = Asymmetric::allocate(
         AlgorithmId::RsassaPkcs1V15Sha256,
         OperationMode::Sign,
         key_info.object_size(),
     )?;
 
     rsa.set_key(&rsa_key)?;
-    match rsa.sign_digest(&[], &hash, signature) {
-        Ok(len) => {
-            trace_println!("[+] signature: {:?}", p2.buffer());
-            p2.set_updated_size(len);
-            Ok(())
-        }
-        Err(e) => {
-            trace_println!("[+] error: {:?}", e);
-            Err(ErrorKind::SignatureInvalid.into())
-        }
-    }
+    let len = rsa.sign_digest(&[], &hash, p2.get_buffer_mut())?;
+    p2.set_updated_size(len)?;
+    Ok(())
 }
 
-fn verify(params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref()? };
-    let mut p1 = unsafe { params.1.as_memref()? };
-    let mut p2 = unsafe { params.2.as_memref()? };
+fn verify((p0, p1, p2, _): &mut ParametersAny<'_>) -> Result<()> {
+    let p0 = p0.as_memref_input()?;
+    let p1 = p1.as_memref_input()?;
+    let p2 = p2.as_memref_input()?;
 
-    let message = p0.buffer();
+    let message = p0.get_buffer();
     let mut pub_key_mod = vec![0u8; 256];
-    let mut pub_key_exp = vec![0u8; p1.buffer().len() - 256];
-    let signature = p2.buffer();
+    let mut pub_key_exp = vec![0u8; p1.get_buffer().len() - 256];
+    let signature = p2.get_buffer();
 
-    pub_key_mod.copy_from_slice(&p1.buffer()[..256]);
-    pub_key_exp.copy_from_slice(&p1.buffer()[256..]);
+    pub_key_mod.copy_from_slice(&p1.get_buffer()[..256]);
+    pub_key_exp.copy_from_slice(&p1.get_buffer()[256..]);
 
     trace_println!("[+] message: {:?}", &message);
     trace_println!("[+] public_key_mod: {:?}", &pub_key_mod);
@@ -156,7 +131,7 @@ fn verify(params: &mut Parameters) -> Result<()> {
 
     let key_info = rsa_pub_key.info()?;
 
-    let rsa = Asymmetric::allocate(
+    let mut rsa = Asymmetric::allocate(
         AlgorithmId::RsassaPkcs1V15Sha256,
         OperationMode::Verify,
         key_info.object_size(),
@@ -176,7 +151,7 @@ fn verify(params: &mut Parameters) -> Result<()> {
 }
 
 #[ta_invoke_command]
-fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(cmd_id: u32, params: &mut ParametersAny<'_>) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::Sign => sign(params),

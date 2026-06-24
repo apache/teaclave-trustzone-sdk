@@ -18,15 +18,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![no_main]
 
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
-use optee_utee::{ErrorKind, Parameters, Result, Uuid};
+use optee_utee::prelude::*;
+use optee_utee::{ErrorKind, Result, Uuid};
 use optee_utee::{ParamIndex, TaSessionBuilder, TeeParams};
 use proto::{
     Command, HelloWorldTaCommand, SystemPtaCommand, HELLO_WORLD_USER_TA_UUID, SYSTEM_PTA_UUID,
 };
-
 #[ta_create]
 fn create() -> Result<()> {
     trace_println!("[+] TA create");
@@ -34,7 +31,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters) -> Result<()> {
+fn open_session(_params: &mut ParametersNone) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -131,7 +128,7 @@ fn test_invoke_hello_world_user_ta() -> Result<()> {
 }
 
 #[ta_invoke_command]
-fn invoke_command(cmd_id: u32, _params: &mut Parameters) -> Result<()> {
+fn invoke_command(cmd_id: u32, _params: &mut ParametersNone) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::Test => {

@@ -18,10 +18,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![no_main]
 
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
-use optee_utee::{ErrorKind, Parameters, Result};
+use optee_utee::prelude::*;
+use optee_utee::{ErrorKind, Result};
 use proto::Command;
 
 #[ta_create]
@@ -31,7 +29,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters) -> Result<()> {
+fn open_session(_params: &mut ParametersNone) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -47,16 +45,24 @@ fn destroy() {
 }
 
 #[ta_invoke_command]
-fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(
+    cmd_id: u32,
+    params: &mut (
+        ParameterValueInout,
+        ParameterNone,
+        ParameterNone,
+        ParameterNone,
+    ),
+) -> Result<()> {
     trace_println!("[+] TA invoke command");
-    let mut values = unsafe { params.0.as_value()? };
+    let values = &mut params.0;
     match Command::from(cmd_id) {
         Command::IncValue => {
-            values.set_a(values.a() + 100);
+            values.set_a(values.get_a() + 100);
             Ok(())
         }
         Command::DecValue => {
-            values.set_a(values.a() - 100);
+            values.set_a(values.get_a() - 100);
             Ok(())
         }
         _ => Err(ErrorKind::BadParameters.into()),

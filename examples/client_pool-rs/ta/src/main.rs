@@ -19,11 +19,9 @@
 #![no_main]
 extern crate alloc;
 
-use alloc::{boxed::Box, string::String};
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
-use optee_utee::{ErrorKind, Parameters, Result};
+use alloc::string::String;
+use optee_utee::prelude::*;
+use optee_utee::{ErrorKind, Result};
 use proto::Command;
 
 #[ta_create]
@@ -33,15 +31,15 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(params: &mut Parameters, ctx: &mut String) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref()? };
+fn open_session((p0, _, _, _): &mut ParametersAny<'_>, ctx: &mut String) -> Result<()> {
+    let p0 = p0.as_memref_output()?;
 
     let mut buffer = [0_u8; proto::IDENTITY_SIZE];
     optee_utee::Random::generate(&mut buffer);
     *ctx = hex::encode(buffer).to_uppercase();
 
     trace_println!("[+] TA open session, identity: {}", ctx);
-    p0.buffer().copy_from_slice(&buffer);
+    p0.set_output(buffer)?;
 
     Ok(())
 }
@@ -57,12 +55,16 @@ fn destroy() {
 }
 
 #[ta_invoke_command]
-fn invoke_command(ctx: &mut String, cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(
+    ctx: &mut String,
+    cmd_id: u32,
+    (p0, _, _, _): &mut ParametersAny<'_>,
+) -> Result<()> {
     match Command::from(cmd_id) {
         Command::Sleep => {
-            let values = unsafe { params.0.as_value()? };
+            let values = p0.as_value_input()?;
 
-            let milliseconds = values.a();
+            let milliseconds = values.get_a();
             let mut now = optee_utee::Time::new();
             now.system_time();
             // this would cause messy output in the console when running concurrently.

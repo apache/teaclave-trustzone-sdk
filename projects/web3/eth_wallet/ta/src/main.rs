@@ -20,15 +20,12 @@
 mod hash;
 mod wallet;
 
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
-use optee_utee::{Error, ErrorKind, Parameters};
+use optee_utee::prelude::*;
+use optee_utee::{Error, ErrorKind};
 use proto::Command;
 use secure_db::SecureStorageClient;
 
 use anyhow::{anyhow, bail, Result};
-use std::io::Write;
 use wallet::Wallet;
 
 const DB_NAME: &str = "eth_wallet_db";
@@ -40,7 +37,7 @@ fn create() -> optee_utee::Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters) -> optee_utee::Result<()> {
+fn open_session(_params: &mut ParametersNone) -> optee_utee::Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -142,28 +139,27 @@ fn handle_invoke(command: Command, serialized_input: &[u8]) -> Result<Vec<u8>> {
 }
 
 #[ta_invoke_command]
-fn invoke_command(cmd_id: u32, params: &mut Parameters) -> optee_utee::Result<()> {
+fn invoke_command(
+    cmd_id: u32,
+    (p0, p1, _, _): &mut (
+        ParameterMemrefInput<'_>,
+        ParameterMemrefOutput<'_>,
+        ParameterNone,
+        ParameterNone,
+    ),
+) -> optee_utee::Result<()> {
     dbg_println!("[+] TA invoke command");
-    let mut p0 = unsafe { params.0.as_memref()? };
-    let mut p1 = unsafe { params.1.as_memref()? };
-    let mut p2 = unsafe { params.2.as_value()? };
 
-    let output_vec = match handle_invoke(Command::from(cmd_id), p0.buffer()) {
+    p1.set_updated_size(0)?;
+    let output_vec = match handle_invoke(Command::from(cmd_id), p0.get_buffer()) {
         Ok(output) => output,
         Err(e) => {
-            let err_message = format!("{:?}", e).as_bytes().to_vec();
-            p1.buffer()
-                .write(&err_message)
-                .map_err(|_| Error::new(ErrorKind::BadState))?;
-            p2.set_a(err_message.len() as u32);
+            let err_message = format!("{:?}", e);
+            p1.set_output(err_message)?;
             return Err(Error::new(ErrorKind::BadParameters));
         }
     };
-    p1.buffer()
-        .write(&output_vec)
-        .map_err(|_| Error::new(ErrorKind::BadState))?;
-    p2.set_a(output_vec.len() as u32);
-
+    p1.set_output(output_vec)?;
     Ok(())
 }
 

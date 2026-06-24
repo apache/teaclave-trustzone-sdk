@@ -38,10 +38,8 @@ cfg_block::cfg_block! {
 }
 
 use optee_utee::net::TcpStream;
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
-use optee_utee::{ErrorKind, Parameters, Result};
+use optee_utee::prelude::*;
+use optee_utee::{ErrorKind, Result};
 use proto::{Command, IpVersion};
 
 #[ta_create]
@@ -51,7 +49,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters) -> Result<()> {
+fn open_session(_params: &mut ParametersNone) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -67,26 +65,26 @@ fn destroy() {
 }
 
 #[ta_invoke_command]
-fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(cmd_id: u32, (p0, p1, p2, _): &mut ParametersAny<'_>) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::Start => {
             use core::convert::TryFrom;
 
-            let mut param0 = unsafe { params.0.as_memref()? };
-            let param1 = unsafe { params.1.as_value()? };
-            let mut param2 = unsafe { params.2.as_memref()? };
+            let p0 = p0.as_memref_input()?;
+            let p1 = p1.as_value_input()?;
+            let p2 = p2.as_memref_input()?;
 
-            let address = core::str::from_utf8(param0.buffer()).map_err(|e| {
+            let address = core::str::from_utf8(p0.get_buffer()).map_err(|e| {
                 trace_println!("Failed to parse address from UTF-8: {}", e);
                 ErrorKind::BadParameters
             })?;
-            let port = param1.a() as u16;
-            let ip_version = IpVersion::try_from(param1.b()).map_err(|_| {
+            let port = p1.get_a() as u16;
+            let ip_version = IpVersion::try_from(p1.get_b()).map_err(|_| {
                 trace_println!("Invalid IP version parameter");
                 ErrorKind::BadParameters
             })?;
-            let http_data = param2.buffer();
+            let http_data = p2.get_buffer();
 
             tcp_client(address, port, ip_version, http_data)
         }

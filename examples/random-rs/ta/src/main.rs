@@ -20,12 +20,10 @@
 
 extern crate alloc;
 
-use alloc::vec;
+use optee_utee::prelude::*;
 use optee_utee::Random;
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
-use optee_utee::{ErrorKind, Parameters, Result};
+
+use optee_utee::{ErrorKind, Result};
 use proto::Command;
 
 #[ta_create]
@@ -35,7 +33,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters) -> Result<()> {
+fn open_session(_params: &mut ParametersNone) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -50,19 +48,17 @@ fn destroy() {
     trace_println!("[+] TA destroy");
 }
 
-pub fn random_number_generate(params: &mut Parameters) -> Result<()> {
-    let mut p = unsafe { params.0.as_memref()? };
-    let mut buf = vec![0; p.buffer().len()];
-    buf.copy_from_slice(p.buffer());
+pub fn random_number_generate((p0, _, _, _): &mut ParametersAny<'_>) -> Result<()> {
+    let p0 = p0.as_memref_output()?;
 
-    Random::generate(buf.as_mut() as _);
-    p.buffer().copy_from_slice(&buf);
+    Random::generate(p0.get_buffer_mut());
+    p0.set_updated_size(p0.get_capacity())?;
 
     Ok(())
 }
 
 #[ta_invoke_command]
-fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(cmd_id: u32, params: &mut ParametersAny<'_>) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::RandomGenerator => random_number_generate(params),

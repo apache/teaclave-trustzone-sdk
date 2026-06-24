@@ -20,15 +20,12 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
 use alloc::vec;
 use optee_utee::is_algorithm_supported;
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
+use optee_utee::prelude::*;
 use optee_utee::{AlgorithmId, Cipher, ElementId, OperationMode};
 use optee_utee::{AttributeId, AttributeMemref, TransientObject, TransientObjectType};
-use optee_utee::{ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Result};
 use proto::{Algo, Command, KeySize, Mode};
 
 pub struct AesCipher {
@@ -54,7 +51,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters, _sess_ctx: &mut AesCipher) -> Result<()> {
+fn open_session(_params: &mut ParametersNone, _sess_ctx: &mut AesCipher) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -70,7 +67,11 @@ fn destroy() {
 }
 
 #[ta_invoke_command]
-fn invoke_command(sess_ctx: &mut AesCipher, cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(
+    sess_ctx: &mut AesCipher,
+    cmd_id: u32,
+    params: &mut ParametersAny<'_>,
+) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::Prepare => alloc_resources(sess_ctx, params),
@@ -105,10 +106,12 @@ pub fn ta2tee_mode_id(mode: u32) -> Result<OperationMode> {
     }
 }
 
-pub fn alloc_resources(aes: &mut AesCipher, params: &mut Parameters) -> Result<()> {
-    let algo_value = unsafe { params.0.as_value()?.a() };
-    let key_size_value = unsafe { params.1.as_value()?.a() };
-    let mode_id_value = unsafe { params.2.as_value()?.a() };
+pub fn alloc_resources(aes: &mut AesCipher, (p0, p1, p2, _): &mut ParametersAny<'_>) -> Result<()> {
+    let (algo_value, key_size_value, mode_id_value) = (
+        p0.as_value_input()?.get_a(),
+        p1.as_value_input()?.get_a(),
+        p2.as_value_input()?.get_a(),
+    );
 
     aes.key_size = ta2tee_key_size(key_size_value)?;
 
@@ -131,9 +134,8 @@ pub fn alloc_resources(aes: &mut AesCipher, params: &mut Parameters) -> Result<(
     Ok(())
 }
 
-pub fn set_aes_key(aes: &mut AesCipher, params: &mut Parameters) -> Result<()> {
-    let mut param0 = unsafe { params.0.as_memref()? };
-    let key = param0.buffer();
+pub fn set_aes_key(aes: &mut AesCipher, (p0, _, _, _): &mut ParametersAny<'_>) -> Result<()> {
+    let key = p0.as_memref_input()?.get_buffer();
 
     if key.len() != aes.key_size {
         trace_println!("[+] Get wrong key size !\n");
@@ -149,9 +151,8 @@ pub fn set_aes_key(aes: &mut AesCipher, params: &mut Parameters) -> Result<()> {
     Ok(())
 }
 
-pub fn reset_aes_iv(aes: &mut AesCipher, params: &mut Parameters) -> Result<()> {
-    let mut param0 = unsafe { params.0.as_memref()? };
-    let iv = param0.buffer();
+pub fn reset_aes_iv(aes: &mut AesCipher, (p0, _, _, _): &mut ParametersAny<'_>) -> Result<()> {
+    let iv = p0.as_memref_input()?.get_buffer();
 
     aes.cipher.init(iv);
 
@@ -159,21 +160,19 @@ pub fn reset_aes_iv(aes: &mut AesCipher, params: &mut Parameters) -> Result<()> 
     Ok(())
 }
 
-pub fn cipher_buffer(aes: &mut AesCipher, params: &mut Parameters) -> Result<()> {
-    let mut param0 = unsafe { params.0.as_memref()? };
-    let mut param1 = unsafe { params.1.as_memref()? };
+pub fn cipher_buffer(aes: &mut AesCipher, (p0, p1, _, _): &mut ParametersAny<'_>) -> Result<()> {
+    let (input, output) = (p0.as_memref_input()?, p1.as_memref_output()?);
 
-    let input = param0.buffer();
-    let output = param1.buffer();
-
-    if output.len() < input.len() {
+    if output.get_capacity() < input.get_buffer().len() {
         return Err(ErrorKind::BadParameters.into());
     }
 
     trace_println!("[+] TA tries to update ciphers!");
 
-    let tmp_size = aes.cipher.update(input, output)?;
-    param1.set_updated_size(tmp_size);
+    let tmp_size = aes
+        .cipher
+        .update(input.get_buffer(), output.get_buffer_mut())?;
+    output.set_updated_size(tmp_size)?;
     Ok(())
 }
 

@@ -20,14 +20,10 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
-use alloc::vec;
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
+use optee_utee::prelude::*;
 use optee_utee::{AlgorithmId, OperationMode, AE};
 use optee_utee::{AttributeId, AttributeMemref, TransientObject, TransientObjectType};
-use optee_utee::{ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Result};
 use proto::{Command, Mode, AAD_LEN, BUFFER_SIZE, KEY_SIZE, TAG_LEN};
 
 pub const PAYLOAD_NUMBER: usize = 2;
@@ -49,7 +45,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters, _sess_ctx: &mut AEOp) -> Result<()> {
+fn open_session(_params: &mut ParametersNone, _sess_ctx: &mut AEOp) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -65,7 +61,7 @@ fn destroy() {
 }
 
 #[ta_invoke_command]
-fn invoke_command(sess_ctx: &mut AEOp, cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(sess_ctx: &mut AEOp, cmd_id: u32, params: &mut ParametersAny<'_>) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::Prepare => {
@@ -88,19 +84,15 @@ fn invoke_command(sess_ctx: &mut AEOp, cmd_id: u32, params: &mut Parameters) -> 
     }
 }
 
-pub fn prepare(ae: &mut AEOp, params: &mut Parameters) -> Result<()> {
-    let p0 = unsafe { params.0.as_value()? };
-    let mut p1 = unsafe { params.1.as_memref()? };
-    let mut p2 = unsafe { params.2.as_memref()? };
-    let mut p3 = unsafe { params.3.as_memref()? };
-    let mode = match Mode::from(p0.a()) {
+pub fn prepare(ae: &mut AEOp, (p0, p1, p2, p3): &mut ParametersAny<'_>) -> Result<()> {
+    let mode = match Mode::from(p0.as_value_input()?.get_a()) {
         Mode::Encrypt => OperationMode::Encrypt,
         Mode::Decrypt => OperationMode::Decrypt,
         _ => OperationMode::IllegalValue,
     };
-    let nonce = p1.buffer();
-    let key = p2.buffer();
-    let aad = p3.buffer();
+    let nonce = p1.as_memref_input()?.get_buffer();
+    let key = p2.as_memref_input()?.get_buffer();
+    let aad = p3.as_memref_input()?.get_buffer();
 
     ae.op = AE::allocate(AlgorithmId::AesCcm, mode, KEY_SIZE * 8)?;
 
@@ -114,61 +106,41 @@ pub fn prepare(ae: &mut AEOp, params: &mut Parameters) -> Result<()> {
     Ok(())
 }
 
-pub fn update(digest: &mut AEOp, params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref()? };
-    let mut p1 = unsafe { params.1.as_memref()? };
-    let src = p0.buffer();
-    let res = p1.buffer();
-    digest.op.update(src, res)?;
+pub fn update(digest: &mut AEOp, (p0, p1, _, _): &mut ParametersAny<'_>) -> Result<()> {
+    let (p0, p1) = (p0.as_memref_input()?, p1.as_memref_output()?);
+    let size = digest.op.update(p0.get_buffer(), p1.get_buffer_mut())?;
+    p1.set_updated_size(size)?;
     Ok(())
 }
 
-pub fn encrypt_final(digest: &mut AEOp, params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref()? };
-    let mut p1 = unsafe { params.1.as_memref()? };
-    let mut p2 = unsafe { params.2.as_memref()? };
+pub fn encrypt_final(digest: &mut AEOp, (p0, p1, p2, _): &mut ParametersAny<'_>) -> Result<()> {
+    let (p0, p1, p2) = (
+        p0.as_memref_input()?,
+        p1.as_memref_output()?,
+        p2.as_memref_output()?,
+    );
 
-    let mut clear = vec![0; p0.buffer().len()];
-    clear.copy_from_slice(p0.buffer());
-    let mut ciph = vec![0; p1.buffer().len()];
-    ciph.copy_from_slice(p1.buffer());
-    let mut tag = vec![0; p2.buffer().len()];
-    tag.copy_from_slice(p2.buffer());
-
-    match digest.op.encrypt_final(&clear, &mut ciph, &mut tag) {
-        Err(e) => Err(e),
-        Ok((_ciph_len, _tag_len)) => {
-            p0.buffer().copy_from_slice(&clear);
-            p1.buffer().copy_from_slice(&ciph);
-            p2.buffer().copy_from_slice(&tag);
-
-            Ok(())
-        }
-    }
+    let (ciph_len, tag_len) =
+        digest
+            .op
+            .encrypt_final(p0.get_buffer(), p1.get_buffer_mut(), p2.get_buffer_mut())?;
+    p1.set_updated_size(ciph_len)?;
+    p2.set_updated_size(tag_len)?;
+    Ok(())
 }
 
-pub fn decrypt_final(digest: &mut AEOp, params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref()? };
-    let mut p1 = unsafe { params.1.as_memref()? };
-    let mut p2 = unsafe { params.2.as_memref()? };
+pub fn decrypt_final(digest: &mut AEOp, (p0, p1, p2, _): &mut ParametersAny<'_>) -> Result<()> {
+    let (p0, p1, p2) = (
+        p0.as_memref_input()?,
+        p1.as_memref_output()?,
+        p2.as_memref_input()?,
+    );
 
-    let mut clear = vec![0; p0.buffer().len()];
-    clear.copy_from_slice(p0.buffer());
-    let mut ciph = vec![0; p1.buffer().len()];
-    ciph.copy_from_slice(p1.buffer());
-    let mut tag = vec![0; p2.buffer().len()];
-    tag.copy_from_slice(p2.buffer());
-
-    match digest.op.decrypt_final(&clear, &mut ciph, &tag) {
-        Err(e) => Err(e),
-        Ok(_clear_len) => {
-            p0.buffer().copy_from_slice(&clear);
-            p1.buffer().copy_from_slice(&ciph);
-            p2.buffer().copy_from_slice(&tag);
-
-            Ok(())
-        }
-    }
+    let len = digest
+        .op
+        .decrypt_final(p0.get_buffer(), p1.get_buffer_mut(), p2.get_buffer())?;
+    p1.set_updated_size(len)?;
+    Ok(())
 }
 
 include!(concat!(env!("OUT_DIR"), "/user_ta_header.rs"));

@@ -20,12 +20,9 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
+use optee_utee::prelude::*;
 use optee_utee::{AlgorithmId, Asymmetric, OperationMode};
-use optee_utee::{ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Result};
 use optee_utee::{GenericObject, TransientObject, TransientObjectType};
 use proto::Command;
 
@@ -48,7 +45,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters, _sess_ctx: &mut RsaCipher) -> Result<()> {
+fn open_session(_params: &mut ParametersNone, _sess_ctx: &mut RsaCipher) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -63,79 +60,53 @@ fn destroy() {
     trace_println!("[+] TA destroy");
 }
 
-fn gen_key(rsa: &mut RsaCipher, params: &mut Parameters) -> Result<()> {
-    let key_size = unsafe { params.0.as_value()?.a() };
+fn gen_key(rsa: &mut RsaCipher, (p0, _, _, _): &mut ParametersAny<'_>) -> Result<()> {
+    let key_size = p0.as_value_input()?.get_a();
     rsa.key = TransientObject::allocate(TransientObjectType::RsaKeypair, key_size as usize)?;
     rsa.key.generate_key(key_size as usize, &[])?;
     Ok(())
 }
 
-fn get_size(rsa: &mut RsaCipher, params: &mut Parameters) -> Result<()> {
+fn get_size(rsa: &mut RsaCipher, (p0, _, _, _): &mut ParametersAny<'_>) -> Result<()> {
     let key_info = rsa.key.info()?;
-    unsafe {
-        params
-            .0
-            .as_value()?
-            .set_a((key_info.object_size() / 8) as u32)
-    };
+    p0.as_value_output()?
+        .set_a((key_info.object_size() / 8) as u32);
     Ok(())
 }
 
-fn encrypt(rsa: &mut RsaCipher, params: &mut Parameters) -> Result<()> {
+fn encrypt(rsa: &mut RsaCipher, (p0, p1, _, _): &mut ParametersAny<'_>) -> Result<()> {
     let key_info = rsa.key.info()?;
-    let mut p0 = unsafe { params.0.as_memref()? };
-    let plain_text = p0.buffer();
-    let mut p1 = unsafe { params.1.as_memref()? };
-    match Asymmetric::allocate(
+    let (p0, p1) = (p0.as_memref_input()?, p1.as_memref_output()?);
+    let mut cipher = Asymmetric::allocate(
         AlgorithmId::RsaesPkcs1V15,
         OperationMode::Encrypt,
         key_info.object_size(),
-    ) {
-        Err(e) => Err(e),
-        Ok(cipher) => {
-            cipher.set_key(&rsa.key)?;
-            match cipher.encrypt(&[], plain_text) {
-                Err(e) => Err(e),
-                Ok(cipher_text) => {
-                    if cipher_text.len() > p1.buffer().len() {
-                        p1.set_updated_size(cipher_text.len());
-                        Err(ErrorKind::ShortBuffer.into())
-                    } else {
-                        p1.buffer().clone_from_slice(&cipher_text);
-                        Ok(())
-                    }
-                }
-            }
-        }
-    }
+    )?;
+    cipher.set_key(&rsa.key)?;
+    let cipher_text = cipher.encrypt(&[], p0.get_buffer())?;
+    p1.set_output(cipher_text)?;
+    Ok(())
 }
 
-fn decrypt(rsa: &mut RsaCipher, params: &mut Parameters) -> Result<()> {
+fn decrypt(rsa: &mut RsaCipher, (p0, p1, _, _): &mut ParametersAny<'_>) -> Result<()> {
     let key_info = rsa.key.info()?;
-    let mut p0 = unsafe { params.0.as_memref()? };
-    let cipher_text = p0.buffer();
-    let mut p1 = unsafe { params.1.as_memref()? };
-    match Asymmetric::allocate(
+    let (p0, p1) = (p0.as_memref_input()?, p1.as_memref_output()?);
+    let mut cipher = Asymmetric::allocate(
         AlgorithmId::RsaesPkcs1V15,
         OperationMode::Decrypt,
         key_info.object_size(),
-    ) {
-        Err(e) => Err(e),
-        Ok(cipher) => {
-            cipher.set_key(&rsa.key)?;
-            match cipher.decrypt(&[], cipher_text) {
-                Err(e) => Err(e),
-                Ok(plain_text) => {
-                    p1.buffer().clone_from_slice(&plain_text);
-                    Ok(())
-                }
-            }
-        }
-    }
+    )?;
+    cipher.set_key(&rsa.key)?;
+    let plain_text = cipher.decrypt(&[], p0.get_buffer())?;
+    p1.set_output(plain_text)
 }
 
 #[ta_invoke_command]
-fn invoke_command(sess_ctx: &mut RsaCipher, cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(
+    sess_ctx: &mut RsaCipher,
+    cmd_id: u32,
+    params: &mut ParametersAny<'_>,
+) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::GenKey => gen_key(sess_ctx, params),

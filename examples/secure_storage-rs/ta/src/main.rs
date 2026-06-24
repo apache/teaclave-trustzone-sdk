@@ -20,12 +20,9 @@
 
 extern crate alloc;
 
-use alloc::vec;
-use optee_utee::{
-    ta_close_session, ta_create, ta_destroy, ta_invoke_command, ta_open_session, trace_println,
-};
+use optee_utee::prelude::*;
 use optee_utee::{DataFlag, GenericObject, ObjectStorageConstants, PersistentObject};
-use optee_utee::{ErrorKind, Parameters, Result};
+use optee_utee::{ErrorKind, Result};
 use proto::Command;
 
 #[ta_create]
@@ -35,7 +32,7 @@ fn create() -> Result<()> {
 }
 
 #[ta_open_session]
-fn open_session(_params: &mut Parameters) -> Result<()> {
+fn open_session(_params: &mut ParametersNone) -> Result<()> {
     trace_println!("[+] TA open session");
     Ok(())
 }
@@ -51,7 +48,7 @@ fn destroy() {
 }
 
 #[ta_invoke_command]
-fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
+fn invoke_command(cmd_id: u32, params: &mut ParametersAny<'_>) -> Result<()> {
     trace_println!("[+] TA invoke command");
     match Command::from(cmd_id) {
         Command::Write => create_raw_object(params),
@@ -61,11 +58,9 @@ fn invoke_command(cmd_id: u32, params: &mut Parameters) -> Result<()> {
     }
 }
 
-pub fn delete_object(params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref()? };
-
-    let mut obj_id = vec![0; p0.buffer().len()];
-    obj_id.copy_from_slice(p0.buffer());
+pub fn delete_object((p0, _, _, _): &mut ParametersAny<'_>) -> Result<()> {
+    // use to_vec to copy into tee memory
+    let obj_id = p0.as_memref_input()?.get_buffer().to_vec();
 
     match PersistentObject::open(
         ObjectStorageConstants::Private,
@@ -81,14 +76,10 @@ pub fn delete_object(params: &mut Parameters) -> Result<()> {
     }
 }
 
-pub fn create_raw_object(params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref()? };
-    let mut p1 = unsafe { params.1.as_memref()? };
-
-    let mut obj_id = vec![0; p0.buffer().len()];
-    obj_id.copy_from_slice(p0.buffer());
-    let mut data_buffer = vec![0; p1.buffer().len()];
-    data_buffer.copy_from_slice(p1.buffer());
+pub fn create_raw_object((p0, p1, _, _): &mut ParametersAny<'_>) -> Result<()> {
+    // use to_vec to copy into tee memory
+    let obj_id = p0.as_memref_input()?.get_buffer().to_vec();
+    let data_buffer = p1.as_memref_input()?.get_buffer().to_vec();
 
     let obj_data_flag = DataFlag::ACCESS_READ
         | DataFlag::ACCESS_WRITE
@@ -97,59 +88,42 @@ pub fn create_raw_object(params: &mut Parameters) -> Result<()> {
 
     let init_data: [u8; 0] = [0; 0];
 
-    match PersistentObject::create(
+    let mut object = PersistentObject::create(
         ObjectStorageConstants::Private,
         &obj_id,
         obj_data_flag,
         None,
         &init_data,
-    ) {
-        Err(e) => Err(e),
-
-        Ok(mut object) => match object.write(&data_buffer) {
-            Ok(()) => Ok(()),
-            Err(e_write) => {
-                object.close_and_delete()?;
-                Err(e_write)
-            }
-        },
+    )?;
+    match object.write(&data_buffer) {
+        Ok(()) => Ok(()),
+        Err(e_write) => {
+            object.close_and_delete()?;
+            Err(e_write)
+        }
     }
 }
 
-pub fn read_raw_object(params: &mut Parameters) -> Result<()> {
-    let mut p0 = unsafe { params.0.as_memref()? };
-    let mut p1 = unsafe { params.1.as_memref()? };
-    let mut obj_id = vec![0; p0.buffer().len()];
-    obj_id.copy_from_slice(p0.buffer());
+pub fn read_raw_object((p0, p1, _, _): &mut ParametersAny<'_>) -> Result<()> {
+    // use to_vec to copy into tee memory
+    let obj_id = p0.as_memref_input()?.get_buffer().to_vec();
+    let p1 = p1.as_memref_output()?;
 
-    let mut data_buffer = vec![0; p1.buffer().len()];
-    data_buffer.copy_from_slice(p1.buffer());
-
-    match PersistentObject::open(
+    let mut object = PersistentObject::open(
         ObjectStorageConstants::Private,
         &obj_id,
         DataFlag::ACCESS_READ | DataFlag::SHARE_READ,
-    ) {
-        Err(e) => Err(e),
+    )?;
+    let obj_info = object.info()?;
 
-        Ok(mut object) => {
-            let obj_info = object.info()?;
-
-            if obj_info.data_size() > p1.buffer().len() {
-                p1.set_updated_size(obj_info.data_size());
-                return Err(ErrorKind::ShortBuffer.into());
-            }
-            let read_bytes = object.read(&mut data_buffer)?;
-            if read_bytes != obj_info.data_size() as u32 {
-                return Err(ErrorKind::ExcessData.into());
-            }
-
-            p1.set_updated_size(read_bytes as usize);
-            p1.buffer().copy_from_slice(&data_buffer);
-
-            Ok(())
-        }
+    let read_bytes = object.read(p1.get_buffer_mut())?;
+    if read_bytes != obj_info.data_size() as u32 {
+        return Err(ErrorKind::ExcessData.into());
     }
+
+    p1.set_updated_size(read_bytes as usize)?;
+
+    Ok(())
 }
 
 include!(concat!(env!("OUT_DIR"), "/user_ta_header.rs"));

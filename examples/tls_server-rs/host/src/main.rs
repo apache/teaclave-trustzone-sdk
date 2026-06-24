@@ -84,10 +84,9 @@ fn do_tls_write(
 ) -> optee_teec::Result<usize> {
     let p0 = ParamValue::new(session_id, 0, ParamType::ValueInput);
     let p1 = ParamTmpRef::new_output(buf);
-    let p2 = ParamValue::new(0, 0, ParamType::ValueOutput);
-    let mut operation = Operation::new(0, p0, p1, p2, ParamNone);
+    let mut operation = Operation::new(0, p0, p1, ParamNone, ParamNone);
     ta_session.invoke_command(Command::DoTlsWrite as u32, &mut operation)?;
-    Ok(operation.parameters().2.a() as usize)
+    Ok(operation.parameters().1.updated_size())
 }
 
 fn handle_client(
