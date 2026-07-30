@@ -64,8 +64,7 @@ COMMON_EXAMPLES = \
 	time-rs \
 	udp_socket-rs \
 	signature_verification-rs \
-	client_pool-rs \
-	build_with_optee_utee_sys-rs
+	client_pool-rs
 
 # Clean targets
 STD_ONLY_EXAMPLES_CLEAN = $(STD_ONLY_EXAMPLES:%=%-clean)

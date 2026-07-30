@@ -27,6 +27,5 @@ edition.workspace = true
 
 [dependencies]
 proto = { workspace = true }
-optee-utee-sys = { workspace = true }
 optee-utee = { workspace = true }
 burn = { workspace = true }

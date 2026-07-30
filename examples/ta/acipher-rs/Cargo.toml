@@ -26,12 +26,11 @@ edition = "2018"
 
 [dependencies]
 proto = { workspace = true }
-optee-utee-sys = { workspace = true }
 optee-utee = { workspace = true }
 
 [features]
 default = []
-std = ["optee-utee/std", "optee-utee-sys/std"]
+std = ["optee-utee/std"]
 
 [build-dependencies]
 proto = { workspace = true }

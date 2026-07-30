@@ -37,7 +37,6 @@ num_enum.workspace = true
 
 [dev-dependencies]
 rand.workspace = true
-once_cell.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 optee-utee-sys = { workspace = true, features = ["mock"] }

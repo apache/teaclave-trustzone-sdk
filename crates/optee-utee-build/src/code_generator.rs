@@ -121,7 +121,7 @@ impl HeaderFileGenerator {
             let utee_type_name_codes = property_value_utee_type_codes(&prop.value);
             let utee_value_conv_codes = property_value_as_utee_value_codes(&var_name, &prop.value);
             ext_property_codes.push(quote! {
-                optee_utee_sys::user_ta_property {
+                optee_utee::raw::user_ta_property {
                     name: #prop_name_codes.as_ptr(),
                     prop_type: #utee_type_name_codes,
                     value: #utee_value_conv_codes,
@@ -133,64 +133,64 @@ impl HeaderFileGenerator {
         let property_len = ORIGIN_PROPERTY_LEN + conf.ext_properties.len();
         let no_mangle_attribute = no_mangle_attribute_codes();
         self.code.extend(quote! {
-        const IS_SINGLE_INSTANCE: bool = (TA_FLAGS & optee_utee_sys::TA_FLAG_SINGLE_INSTANCE) != 0;
-        const IS_MULTI_SESSION: bool = (TA_FLAGS & optee_utee_sys::TA_FLAG_MULTI_SESSION) != 0;
-        const IS_KEEP_ALIVE: bool = (TA_FLAGS & optee_utee_sys::TA_FLAG_INSTANCE_KEEP_ALIVE) != 0;
-        const IS_KEEP_CRASHED: bool = (TA_FLAGS & optee_utee_sys::TA_FLAG_INSTANCE_KEEP_CRASHED) != 0;
+        const IS_SINGLE_INSTANCE: bool = (TA_FLAGS & optee_utee::raw::TA_FLAG_SINGLE_INSTANCE) != 0;
+        const IS_MULTI_SESSION: bool = (TA_FLAGS & optee_utee::raw::TA_FLAG_MULTI_SESSION) != 0;
+        const IS_KEEP_ALIVE: bool = (TA_FLAGS & optee_utee::raw::TA_FLAG_INSTANCE_KEEP_ALIVE) != 0;
+        const IS_KEEP_CRASHED: bool = (TA_FLAGS & optee_utee::raw::TA_FLAG_INSTANCE_KEEP_CRASHED) != 0;
         const TA_ENDIAN: u32 = 0;
-        const DONT_CLOSE_HANDLE_ON_CORRUPT_OBJECT: bool = (TA_FLAGS & optee_utee_sys::TA_FLAG_DONT_CLOSE_HANDLE_ON_CORRUPT_OBJECT) != 0;
+        const DONT_CLOSE_HANDLE_ON_CORRUPT_OBJECT: bool = (TA_FLAGS & optee_utee::raw::TA_FLAG_DONT_CLOSE_HANDLE_ON_CORRUPT_OBJECT) != 0;
         #no_mangle_attribute
         pub static ta_num_props: usize = #property_len;
         #no_mangle_attribute
-        pub static ta_props: [optee_utee_sys::user_ta_property; #property_len] = [
-            optee_utee_sys::user_ta_property {
-                name: optee_utee_sys::TA_PROP_STR_SINGLE_INSTANCE,
-                prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
+        pub static ta_props: [optee_utee::raw::user_ta_property; #property_len] = [
+            optee_utee::raw::user_ta_property {
+                name: optee_utee::raw::TA_PROP_STR_SINGLE_INSTANCE,
+                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
                 value: &IS_SINGLE_INSTANCE as *const bool as _,
             },
-            optee_utee_sys::user_ta_property {
-                name: optee_utee_sys::TA_PROP_STR_MULTI_SESSION,
-                prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
+            optee_utee::raw::user_ta_property {
+                name: optee_utee::raw::TA_PROP_STR_MULTI_SESSION,
+                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
                 value: &IS_MULTI_SESSION as *const bool as _,
             },
-            optee_utee_sys::user_ta_property {
-                name: optee_utee_sys::TA_PROP_STR_KEEP_ALIVE,
-                prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
+            optee_utee::raw::user_ta_property {
+                name: optee_utee::raw::TA_PROP_STR_KEEP_ALIVE,
+                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
                 value: &IS_KEEP_ALIVE as *const bool as _,
             },
-            optee_utee_sys::user_ta_property {
-                name: optee_utee_sys::TA_PROP_STR_KEEP_CRASHED,
-                prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
+            optee_utee::raw::user_ta_property {
+                name: optee_utee::raw::TA_PROP_STR_KEEP_CRASHED,
+                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
                 value: &IS_KEEP_CRASHED as *const bool as _,
             },
-            optee_utee_sys::user_ta_property {
-                name: optee_utee_sys::TA_PROP_STR_DATA_SIZE,
-                prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
+            optee_utee::raw::user_ta_property {
+                name: optee_utee::raw::TA_PROP_STR_DATA_SIZE,
+                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
                 value: &TA_DATA_SIZE as *const u32 as _,
             },
-            optee_utee_sys::user_ta_property {
-                name: optee_utee_sys::TA_PROP_STR_STACK_SIZE,
-                prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
+            optee_utee::raw::user_ta_property {
+                name: optee_utee::raw::TA_PROP_STR_STACK_SIZE,
+                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
                 value: &TA_STACK_SIZE as *const u32 as _,
             },
-            optee_utee_sys::user_ta_property {
-                name: optee_utee_sys::TA_PROP_STR_VERSION,
-                prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_STRING,
+            optee_utee::raw::user_ta_property {
+                name: optee_utee::raw::TA_PROP_STR_VERSION,
+                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_STRING,
                 value: TA_VERSION as *const [u8] as _,
             },
-            optee_utee_sys::user_ta_property {
-                name: optee_utee_sys::TA_PROP_STR_DESCRIPTION,
-                prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_STRING,
+            optee_utee::raw::user_ta_property {
+                name: optee_utee::raw::TA_PROP_STR_DESCRIPTION,
+                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_STRING,
                 value: TA_DESCRIPTION as *const [u8] as _,
             },
-            optee_utee_sys::user_ta_property {
-                name: optee_utee_sys::TA_PROP_STR_ENDIAN,
-                prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
+            optee_utee::raw::user_ta_property {
+                name: optee_utee::raw::TA_PROP_STR_ENDIAN,
+                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
                 value: &TA_ENDIAN as *const u32 as _,
             },
-            optee_utee_sys::user_ta_property {
-                name: optee_utee_sys::TA_PROP_STR_DOES_NOT_CLOSE_HANDLE_ON_CORRUPT_OBJECT,
-                prop_type: optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
+            optee_utee::raw::user_ta_property {
+                name: optee_utee::raw::TA_PROP_STR_DOES_NOT_CLOSE_HANDLE_ON_CORRUPT_OBJECT,
+                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
                 value: &DONT_CLOSE_HANDLE_ON_CORRUPT_OBJECT as *const bool as _,
             },
             #(#ext_property_codes),*
@@ -207,7 +207,7 @@ impl HeaderFileGenerator {
         self.code.extend(quote! {
         #no_mangle_attribute
         #ta_head_session_attribute
-        pub static ta_head: optee_utee_sys::ta_head = optee_utee_sys::ta_head {
+        pub static ta_head: optee_utee::raw::ta_head = optee_utee::raw::ta_head {
             uuid: #uuid_value_codes,
             stack_size: #stack_size,
             flags: TA_FLAGS,
@@ -246,7 +246,7 @@ fn property_value_data_codes(value: &PropertyValue) -> Result<proc_macro2::Token
 fn uuid_to_tee_uuid_value_codes(uuid: &uuid::Uuid) -> Result<proc_macro2::TokenStream, Error> {
     let (time_low, time_mid, time_hi_and_version, clock_seq_and_node) = uuid.as_fields();
     Ok(quote! {
-    optee_utee_sys::TEE_UUID {
+    optee_utee::raw::TEE_UUID {
         timeLow: #time_low,
         timeMid: #time_mid,
         timeHiAndVersion: #time_hi_and_version,
@@ -261,7 +261,7 @@ fn identity_to_tee_identity_value_codes(
 ) -> Result<proc_macro2::TokenStream, Error> {
     let tee_uuid_codes = uuid_to_tee_uuid_value_codes(uuid)?;
     Ok(quote! {
-        optee_utee_sys::TEE_Identity {
+        optee_utee::raw::TEE_Identity {
             login: #login,
             uuid: #tee_uuid_codes,
         }
@@ -273,10 +273,10 @@ fn property_value_rust_type_declaration_codes(value: &PropertyValue) -> proc_mac
         PropertyValue::U32(_) => "u32",
         PropertyValue::U64(_) => "u64",
         PropertyValue::Bool(_) => "bool",
-        PropertyValue::Uuid(_) => "optee_utee_sys::TEE_UUID",
+        PropertyValue::Uuid(_) => "optee_utee::raw::TEE_UUID",
         PropertyValue::Str(_) => "&[u8]",
         PropertyValue::BinaryBlock(_) => "&[u8]",
-        PropertyValue::Identity(..) => "optee_utee_sys::TEE_Identity",
+        PropertyValue::Identity(..) => "optee_utee::raw::TEE_Identity",
     })
     .unwrap()
 }
@@ -291,12 +291,15 @@ fn property_value_as_utee_value_codes(
             PropertyValue::U64(_) => format!("&{} as *const u64 as *mut _", var_name),
             PropertyValue::Bool(_) => format!("&{} as *const bool as *mut _", var_name),
             PropertyValue::Uuid(_) => {
-                format!("&{} as *const optee_utee_sys::TEE_UUID as *mut _", var_name)
+                format!(
+                    "&{} as *const optee_utee::raw::TEE_UUID as *mut _",
+                    var_name
+                )
             }
             PropertyValue::Str(_) => format!("{} as *const [u8] as *mut _", var_name),
             PropertyValue::BinaryBlock(_) => format!("{} as *const [u8] as *mut _", var_name),
             PropertyValue::Identity(..) => format!(
-                "&{} as *const optee_utee_sys::TEE_Identity as *mut _",
+                "&{} as *const optee_utee::raw::TEE_Identity as *mut _",
                 var_name
             ),
         }
@@ -307,16 +310,16 @@ fn property_value_as_utee_value_codes(
 
 fn property_value_utee_type_codes(value: &PropertyValue) -> proc_macro2::TokenStream {
     proc_macro2::TokenStream::from_str(match value {
-        PropertyValue::U32(_) => "optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_U32",
-        PropertyValue::U64(_) => "optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_U64",
-        PropertyValue::Bool(_) => "optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL",
-        PropertyValue::Uuid(_) => "optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_UUID",
-        PropertyValue::Str(_) => "optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_STRING",
+        PropertyValue::U32(_) => "optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_U32",
+        PropertyValue::U64(_) => "optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_U64",
+        PropertyValue::Bool(_) => "optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL",
+        PropertyValue::Uuid(_) => "optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_UUID",
+        PropertyValue::Str(_) => "optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_STRING",
         PropertyValue::BinaryBlock(_) => {
-            "optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_BINARY_BLOCK"
+            "optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BINARY_BLOCK"
         }
         PropertyValue::Identity(..) => {
-            "optee_utee_sys::user_ta_prop_type::USER_TA_PROP_TYPE_IDENTITY"
+            "optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_IDENTITY"
         }
     })
     .unwrap()

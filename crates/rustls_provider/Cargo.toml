@@ -30,5 +30,3 @@ optee-utee.workspace = true
 rustls = { workspace = true, default-features = false, features = ["std"] }
 rustls-rustcrypto = { workspace = true }
 getrandom = { workspace = true }
-base64ct = { workspace = true }
-ed25519-dalek = { workspace = true }

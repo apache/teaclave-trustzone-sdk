@@ -37,4 +37,4 @@ permalink: /trustzone-sdk-docs/ta-development-modes.md
 
 - **`no-std`**: Excludes `test_tls_client`, `test_tls_server`, `test_secure_db_abstraction`.
 
-- **`std`**: Excludes `test_mnist_rs`, `test_build_with_optee_utee_sys`. 
+- **`std`**: Excludes `test_mnist_rs`.

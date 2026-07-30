@@ -23,7 +23,6 @@ members = [
     "aes-rs",
     "authentication-rs",
     "big_int-rs",
-    "build_with_optee_utee_sys-rs",
     "client_pool-rs",
     "diffie_hellman-rs",
     "digest-rs",
@@ -58,7 +57,6 @@ authors = ["Teaclave Contributors <dev@teaclave.apache.org>"]
 
 [workspace.dependencies]
 proto = { path = "proto" }
-optee-utee-sys = { path = "../../crates/optee-utee-sys" }
 optee-utee = { path = "../../crates/optee-utee", features = ["unwind_stubs"] }
 optee-utee-build = { path = "../../crates/optee-utee-build" }
 rustls_provider = { path = "../../crates/rustls_provider" }

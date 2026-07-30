@@ -21,7 +21,6 @@ pub mod acipher;
 pub mod aes;
 pub mod authentication;
 pub mod big_int;
-pub mod build_with_optee_utee_sys;
 pub mod client_pool;
 pub mod diffie_hellman;
 pub mod digest;

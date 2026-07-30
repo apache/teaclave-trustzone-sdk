@@ -139,7 +139,8 @@ impl<'a, 'b> PluginParameters<'a, 'b> {
     /// Returns a mutable reference to the inout buffer.
     ///
     /// # Safety
-    /// The caller is responsible for updating `out_len` (via [`set_out_len`])
+    /// The caller is responsible for updating `out_len` (via
+    /// [`set_out_len`](Self::set_out_len))
     /// after writing to the buffer.
     pub unsafe fn get_buffer_mut(&mut self) -> &mut [u8] {
         self.buf
