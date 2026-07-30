@@ -1,10 +1,5 @@
 {
   "examples": {
-    "build_with_optee_utee_sys-rs": {
-      "category": "no-std-only",
-      "tas": ["ta/build_with_optee_utee_sys-rs"],
-      "cas": ["ca/build_with_optee_utee_sys-rs"]
-    },
     "mnist-rs": {
       "category": "no-std-only",
       "tas": [

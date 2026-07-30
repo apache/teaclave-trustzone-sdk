@@ -28,7 +28,6 @@ edition.workspace = true
 [dependencies]
 common = { workspace = true }
 proto = { workspace = true }
-optee-utee-sys = { workspace = true }
 optee-utee = { workspace = true }
 burn = { workspace = true }
 spin = { workspace = true }

@@ -26,11 +26,10 @@ edition = "2018"
 
 [features]
 default = []
-std = ["optee-utee/std", "optee-utee-sys/std"]
+std = ["optee-utee/std"]
 
 [dependencies]
 proto = { workspace = true }
-optee-utee-sys = { workspace = true }
 optee-utee = { workspace = true, features = ["unwind_stubs"] }
 hex = { workspace = true, default-features = false }
 
