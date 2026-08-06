@@ -20,7 +20,8 @@ export TARGET_TA="aarch64-unknown-optee"
 export CROSS_COMPILE_TA="aarch64-linux-gnu-"
 
 # CARGO_FLAGS for building std TAs with cargo -Z build-std
-export CARGO_FLAGS="-Z build-std=std,panic_abort"
+export CARGO_FLAGS="-Z build-std=std,panic_abort -Z json-target-spec"
+export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Z unstable-options"
 # rust library source for cargo -Z build-std
 export __CARGO_TESTS_ONLY_SRC_ROOT=$RUST_STD_DIR/rust/library
 # enable std feature for building std TAs (defined in TA's Cargo.toml and used in TA's Makefile)

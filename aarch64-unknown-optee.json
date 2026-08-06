@@ -16,6 +16,6 @@
     "target-endian": "little",
     "target-pointer-width": 64,
     "vendor": "unknown",
-    "panic-strategy": "abort"
+    "panic-strategy": "abort",
+    "singlethread": true
   }
-  

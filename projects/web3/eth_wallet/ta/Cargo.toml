@@ -24,6 +24,10 @@ repository = "https://github.com/apache/teaclave-trustzone-sdk.git"
 description = "An example of Ethereum wallet TA."
 edition = "2018"
 
+[features]
+default = []
+std = []
+
 [dependencies]
 libc = { path = "../../../../rust/libc" }
 proto = { path = "../proto" }

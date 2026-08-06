@@ -36,7 +36,7 @@
 /// ```
 #[macro_export]
 macro_rules! trace_print {
-    ($($arg:tt)*) => ($crate::trace::Trace::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => {{ $crate::trace::Trace::_print(format_args!($($arg)*)) }};
 }
 
 /// Macro for printing to the trace output, with a newline.
@@ -53,12 +53,12 @@ macro_rules! trace_print {
 #[macro_export]
 macro_rules! trace_println {
     () => {
-        $crate::trace::Trace::_print(format_args!("\n"));
+        $crate::trace::Trace::_print(format_args!("\n"))
     };
     ($s:expr) => {
-        $crate::trace::Trace::_print(format_args!(concat!($s, "\n")));
+        $crate::trace::Trace::_print(format_args!(concat!($s, "\n")))
     };
     ($s:expr, $($tt:tt)*) => {
-        $crate::trace::Trace::_print(format_args!(concat!($s, "\n"), $($tt)*));
+        $crate::trace::Trace::_print(format_args!(concat!($s, "\n"), $($tt)*))
     };
 }

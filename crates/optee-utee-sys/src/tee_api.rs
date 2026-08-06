@@ -150,8 +150,8 @@ pub mod api {
             maxObjectSize: u32,
             object: *mut TEE_ObjectHandle,
         ) -> TEE_Result;
-        pub fn TEE_FreeTransientObject(object: TEE_ObjectHandle) -> c_void;
-        pub fn TEE_ResetTransientObject(object: TEE_ObjectHandle) -> c_void;
+        pub fn TEE_FreeTransientObject(object: TEE_ObjectHandle);
+        pub fn TEE_ResetTransientObject(object: TEE_ObjectHandle);
         pub fn TEE_PopulateTransientObject(
             object: TEE_ObjectHandle,
             attrs: *const TEE_Attribute,
@@ -162,17 +162,9 @@ pub mod api {
             attributeID: u32,
             buffer: *const c_void,
             length: usize,
-        ) -> c_void;
-        pub fn TEE_InitValueAttribute(
-            attr: *mut TEE_Attribute,
-            attributeID: u32,
-            a: u32,
-            b: u32,
-        ) -> c_void;
-        pub fn TEE_CopyObjectAttributes(
-            destObject: TEE_ObjectHandle,
-            srcObject: TEE_ObjectHandle,
-        ) -> c_void;
+        );
+        pub fn TEE_InitValueAttribute(attr: *mut TEE_Attribute, attributeID: u32, a: u32, b: u32);
+        pub fn TEE_CopyObjectAttributes(destObject: TEE_ObjectHandle, srcObject: TEE_ObjectHandle);
         pub fn TEE_CopyObjectAttributes1(
             destObject: TEE_ObjectHandle,
             srcObject: TEE_ObjectHandle,
@@ -254,17 +246,17 @@ pub mod api {
             mode: u32,
             maxKeySize: u32,
         ) -> TEE_Result;
-        pub fn TEE_FreeOperation(operation: TEE_OperationHandle) -> c_void;
+        pub fn TEE_FreeOperation(operation: TEE_OperationHandle);
         pub fn TEE_GetOperationInfo(
             operation: TEE_OperationHandle,
             operationInfo: *mut TEE_OperationInfo,
-        ) -> c_void;
+        );
         pub fn TEE_GetOperationInfoMultiple(
             operation: TEE_OperationHandle,
             operationInfoMultiple: *mut TEE_OperationInfoMultiple,
             operationSize: *mut usize,
         ) -> TEE_Result;
-        pub fn TEE_ResetOperation(operation: TEE_OperationHandle) -> c_void;
+        pub fn TEE_ResetOperation(operation: TEE_OperationHandle);
         pub fn TEE_SetOperationKey(
             operation: TEE_OperationHandle,
             key: TEE_ObjectHandle,
@@ -277,7 +269,7 @@ pub mod api {
         pub fn TEE_CopyOperation(
             dstOperation: TEE_OperationHandle,
             srcOperation: TEE_OperationHandle,
-        ) -> c_void;
+        );
         pub fn TEE_IsAlgorithmSupported(algId: u32, element: u32) -> TEE_Result;
 
         // Cryptographic Operations API - Message Digest Functions
@@ -286,7 +278,7 @@ pub mod api {
             operation: TEE_OperationHandle,
             chunk: *const c_void,
             chunkSize: usize,
-        ) -> c_void;
+        );
         pub fn TEE_DigestDoFinal(
             operation: TEE_OperationHandle,
             chunk: *const c_void,
@@ -297,11 +289,7 @@ pub mod api {
 
         // Cryptographic Operations API - Symmetric Cipher Functions
 
-        pub fn TEE_CipherInit(
-            operation: TEE_OperationHandle,
-            IV: *const c_void,
-            IVLen: usize,
-        ) -> c_void;
+        pub fn TEE_CipherInit(operation: TEE_OperationHandle, IV: *const c_void, IVLen: usize);
         pub fn TEE_CipherUpdate(
             operation: TEE_OperationHandle,
             srcData: *const c_void,
@@ -319,16 +307,12 @@ pub mod api {
 
         // Cryptographic Operations API - MAC Functions
 
-        pub fn TEE_MACInit(
-            operation: TEE_OperationHandle,
-            IV: *const c_void,
-            IVLen: usize,
-        ) -> c_void;
+        pub fn TEE_MACInit(operation: TEE_OperationHandle, IV: *const c_void, IVLen: usize);
         pub fn TEE_MACUpdate(
             operation: TEE_OperationHandle,
             chunk: *const c_void,
             chunkSize: usize,
-        ) -> c_void;
+        );
         pub fn TEE_MACComputeFinal(
             operation: TEE_OperationHandle,
             message: *const c_void,
@@ -358,7 +342,7 @@ pub mod api {
             operation: TEE_OperationHandle,
             AADdata: *const c_void,
             AADdataLen: usize,
-        ) -> c_void;
+        );
         pub fn TEE_AEUpdate(
             operation: TEE_OperationHandle,
             srcData: *const c_void,
@@ -431,19 +415,19 @@ pub mod api {
             params: *const TEE_Attribute,
             paramCount: u32,
             derivedKey: TEE_ObjectHandle,
-        ) -> c_void;
+        );
 
         // Cryptographic Operations API - Random Number Generation Functions
 
-        pub fn TEE_GenerateRandom(randomBuffer: *mut c_void, randomBufferLen: usize) -> c_void;
+        pub fn TEE_GenerateRandom(randomBuffer: *mut c_void, randomBufferLen: usize);
 
         // Date & Time API
 
-        pub fn TEE_GetSystemTime(time: *mut TEE_Time) -> c_void;
+        pub fn TEE_GetSystemTime(time: *mut TEE_Time);
         pub fn TEE_Wait(timeout: u32) -> TEE_Result;
         pub fn TEE_GetTAPersistentTime(time: *mut TEE_Time) -> TEE_Result;
         pub fn TEE_SetTAPersistentTime(time: *const TEE_Time) -> TEE_Result;
-        pub fn TEE_GetREETime(time: *mut TEE_Time) -> c_void;
+        pub fn TEE_GetREETime(time: *mut TEE_Time);
 
         // TEE Arithmetical API - Memory allocation and size of objects
 
@@ -452,13 +436,13 @@ pub mod api {
 
         // TEE Arithmetical API - Initialization functions
 
-        pub fn TEE_BigIntInit(bigInt: *mut TEE_BigInt, len: usize) -> c_void;
+        pub fn TEE_BigIntInit(bigInt: *mut TEE_BigInt, len: usize);
         pub fn TEE_BigIntInitFMMContext(
             context: *mut TEE_BigIntFMMContext,
             len: usize,
             modulus: *const TEE_BigInt,
-        ) -> c_void;
-        pub fn TEE_BigIntInitFMM(bigIntFMM: *mut TEE_BigIntFMM, len: usize) -> c_void;
+        );
+        pub fn TEE_BigIntInitFMM(bigIntFMM: *mut TEE_BigIntFMM, len: usize);
 
         // TEE Arithmetical API - Converter functions
 
@@ -473,82 +457,58 @@ pub mod api {
             bufferLen: *mut usize,
             bigInt: *const TEE_BigInt,
         ) -> TEE_Result;
-        pub fn TEE_BigIntConvertFromS32(dest: *mut TEE_BigInt, shortVal: i32) -> c_void;
+        pub fn TEE_BigIntConvertFromS32(dest: *mut TEE_BigInt, shortVal: i32);
         pub fn TEE_BigIntConvertToS32(dest: *mut i32, src: *const TEE_BigInt) -> TEE_Result;
 
         // TEE Arithmetical API - Logical operations
 
         pub fn TEE_BigIntCmp(op1: *const TEE_BigInt, op2: *const TEE_BigInt) -> i32;
         pub fn TEE_BigIntCmpS32(op: *const TEE_BigInt, shortVal: i32) -> i32;
-        pub fn TEE_BigIntShiftRight(
-            dest: *mut TEE_BigInt,
-            op: *const TEE_BigInt,
-            bits: size_t,
-        ) -> c_void;
+        pub fn TEE_BigIntShiftRight(dest: *mut TEE_BigInt, op: *const TEE_BigInt, bits: size_t);
         pub fn TEE_BigIntGetBit(src: *const TEE_BigInt, bitIndex: u32) -> bool;
         pub fn TEE_BigIntGetBitCount(src: *const TEE_BigInt) -> u32;
         pub fn TEE_BigIntSetBit(src: *mut TEE_BigInt, bitIndex: u32, value: bool) -> TEE_Result;
         pub fn TEE_BigIntAssign(dest: *mut TEE_BigInt, src: *const TEE_BigInt) -> TEE_Result;
         pub fn TEE_BigIntAbs(dest: *mut TEE_BigInt, src: *const TEE_BigInt) -> TEE_Result;
-        pub fn TEE_BigIntAdd(
-            dest: *mut TEE_BigInt,
-            op1: *const TEE_BigInt,
-            op2: *const TEE_BigInt,
-        ) -> c_void;
-        pub fn TEE_BigIntSub(
-            dest: *mut TEE_BigInt,
-            op1: *const TEE_BigInt,
-            op2: *const TEE_BigInt,
-        ) -> c_void;
-        pub fn TEE_BigIntNeg(dest: *mut TEE_BigInt, op: *const TEE_BigInt) -> c_void;
-        pub fn TEE_BigIntMul(
-            dest: *mut TEE_BigInt,
-            op1: *const TEE_BigInt,
-            op2: *const TEE_BigInt,
-        ) -> c_void;
-        pub fn TEE_BigIntSquare(dest: *mut TEE_BigInt, op: *const TEE_BigInt) -> c_void;
+        pub fn TEE_BigIntAdd(dest: *mut TEE_BigInt, op1: *const TEE_BigInt, op2: *const TEE_BigInt);
+        pub fn TEE_BigIntSub(dest: *mut TEE_BigInt, op1: *const TEE_BigInt, op2: *const TEE_BigInt);
+        pub fn TEE_BigIntNeg(dest: *mut TEE_BigInt, op: *const TEE_BigInt);
+        pub fn TEE_BigIntMul(dest: *mut TEE_BigInt, op1: *const TEE_BigInt, op2: *const TEE_BigInt);
+        pub fn TEE_BigIntSquare(dest: *mut TEE_BigInt, op: *const TEE_BigInt);
         pub fn TEE_BigIntDiv(
             dest_q: *mut TEE_BigInt,
             dest_r: *mut TEE_BigInt,
             op1: *const TEE_BigInt,
             op2: *const TEE_BigInt,
-        ) -> c_void;
+        );
 
         // TEE Arithmetical API - Modular arithmetic operations
 
-        pub fn TEE_BigIntMod(
-            dest: *mut TEE_BigInt,
-            op: *const TEE_BigInt,
-            n: *const TEE_BigInt,
-        ) -> c_void;
+        pub fn TEE_BigIntMod(dest: *mut TEE_BigInt, op: *const TEE_BigInt, n: *const TEE_BigInt);
         pub fn TEE_BigIntAddMod(
             dest: *mut TEE_BigInt,
             op1: *const TEE_BigInt,
             op2: *const TEE_BigInt,
             n: *const TEE_BigInt,
-        ) -> c_void;
+        );
         pub fn TEE_BigIntSubMod(
             dest: *mut TEE_BigInt,
             op1: *const TEE_BigInt,
             op2: *const TEE_BigInt,
             n: *const TEE_BigInt,
-        ) -> c_void;
+        );
         pub fn TEE_BigIntMulMod(
             dest: *mut TEE_BigInt,
             op1: *const TEE_BigInt,
             op2: *const TEE_BigInt,
             n: *const TEE_BigInt,
-        ) -> c_void;
+        );
         pub fn TEE_BigIntSquareMod(
             dest: *mut TEE_BigInt,
             op: *const TEE_BigInt,
             n: *const TEE_BigInt,
-        ) -> c_void;
-        pub fn TEE_BigIntInvMod(
-            dest: *mut TEE_BigInt,
-            op: *const TEE_BigInt,
-            n: *const TEE_BigInt,
-        ) -> c_void;
+        );
+        pub fn TEE_BigIntInvMod(dest: *mut TEE_BigInt, op: *const TEE_BigInt, n: *const TEE_BigInt);
         pub fn TEE_BigIntExpMod(
             dest: *mut TEE_BigInt,
             op1: *const TEE_BigInt,
@@ -566,7 +526,7 @@ pub mod api {
             v: *mut TEE_BigInt,
             op1: *const TEE_BigInt,
             op2: *const TEE_BigInt,
-        ) -> c_void;
+        );
         pub fn TEE_BigIntIsProbablePrime(op: *const TEE_BigInt, confidenceLevel: u32) -> i32;
 
         // TEE Arithmetical API - Fast modular multiplication operations
@@ -576,19 +536,19 @@ pub mod api {
             src: *const TEE_BigInt,
             n: *const TEE_BigInt,
             context: *const TEE_BigIntFMMContext,
-        ) -> c_void;
+        );
         pub fn TEE_BigIntConvertFromFMM(
             dest: *mut TEE_BigInt,
             src: *const TEE_BigIntFMM,
             n: *const TEE_BigInt,
             context: *const TEE_BigIntFMMContext,
-        ) -> c_void;
+        );
         pub fn TEE_BigIntComputeFMM(
             dest: *mut TEE_BigIntFMM,
             op1: *const TEE_BigIntFMM,
             op2: *const TEE_BigIntFMM,
             n: *const TEE_BigInt,
             context: *const TEE_BigIntFMMContext,
-        ) -> c_void;
+        );
     }
 }

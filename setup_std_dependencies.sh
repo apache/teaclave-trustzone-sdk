@@ -21,12 +21,13 @@ set -xe
 
 ##########################################
 # move to project root
-cd "$(dirname "$0")"
+PROJECT_ROOT="$(cd -- "$(dirname -- "$0")" && pwd)"
+cd "$PROJECT_ROOT"
 
 ##########################################
-# initialize submodules: rust / libc / patches
-RUST_TAG=1.93.1        # commit 01f6ddf7588f42ae2d7eb0a2f21d44e8e96674cf
-LIBC_TAG=0.2.182       # commit e879ee90b6cd8f79b352d4d4d1f8ca05f94f2f53
+# initialize Rust and libc at pinned revisions, plus their OP-TEE patches
+RUST_TAG=1ed2df61a19042f231709eb05d032ae9e2cb2084 # nightly-2026-08-05
+LIBC_TAG=0.2.189
 
 if [ -d rust/ ]
 then
@@ -35,20 +36,22 @@ fi
 
 mkdir rust && cd rust
 
-# Clone official Rust source at specific tag
-git clone --depth=1 --branch $RUST_TAG https://github.com/rust-lang/rust.git && \
+# Clone official Rust source, then select the exact revision in RUST_TAG
+git clone --filter=blob:none --no-checkout https://github.com/rust-lang/rust.git rust && \
 	(cd rust && \
+	git fetch --depth=1 origin "$RUST_TAG" && \
+	git checkout --detach FETCH_HEAD && \
 	git submodule update --init library/stdarch && \
 	git submodule update --init library/backtrace)
 
 # Clone official libc at specific tag
-git clone --depth=1 --branch $LIBC_TAG https://github.com/rust-lang/libc.git
+git clone --depth=1 --branch "$LIBC_TAG" https://github.com/rust-lang/libc.git
 
 # Clone patches repository
 git clone --depth=1 https://github.com/apache/teaclave-crates.git patches
 
 # Apply patches
-(cd rust && git apply ../patches/rust-1.93.1-01f6ddf/optee-0001-std-adaptation.patch)
-(cd libc && git apply ../patches/libc-0.2.182-e879ee9/optee-0001-libc-adaptation.patch)
+(cd rust && git apply ../patches/rust-1.99.0-1ed2df6/optee-0001-std-adaptation.patch)
+(cd libc && git apply ../patches/libc-0.2.189-ef0906e/optee-0001-libc-adaptation.patch)
 
 echo "Rust and libc sources initialized and patched"

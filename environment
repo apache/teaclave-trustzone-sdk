@@ -45,7 +45,8 @@ then
     export TARGET_TA="arm-unknown-optee"
     echo "set TARGET_TA=$TARGET_TA (std)"
     export FEATURES="--features std"
-    export CARGO_FLAGS="-Z build-std=std,panic_abort"
+    export CARGO_FLAGS="-Z build-std=std,panic_abort -Z json-target-spec"
+    export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Z unstable-options"
     export __CARGO_TESTS_ONLY_SRC_ROOT="$(pwd)/rust/rust/library"
   else
     export TARGET_TA="arm-unknown-linux-gnueabihf"
@@ -63,7 +64,8 @@ else
     export TARGET_TA="aarch64-unknown-optee"
     echo "set TARGET_TA=$TARGET_TA (std)"
     export FEATURES="--features std"
-    export CARGO_FLAGS="-Z build-std=std,panic_abort"
+    export CARGO_FLAGS="-Z build-std=std,panic_abort -Z json-target-spec"
+    export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Z unstable-options"
     export __CARGO_TESTS_ONLY_SRC_ROOT="$(pwd)/rust/rust/library"
   else
     export TARGET_TA="aarch64-unknown-linux-gnu"
