@@ -15,17 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-export TA_DEV_KIT_DIR="$OPTEE_OS_DIR/out/arm-plat-vexpress/export-ta_arm32"
-export TARGET_TA="arm-unknown-optee"
-export CROSS_COMPILE_TA="arm-linux-gnueabihf-"
-
-# CARGO_FLAGS for building std TAs with cargo -Z build-std
-export CARGO_FLAGS="-Z build-std=std,panic_abort -Z json-target-spec"
-export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Z unstable-options"
-# rust library source for cargo -Z build-std
-export __CARGO_TESTS_ONLY_SRC_ROOT=$RUST_STD_DIR/rust/library
-# enable std feature for building std TAs (defined in TA's Cargo.toml and used in TA's Makefile)
-export FEATURES="--features std"
-
-# assume $customized-target.json is located here
-export RUST_TARGET_PATH=$RUST_STD_DIR
+screenlog.*
+shared
+x86_64-optee-4.10.0-qemuv8-ubuntu-24.04*
+aarch64-optee-4.10.0-qemuv8-ubuntu-24.04*

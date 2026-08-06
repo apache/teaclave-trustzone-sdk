@@ -27,7 +27,7 @@ LINKER_CFG := target.$(TARGET).linker=\"$(CROSS_COMPILE)gcc\"
 
 # fix for the error: "unwinding panics are not supported without std" reported by clippy
 # Set panic=abort for std and no-std
-RUSTFLAGS := -C panic=abort
+RUSTFLAGS := -C panic=abort -Z unstable-options
 # CARGO_FLAGS is set by sourcing environment (e.g. -Z build-std=std,panic_abort for std builds)
 CARGO_FLAGS ?= 
 

@@ -326,11 +326,12 @@ fn setup_build_command(
         None
     };
 
-    // Always use cargo; std builds pass -Z build-std=std,panic_abort
+    // Always use cargo; std builds use the patched standard library and JSON targets.
     let mut cmd = cargo_command();
     cmd.arg(command);
     if config.std {
         cmd.arg("-Z").arg("build-std=std,panic_abort");
+        cmd.arg("-Z").arg("json-target-spec");
     }
     cmd.arg("--target").arg(&target);
 
@@ -365,6 +366,9 @@ fn setup_build_command(
         rustflags.push(' ');
     }
     rustflags.push_str("-C panic=abort");
+    if config.std && !rustflags.contains("unstable-options") {
+        rustflags.push_str(" -Z unstable-options");
+    }
     cmd.env("RUSTFLAGS", &rustflags);
 
     // Apply custom environment variables

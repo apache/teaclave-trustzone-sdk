@@ -548,7 +548,7 @@ TA_DEV_KIT_DIR=/opt/optee/export-ta_arm32 \
 RUSTFLAGS="-C panic=abort" \
 RUST_TARGET_PATH=/tmp/cargo-optee-XXXXX \
 __CARGO_TESTS_ONLY_SRC_ROOT=/path/to/rust/library \
-cargo -Z build-std=std,panic_abort clippy --target arm-unknown-optee --features std --release \
+cargo -Z build-std=std,panic_abort -Z json-target-spec clippy --target arm-unknown-optee --features std --release \
   --manifest-path ./ta/Cargo.toml
 
 # 2. Build
@@ -556,7 +556,7 @@ TA_DEV_KIT_DIR=/opt/optee/export-ta_arm32 \
 RUSTFLAGS="-C panic=abort" \
 RUST_TARGET_PATH=/tmp/cargo-optee-XXXXX \
 __CARGO_TESTS_ONLY_SRC_ROOT=/path/to/rust/library \
-cargo -Z build-std=std,panic_abort build --target arm-unknown-optee --features std --release \
+cargo -Z build-std=std,panic_abort -Z json-target-spec build --target arm-unknown-optee --features std --release \
   --manifest-path ./ta/Cargo.toml \
   --config target.arm-unknown-optee.linker="arm-linux-gnueabihf-gcc"
 

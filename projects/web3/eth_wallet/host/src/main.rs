@@ -78,6 +78,7 @@ pub fn derive_address(wallet_id: uuid::Uuid, hd_path: &str) -> Result<[u8; 20]> 
     Ok(output.address)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn sign_transaction(
     wallet_id: uuid::Uuid,
     hd_path: &str,
@@ -123,7 +124,7 @@ fn main() -> Result<()> {
         }
         cli::Command::DeriveAddress(opt) => {
             let address = derive_address(opt.wallet_id, &opt.hd_path)?;
-            println!("Address: 0x{}", hex::encode(&address));
+            println!("Address: 0x{}", hex::encode(address));
         }
         cli::Command::SignTransaction(opt) => {
             let signature = sign_transaction(
@@ -139,7 +140,7 @@ fn main() -> Result<()> {
             println!("Signature: {}", hex::encode(&signature));
         }
         cli::Command::Test => {
-            tests::tests::test_workflow();
+            tests::test_workflow()?;
             println!("Tests passed");
         }
     }
