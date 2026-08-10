@@ -15,6 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+name: "[Workflow Call]Build Test Qemu Image"
+
 on:
   workflow_call:
     inputs:
@@ -68,7 +70,7 @@ jobs:
           echo "Disk usage after cleanup:"
           df -h
       - name: Restore build cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cache/ccache
@@ -80,7 +82,7 @@ jobs:
             builds-cache-${{ runner.arch }}
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install OP-TEE dependencies
         run: |
@@ -140,7 +142,7 @@ jobs:
           tar -czvf $GITHUB_WORKSPACE/out/${{ env.OUTPUT_NAME }}.tar.gz ${{ env.OUTPUT_NAME }}
 
       - name: Upload
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.output_name.outputs.name }}
           path: |
