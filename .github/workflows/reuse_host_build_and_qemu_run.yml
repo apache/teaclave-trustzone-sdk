@@ -50,7 +50,7 @@ jobs:
     container: ${{ inputs.container }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       # Setup Rust and toolchains
       - name: Setup
         run: |
