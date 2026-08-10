@@ -153,7 +153,7 @@ applies to a file. This is the key reference for an automated reviewer.
 
 | Path | World / role | Trust posture | What to scrutinize |
 |---|---|---|---|
-| `crates/optee-utee/` | TA library (Secure World) | **Boundary + trusted** | The boundary lives here. `parameter.rs`, `tee_parameter.rs`, the entry-point glue, and any `unsafe` deref of caller-supplied pointers/lengths. |
+| `crates/optee-utee/` | TA library (Secure World) | **Boundary + trusted** | The boundary lives here. `parameter/` (typed `memref`/`value`/`none` params and the legacy `deprecated` module), `tee_parameter.rs`, the entry-point glue, and any `unsafe` deref of caller-supplied pointers/lengths. |
 | `crates/optee-utee-macros/` | TA entry-point codegen | **Boundary** | The generated `TA_*EntryPoint` wrappers: do they faithfully pass `param_types` and the raw params, and propagate errors without dropping them? |
 | `crates/optee-utee-sys/` | Raw FFI to OP-TEE Internal Core API | **Below the type system** | Signatures must match OP-TEE; `unsafe` correctness. The Rust type system does **not** protect callers here. |
 | `crates/optee-teec/` | CA library (Normal World) | **Untrusted side** | This runs in the adversary's world. "Missing input validation" here is generally **not** a TA-security finding — the TA cannot trust this code regardless. Focus instead on memory safety and not mishandling secrets returned to the CA. |
