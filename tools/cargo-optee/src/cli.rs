@@ -157,7 +157,7 @@ pub struct TABuildArgs {
     #[arg(long = "no-std", action = clap::ArgAction::SetTrue, conflicts_with = "std")]
     pub no_std: bool,
 
-    /// OP-TEE TA development kit export directory
+    /// OP-TEE TA development kit export directory (fallback: TA_DEV_KIT_DIR)
     #[arg(long = "ta-dev-kit-dir")]
     pub ta_dev_kit_dir: Option<PathBuf>,
 
@@ -176,7 +176,7 @@ pub struct CABuildArgs {
     #[command(flatten)]
     pub common: CommonBuildArgs,
 
-    /// OP-TEE client export directory
+    /// OP-TEE client export directory (fallback: OPTEE_CLIENT_EXPORT)
     #[arg(long = "optee-client-export")]
     pub optee_client_export: Option<PathBuf>,
 }
@@ -187,7 +187,7 @@ pub struct PluginBuildArgs {
     #[command(flatten)]
     pub common: CommonBuildArgs,
 
-    /// OP-TEE client export directory
+    /// OP-TEE client export directory (fallback: OPTEE_CLIENT_EXPORT)
     #[arg(long = "optee-client-export")]
     pub optee_client_export: Option<PathBuf>,
 
