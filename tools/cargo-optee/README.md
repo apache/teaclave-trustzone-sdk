@@ -288,7 +288,7 @@ cargo-optee clean --all
 
 ```bash
 cargo-optee build ta \
-  --ta-dev-kit-dir <PATH> \
+  [--ta-dev-kit-dir <PATH>] \
   [--manifest-path <PATH>] \
   [--arch aarch64|arm] \
   [--std] \
@@ -298,11 +298,10 @@ cargo-optee build ta \
   [--debug]
 ```
 
-**Required:**
-- `--ta-dev-kit-dir <PATH>`: Path to OP-TEE TA development kit (available after
-  building OP-TEE OS), user must provide this for building TAs.
-
 **Optional:**
+
+- `--ta-dev-kit-dir <PATH>`: Path to the OP-TEE TA development kit. If omitted,
+  cargo-optee reads it from Cargo.toml metadata, then `TA_DEV_KIT_DIR`.
 - `--manifest-path <PATH>`: Path to Cargo.toml manifest file
 - `--arch <ARCH>`: Target architecture (default: `aarch64`)
   - `aarch64`: ARM 64-bit architecture
@@ -330,10 +329,12 @@ cargo-optee build ta \
   --arch arm
   --no-std
 
-# Build TA with Cargo.toml metadata configuration
-# Note: ta-dev-kit-dir must be configured in Cargo.toml for this work
+# Build TA with Cargo.toml metadata or TA_DEV_KIT_DIR configuration
 cargo-optee build ta \
   --manifest-path ./ta/Cargo.toml
+
+# Build TA using the OP-TEE environment variable
+TA_DEV_KIT_DIR=/opt/optee/export-ta_arm64 cargo-optee build ta
 ```
 
 **Output:**
@@ -344,18 +345,17 @@ cargo-optee build ta \
 
 ```bash
 cargo-optee build ca \
-  --optee-client-export <PATH> \
+  [--optee-client-export <PATH>] \
   [--manifest-path <PATH>] \
   [--arch aarch64|arm] \
   [--debug]
 ```
 
-**Required:**
-- `--optee-client-export <PATH>`: Path to OP-TEE client library directory
-  (available after building OP-TEE client), user must provide this for building
-  CAs.
-
 **Optional:**
+
+- `--optee-client-export <PATH>`: Path to the OP-TEE client export directory.
+  If omitted, cargo-optee reads it from Cargo.toml metadata, then
+  `OPTEE_CLIENT_EXPORT`.
 - `--manifest-path <PATH>`: Path to Cargo.toml manifest file
 - `--arch <ARCH>`: Target architecture (default: `aarch64`)
 - `--debug`: Build in debug mode (default: release mode)
@@ -367,6 +367,9 @@ cargo-optee build ca \
   --optee-client-export /opt/optee/export-client \
   --manifest-path ./examples/ca/hello_world-rs/Cargo.toml \
   --arch aarch64
+
+# Build CA using the environment variable expected by optee-teec-sys
+OPTEE_CLIENT_EXPORT=/opt/optee/export-client cargo-optee build ca
 ```
 
 **Output:**
@@ -378,20 +381,19 @@ We have one example for plugin: `examples/ca/supp_plugin-rs-plugin`.
 
 ```bash
 cargo-optee build plugin \
-  --optee-client-export <PATH> \
+  [--optee-client-export <PATH>] \
   --uuid-path <PATH> \
   [--manifest-path <PATH>] \
   [--arch aarch64|arm] \
   [--debug]
 ```
 
-**Required:**
-- `--optee-client-export <PATH>`: Path to OP-TEE client library directory
-  (available after building OP-TEE client), user must provide this for building
-  plugins.
-- `--uuid-path <PATH>`: Path to UUID file for naming the plugin
-
 **Optional:**
+
+- `--optee-client-export <PATH>`: Path to the OP-TEE client export directory.
+  If omitted, cargo-optee reads it from Cargo.toml metadata, then
+  `OPTEE_CLIENT_EXPORT`.
+- `--uuid-path <PATH>`: Path to UUID file for naming the plugin
 - `--manifest-path <PATH>`: Path to Cargo.toml manifest file
 - `--arch <ARCH>`: Target architecture (default: `aarch64`)
 - `--debug`: Build in debug mode (default: release mode)
@@ -427,11 +429,13 @@ signing-key = "/path/to/key.pem"    # Path to signing key (optional, defaults to
 ```
 
 **Allowed entries:**
+
 - `arch`: Target architecture (`"aarch64"` or `"arm"`)
 - `debug`: Build in debug mode (`true` or `false`) 
 - `std`: Enable std library support (`true` or `false`)
 - `uuid-path`: Relative or absolute path to UUID file
-- `ta-dev-kit-dir`: Architecture-specific paths to TA development kit (required)
+- `ta-dev-kit-dir`: Architecture-specific paths to the TA development kit. If
+  omitted, `TA_DEV_KIT_DIR` is used.
 - `signing-key`: Path to signing key file
 
 #### Client Application (CA) Metadata
@@ -448,10 +452,11 @@ optee-client-export = { aarch64 = "/opt/optee/export-client_arm64" }
 ```
 
 **Allowed entries:**
+
 - `arch`: Target architecture (`"aarch64"` or `"arm"`)
 - `debug`: Build in debug mode (`true` or `false`)
-- `optee-client-export`: Architecture-specific paths to OP-TEE client export
-  (required)
+- `optee-client-export`: Architecture-specific paths to the OP-TEE client
+  export. If omitted, `OPTEE_CLIENT_EXPORT` is used.
 
 #### Plugin Metadata
 
@@ -467,11 +472,12 @@ optee-client-export = { aarch64 = "/opt/optee/export-client_arm64", arm = "/opt/
 ```
 
 **Allowed entries:**
+
 - `arch`: Target architecture (`"aarch64"` or `"arm"`)
 - `debug`: Build in debug mode (`true` or `false`)
 - `uuid-path`: Relative or absolute path to UUID file (required for plugins)
 - `optee-client-export`: Architecture-specific paths to OP-TEE client export
-  (required)
+  (falls back to `OPTEE_CLIENT_EXPORT`)
 
 ## Implementation Status
 

@@ -98,14 +98,15 @@ impl TaBuildConfig {
             .or_else(|| metadata_config.as_ref().map(|c| c.std))
             .unwrap_or(false);
 
-        // Handle ta_dev_kit_dir: CLI > metadata > error (required)
-        let ta_dev_kit_dir_config = cmd_ta_dev_kit_dir
-            .or_else(|| {
-                metadata_config
-                    .as_ref()
-                    .and_then(|c| c.ta_dev_kit_dir.clone())
-            })
-            .ok_or_else(ta_dev_kit_dir_error)?;
+        // Handle ta_dev_kit_dir: CLI > metadata > TA_DEV_KIT_DIR > error (required)
+        let ta_dev_kit_dir_config = resolve_config_path(
+            cmd_ta_dev_kit_dir,
+            metadata_config
+                .as_ref()
+                .and_then(|c| c.ta_dev_kit_dir.clone()),
+            "TA_DEV_KIT_DIR",
+        )
+        .ok_or_else(ta_dev_kit_dir_error)?;
 
         // Resolve ta_dev_kit_dir path (relative to absolute)
         let ta_dev_kit_dir = resolve_path_relative_to_project(
@@ -223,14 +224,15 @@ impl CaBuildConfig {
             .or_else(|| metadata_config.as_ref().map(|c| c.debug))
             .unwrap_or(false);
 
-        // Handle optee_client_export: CLI > metadata > error (required)
-        let optee_client_export_config = cmd_optee_client_export
-            .or_else(|| {
-                metadata_config
-                    .as_ref()
-                    .and_then(|c| c.optee_client_export.clone())
-            })
-            .ok_or_else(optee_client_export_error)?;
+        // Handle client export: CLI > metadata > OPTEE_CLIENT_EXPORT > error (required)
+        let optee_client_export_config = resolve_config_path(
+            cmd_optee_client_export,
+            metadata_config
+                .as_ref()
+                .and_then(|c| c.optee_client_export.clone()),
+            "OPTEE_CLIENT_EXPORT",
+        )
+        .ok_or_else(optee_client_export_error)?;
 
         // Resolve optee_client_export path (relative to absolute)
         let optee_client_export = resolve_path_relative_to_project(
@@ -540,6 +542,17 @@ fn resolve_uuid_path(
     }
 }
 
+/// Select a path from explicit configuration, then fall back to an environment variable.
+fn resolve_config_path(
+    command_line: Option<PathBuf>,
+    metadata: Option<PathBuf>,
+    environment_variable: &str,
+) -> Option<PathBuf> {
+    command_line
+        .or(metadata)
+        .or_else(|| std::env::var_os(environment_variable).map(PathBuf::from))
+}
+
 /// Generate error message for missing ta-dev-kit-dir configuration
 fn ta_dev_kit_dir_error() -> anyhow::Error {
     anyhow::anyhow!(
@@ -547,6 +560,7 @@ fn ta_dev_kit_dir_error() -> anyhow::Error {
         Please set it via:\n\
         1. Command line: --ta-dev-kit-dir <path>\n\
         2. Cargo.toml metadata: [package.metadata.optee.ta] section\n\
+        3. Environment variable: TA_DEV_KIT_DIR\n\
         \n\
         Example Cargo.toml:\n\
         [package.metadata.optee.ta]\n\
@@ -563,6 +577,7 @@ fn optee_client_export_error() -> anyhow::Error {
         Please set it via:\n\
         1. Command line: --optee-client-export <path>\n\
         2. Cargo.toml metadata: [package.metadata.optee.ca] or [package.metadata.optee.plugin] section\n\
+        3. Environment variable: OPTEE_CLIENT_EXPORT\n\
         \n\
         Example Cargo.toml:\n\
         [package.metadata.optee.ca]\n\
