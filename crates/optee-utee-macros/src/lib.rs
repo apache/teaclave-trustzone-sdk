@@ -176,6 +176,16 @@ pub fn ta_open_session(_args: TokenStream, input: TokenStream) -> TokenStream {
     match f_sig.inputs.len() {
         1 => {
             let tokens = quote!(
+                #[doc(hidden)]
+                trait __OpteeUteeSessionContext {
+                    type Context;
+                }
+                #[doc(hidden)]
+                struct __OpteeUteeSessionContextFromOpenSession;
+                impl __OpteeUteeSessionContext for __OpteeUteeSessionContextFromOpenSession {
+                    type Context = core::ffi::c_void;
+                }
+
                 #[unsafe(no_mangle)]
                 pub extern "C" fn TA_OpenSessionEntryPoint(
                     param_types: optee_utee::RawParamTypes,
@@ -206,6 +216,16 @@ pub fn ta_open_session(_args: TokenStream, input: TokenStream) -> TokenStream {
             };
 
             quote!(
+                #[doc(hidden)]
+                trait __OpteeUteeSessionContext {
+                    type Context;
+                }
+                #[doc(hidden)]
+                struct __OpteeUteeSessionContextFromOpenSession;
+                impl __OpteeUteeSessionContext for __OpteeUteeSessionContextFromOpenSession {
+                    type Context = #ctx_type;
+                }
+
                 #[unsafe(no_mangle)]
                 pub unsafe extern "C" fn TA_OpenSessionEntryPoint(
                     param_types: optee_utee::RawParamTypes,
@@ -275,6 +295,18 @@ pub fn ta_close_session(_args: TokenStream, input: TokenStream) -> TokenStream {
 
     match f_sig.inputs.len() {
         0 => quote!(
+            #[doc(hidden)]
+            #[allow(dead_code)]
+            fn __optee_utee_close_session_context_type_must_match_ta_open_session() {
+                fn session_context_type_must_match_ta_open_session<T>()
+                where
+                    T: __OpteeUteeSessionContext<Context = core::ffi::c_void>,
+                {}
+                session_context_type_must_match_ta_open_session::<
+                    __OpteeUteeSessionContextFromOpenSession,
+                >();
+            }
+
             #[unsafe(no_mangle)]
             pub extern "C" fn TA_CloseSessionEntryPoint(_: *mut core::ffi::c_void) {
                 #f_ident()
@@ -290,6 +322,18 @@ pub fn ta_close_session(_args: TokenStream, input: TokenStream) -> TokenStream {
             };
 
             quote!(
+                #[doc(hidden)]
+                #[allow(dead_code)]
+                fn __optee_utee_close_session_context_type_must_match_ta_open_session() {
+                    fn session_context_type_must_match_ta_open_session<T>()
+                    where
+                        T: __OpteeUteeSessionContext<Context = #ctx_type>,
+                    {}
+                    session_context_type_must_match_ta_open_session::<
+                        __OpteeUteeSessionContextFromOpenSession,
+                    >();
+                }
+
                 // To eliminate the clippy error: this public function might dereference a raw pointer but is not marked `unsafe`
                 // we just expand the unsafe block, but the session-related macros need refactoring in the future
                 #[unsafe(no_mangle)]
@@ -380,6 +424,18 @@ pub fn ta_invoke_command(_args: TokenStream, input: TokenStream) -> TokenStream 
     match f_sig.inputs.len() {
         2 => {
             let tokens = quote!(
+                #[doc(hidden)]
+                #[allow(dead_code)]
+                fn __optee_utee_invoke_session_context_type_must_match_ta_open_session() {
+                    fn session_context_type_must_match_ta_open_session<T>()
+                    where
+                        T: __OpteeUteeSessionContext<Context = core::ffi::c_void>,
+                    {}
+                    session_context_type_must_match_ta_open_session::<
+                        __OpteeUteeSessionContextFromOpenSession,
+                    >();
+                }
+
                 #[unsafe(no_mangle)]
                 pub extern "C" fn TA_InvokeCommandEntryPoint(
                     _: *mut core::ffi::c_void,
@@ -412,6 +468,18 @@ pub fn ta_invoke_command(_args: TokenStream, input: TokenStream) -> TokenStream 
             };
 
             quote!(
+                #[doc(hidden)]
+                #[allow(dead_code)]
+                fn __optee_utee_invoke_session_context_type_must_match_ta_open_session() {
+                    fn session_context_type_must_match_ta_open_session<T>()
+                    where
+                        T: __OpteeUteeSessionContext<Context = #ctx_type>,
+                    {}
+                    session_context_type_must_match_ta_open_session::<
+                        __OpteeUteeSessionContextFromOpenSession,
+                    >();
+                }
+
                 #[unsafe(no_mangle)]
                 pub unsafe extern "C" fn TA_InvokeCommandEntryPoint(
                     sess_ctx: *mut core::ffi::c_void,

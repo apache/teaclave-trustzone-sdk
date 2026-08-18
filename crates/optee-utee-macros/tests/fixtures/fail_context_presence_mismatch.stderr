@@ -1,0 +1,17 @@
+error[E0271]: type mismatch resolving `<__OpteeUteeSessionContextFromOpenSession as __OpteeUteeSessionContext>::Context == c_void`
+  --> tests/fixtures/fail_context_presence_mismatch.rs:30:1
+   |
+30 | #[ta_invoke_command]
+   | ^^^^^^^^^^^^^^^^^^^^ type mismatch resolving `<__OpteeUteeSessionContextFromOpenSession as __OpteeUteeSessionContext>::Context == c_void`
+   |
+note: expected this to be `c_void`
+  --> tests/fixtures/fail_context_presence_mismatch.rs:26:49
+   |
+26 | fn open_session(_: &mut ParametersNone, _: &mut SessionContext) -> Result<()> {
+   |                                                 ^^^^^^^^^^^^^^
+note: required by a bound in `__optee_utee_invoke_session_context_type_must_match_ta_open_session::session_context_type_must_match_ta_open_session`
+  --> tests/fixtures/fail_context_presence_mismatch.rs:30:1
+   |
+30 | #[ta_invoke_command]
+   | ^^^^^^^^^^^^^^^^^^^^ required by this bound in `session_context_type_must_match_ta_open_session`
+   = note: this error originates in the attribute macro `ta_invoke_command` (in Nightly builds, run with -Z macro-backtrace for more info)

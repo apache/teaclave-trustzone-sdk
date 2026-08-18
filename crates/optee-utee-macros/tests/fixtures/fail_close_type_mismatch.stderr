@@ -1,0 +1,17 @@
+error[E0271]: type mismatch resolving `<__OpteeUteeSessionContextFromOpenSession as __OpteeUteeSessionContext>::Context == CloseContext`
+  --> tests/fixtures/fail_close_type_mismatch.rs:36:1
+   |
+36 | #[ta_close_session]
+   | ^^^^^^^^^^^^^^^^^^^ type mismatch resolving `<__OpteeUteeSessionContextFromOpenSession as __OpteeUteeSessionContext>::Context == CloseContext`
+   |
+note: expected this to be `CloseContext`
+  --> tests/fixtures/fail_close_type_mismatch.rs:27:49
+   |
+27 | fn open_session(_: &mut ParametersNone, _: &mut OpenContext) -> Result<()> {
+   |                                                 ^^^^^^^^^^^
+note: required by a bound in `__optee_utee_close_session_context_type_must_match_ta_open_session::session_context_type_must_match_ta_open_session`
+  --> tests/fixtures/fail_close_type_mismatch.rs:36:1
+   |
+36 | #[ta_close_session]
+   | ^^^^^^^^^^^^^^^^^^^ required by this bound in `session_context_type_must_match_ta_open_session`
+   = note: this error originates in the attribute macro `ta_close_session` (in Nightly builds, run with -Z macro-backtrace for more info)
