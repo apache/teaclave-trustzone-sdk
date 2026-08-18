@@ -35,3 +35,4 @@ header:
     - '**/plugin_uuid.txt'
     - '**/ta_uuid.txt'
     - 'optee-version.txt'
+    - '**/*.stderr'
