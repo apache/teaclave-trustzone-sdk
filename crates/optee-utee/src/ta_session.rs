@@ -50,15 +50,14 @@ impl<'a> TaSessionBuilder<'a> {
     pub fn build(mut self) -> Result<TaSession> {
         let mut err_origin: u32 = 0;
         let mut raw_session: raw::TEE_TASessionHandle = core::ptr::null_mut();
-        // Check if the parameters are provided and prepare them for the C API call.
-        let (raw_param_types, raw_params_ptr, raw_params_opt) =
-            if let Some(params) = &mut self.params {
-                let mut raw_params = params.as_raw();
-                let raw_ptr = raw_params.as_mut_ptr();
-                (params.raw_param_types(), raw_ptr, Some(raw_params))
-            } else {
-                (0, core::ptr::null_mut(), None)
-            };
+        // Store the raw parameters in their final location before taking a pointer to them.
+        // `TEE_Param` is `Copy`, so taking the pointer before moving the array into the
+        // `Option` could leave the pointer referring to the old stack location.
+        let raw_param_types = self.params.as_ref().map_or(0, TeeParams::raw_param_types);
+        let mut raw_params_opt = self.params.as_mut().map(|params| params.as_raw());
+        let raw_params_ptr = raw_params_opt
+            .as_mut()
+            .map_or(core::ptr::null_mut(), |raw_params| raw_params.as_mut_ptr());
 
         // SAFETY:
         // self.target_uuid.as_raw_ptr() provides a valid pointer to the UUID.
@@ -76,11 +75,13 @@ impl<'a> TaSessionBuilder<'a> {
             )
         } {
             raw::TEE_SUCCESS => {
+                // From this point on, ensure every error path closes the opened session.
+                let session = TaSession { raw: raw_session };
                 if let (Some(params), Some(raw_params)) = (&mut self.params, raw_params_opt) {
                     params.update_from_raw(&raw_params)?;
                 }
 
-                Ok(TaSession { raw: raw_session })
+                Ok(session)
             }
             code => Err(Error::from_raw_error(code).with_origin(err_origin.into())),
         }
