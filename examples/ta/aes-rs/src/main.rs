@@ -135,7 +135,7 @@ pub fn alloc_resources(aes: &mut AesCipher, (p0, p1, p2, _): &mut ParametersAny<
 }
 
 pub fn set_aes_key(aes: &mut AesCipher, (p0, _, _, _): &mut ParametersAny<'_>) -> Result<()> {
-    let key = p0.as_memref_input()?.get_buffer();
+    let key = unsafe { p0.as_memref_input()?.get_buffer() };
 
     if key.len() != aes.key_size {
         trace_println!("[+] Get wrong key size !\n");
@@ -152,7 +152,7 @@ pub fn set_aes_key(aes: &mut AesCipher, (p0, _, _, _): &mut ParametersAny<'_>) -
 }
 
 pub fn reset_aes_iv(aes: &mut AesCipher, (p0, _, _, _): &mut ParametersAny<'_>) -> Result<()> {
-    let iv = p0.as_memref_input()?.get_buffer();
+    let iv = unsafe { p0.as_memref_input()?.get_buffer() };
 
     aes.cipher.init(iv);
 
@@ -163,15 +163,15 @@ pub fn reset_aes_iv(aes: &mut AesCipher, (p0, _, _, _): &mut ParametersAny<'_>) 
 pub fn cipher_buffer(aes: &mut AesCipher, (p0, p1, _, _): &mut ParametersAny<'_>) -> Result<()> {
     let (input, output) = (p0.as_memref_input()?, p1.as_memref_output()?);
 
-    if output.get_capacity() < input.get_buffer().len() {
+    if output.get_capacity() < unsafe { input.get_buffer() }.len() {
         return Err(ErrorKind::BadParameters.into());
     }
 
     trace_println!("[+] TA tries to update ciphers!");
 
-    let tmp_size = aes
-        .cipher
-        .update(input.get_buffer(), output.get_buffer_mut())?;
+    let tmp_size = aes.cipher.update(unsafe { input.get_buffer() }, unsafe {
+        output.get_buffer_mut()
+    })?;
     output.set_updated_size(tmp_size)?;
     Ok(())
 }

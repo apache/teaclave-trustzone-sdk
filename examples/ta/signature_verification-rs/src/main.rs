@@ -65,7 +65,7 @@ fn sign((p0, p1, p2, _): &mut ParametersAny<'_>) -> Result<()> {
     let p0 = p0.as_memref_input()?;
     let p1 = p1.as_memref_output()?;
     let p2 = p2.as_memref_output()?;
-    let message = p0.get_buffer();
+    let message = unsafe { p0.get_buffer() };
     trace_println!("[+] message: {:?}", message);
 
     let rsa_key = TransientObject::allocate(TransientObjectType::RsaKeypair, 2048_usize)?;
@@ -73,7 +73,7 @@ fn sign((p0, p1, p2, _): &mut ParametersAny<'_>) -> Result<()> {
     rsa_key.generate_key(2048_usize, &[])?;
 
     {
-        let buffer = p1.get_buffer_mut();
+        let buffer = unsafe { p1.get_buffer_mut() };
         let modulus_len = rsa_key.ref_attribute(AttributeId::RsaModulus, buffer)?;
         let exp_len =
             rsa_key.ref_attribute(AttributeId::RsaPublicExponent, &mut buffer[modulus_len..])?;
@@ -94,7 +94,7 @@ fn sign((p0, p1, p2, _): &mut ParametersAny<'_>) -> Result<()> {
     )?;
 
     rsa.set_key(&rsa_key)?;
-    let len = rsa.sign_digest(&[], &hash, p2.get_buffer_mut())?;
+    let len = rsa.sign_digest(&[], &hash, unsafe { p2.get_buffer_mut() })?;
     p2.set_updated_size(len)?;
     Ok(())
 }
@@ -104,13 +104,13 @@ fn verify((p0, p1, p2, _): &mut ParametersAny<'_>) -> Result<()> {
     let p1 = p1.as_memref_input()?;
     let p2 = p2.as_memref_input()?;
 
-    let message = p0.get_buffer();
+    let message = unsafe { p0.get_buffer() };
     let mut pub_key_mod = vec![0u8; 256];
-    let mut pub_key_exp = vec![0u8; p1.get_buffer().len() - 256];
-    let signature = p2.get_buffer();
+    let mut pub_key_exp = vec![0u8; unsafe { p1.get_buffer() }.len() - 256];
+    let signature = unsafe { p2.get_buffer() };
 
-    pub_key_mod.copy_from_slice(&p1.get_buffer()[..256]);
-    pub_key_exp.copy_from_slice(&p1.get_buffer()[256..]);
+    pub_key_mod.copy_from_slice(&unsafe { p1.get_buffer() }[..256]);
+    pub_key_exp.copy_from_slice(&unsafe { p1.get_buffer() }[256..]);
 
     trace_println!("[+] message: {:?}", &message);
     trace_println!("[+] public_key_mod: {:?}", &pub_key_mod);

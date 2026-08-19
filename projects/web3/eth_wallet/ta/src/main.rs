@@ -25,7 +25,7 @@ use optee_utee::{Error, ErrorKind};
 use proto::Command;
 use secure_db::SecureStorageClient;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use wallet::Wallet;
 
 const DB_NAME: &str = "eth_wallet_db";
@@ -151,7 +151,7 @@ fn invoke_command(
     dbg_println!("[+] TA invoke command");
 
     p1.set_updated_size(0)?;
-    let output_vec = match handle_invoke(Command::from(cmd_id), p0.get_buffer()) {
+    let output_vec = match handle_invoke(Command::from(cmd_id), unsafe { p0.get_buffer() }) {
         Ok(output) => output,
         Err(e) => {
             let err_message = format!("{:?}", e);

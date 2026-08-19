@@ -70,7 +70,7 @@ fn generate_key(dh: &mut DiffieHellman, (p0, p1, p2, p3): &mut ParametersAny<'_>
         p3.as_memref_output()?,
     );
     // Extract prime and base from parameters
-    let prime_base_vec = p0.get_buffer();
+    let prime_base_vec = unsafe { p0.get_buffer() };
     let prime_slice = &prime_base_vec[..KEY_SIZE / 8];
     let base_slice = &prime_base_vec[KEY_SIZE / 8..];
 
@@ -85,7 +85,7 @@ fn generate_key(dh: &mut DiffieHellman, (p0, p1, p2, p3): &mut ParametersAny<'_>
     {
         let key_size = dh
             .key
-            .ref_attribute(AttributeId::DhPublicValue, p2.get_buffer_mut())?;
+            .ref_attribute(AttributeId::DhPublicValue, unsafe { p2.get_buffer_mut() })?;
         p2.set_updated_size(key_size)?;
         p1.set_a(key_size as u32);
     }
@@ -93,7 +93,7 @@ fn generate_key(dh: &mut DiffieHellman, (p0, p1, p2, p3): &mut ParametersAny<'_>
     {
         let key_size = dh
             .key
-            .ref_attribute(AttributeId::DhPrivateValue, p3.get_buffer_mut())?;
+            .ref_attribute(AttributeId::DhPrivateValue, unsafe { p3.get_buffer_mut() })?;
         p3.set_updated_size(key_size)?;
         p1.set_b(key_size as u32);
     }
@@ -106,13 +106,15 @@ fn derive_key(dh: &mut DiffieHellman, (p0, p1, p2, _): &mut ParametersAny<'_>) -
         p1.as_memref_output()?,
         p2.as_value_output()?,
     );
-    let received_public = AttributeMemref::from_ref(AttributeId::DhPublicValue, p0.get_buffer());
+    let received_public =
+        AttributeMemref::from_ref(AttributeId::DhPublicValue, unsafe { p0.get_buffer() });
 
     let mut operation = DeriveKey::allocate(AlgorithmId::DhDeriveSharedSecret, KEY_SIZE)?;
     operation.set_key(&dh.key)?;
     let mut derived_key = TransientObject::allocate(TransientObjectType::GenericSecret, KEY_SIZE)?;
     operation.derive(&[received_public.into()], &mut derived_key);
-    let key_size = derived_key.ref_attribute(AttributeId::SecretValue, p1.get_buffer_mut())?;
+    let key_size =
+        derived_key.ref_attribute(AttributeId::SecretValue, unsafe { p1.get_buffer_mut() })?;
     p1.set_updated_size(key_size)?;
     p2.set_a(key_size as u32);
     Ok(())

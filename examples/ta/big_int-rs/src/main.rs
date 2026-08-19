@@ -18,8 +18,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![no_main]
 
-use optee_utee::prelude::*;
 use optee_utee::BigInt;
+use optee_utee::prelude::*;
 use optee_utee::{ErrorKind, Result};
 use proto::big_int::Command;
 
@@ -103,7 +103,7 @@ fn invoke_command(cmd_id: u32, (p0, p1, _, _): &mut ParametersAny<'_>) -> Result
     let mut n0 = BigInt::new(64);
     let mut n1 = BigInt::new(2);
 
-    n0.convert_from_octet_string(n0_buffer.get_buffer(), 0)?;
+    n0.convert_from_octet_string(unsafe { n0_buffer.get_buffer() }, 0)?;
     n1.convert_from_s32(n1_value.get_a() as i32);
 
     match Command::from(cmd_id) {

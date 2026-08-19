@@ -77,7 +77,7 @@ fn invoke_command(
 }
 
 pub fn update(digest: &mut DigestOp, (p0, _, _, _): &mut ParametersAny<'_>) -> Result<()> {
-    let buffer = p0.as_memref_input()?.get_buffer();
+    let buffer = unsafe { p0.as_memref_input()?.get_buffer() };
     digest.op.update(buffer);
     Ok(())
 }
@@ -88,8 +88,8 @@ pub fn do_final(digest: &mut DigestOp, (p0, p1, p2, _): &mut ParametersAny<'_>) 
         p1.as_memref_output()?,
         p2.as_value_output()?,
     );
-    let input = p0.get_buffer();
-    let length = digest.op.do_final(input, p1.get_buffer_mut())?;
+    let input = unsafe { p0.get_buffer() };
+    let length = digest.op.do_final(input, unsafe { p1.get_buffer_mut() })?;
     p2.set_a(length as u32);
     p1.set_updated_size(length)?;
     Ok(())

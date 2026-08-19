@@ -20,8 +20,8 @@
 
 extern crate alloc;
 
-use optee_utee::prelude::*;
 use optee_utee::Random;
+use optee_utee::prelude::*;
 
 use optee_utee::{ErrorKind, Result};
 use proto::random::Command;
@@ -51,7 +51,7 @@ fn destroy() {
 pub fn random_number_generate((p0, _, _, _): &mut ParametersAny<'_>) -> Result<()> {
     let p0 = p0.as_memref_output()?;
 
-    Random::generate(p0.get_buffer_mut());
+    Random::generate(unsafe { p0.get_buffer_mut() });
     p0.set_updated_size(p0.get_capacity())?;
 
     Ok(())

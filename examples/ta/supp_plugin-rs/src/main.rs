@@ -20,10 +20,10 @@
 
 extern crate alloc;
 
-use optee_utee::prelude::*;
 use optee_utee::LoadablePlugin;
+use optee_utee::prelude::*;
 use optee_utee::{ErrorKind, Result, Uuid};
-use proto::supp_plugin::{Command, PluginCommand, PLUGIN_SUBCMD_NULL, PLUGIN_UUID};
+use proto::supp_plugin::{Command, PLUGIN_SUBCMD_NULL, PLUGIN_UUID, PluginCommand};
 
 #[ta_create]
 fn create() -> Result<()> {
@@ -51,20 +51,18 @@ fn destroy() {
 fn invoke_command(cmd_id: u32, (p0, _, _, _): &mut ParametersAny<'_>) -> Result<()> {
     trace_println!("[+] TA invoke command");
     let p0 = p0.as_memref_input()?;
-    trace_println!(
-        "[+] TA received value {:?} then send to plugin",
+    trace_println!("[+] TA received value {:?} then send to plugin", unsafe {
         p0.get_buffer()
-    );
+    });
     let uuid = Uuid::parse_str(PLUGIN_UUID)?;
 
     match Command::from(cmd_id) {
         Command::Ping => {
             let plugin = LoadablePlugin::new(&uuid);
-            let outbuf = plugin.invoke(
-                PluginCommand::Print as u32,
-                PLUGIN_SUBCMD_NULL,
-                p0.get_buffer(),
-            )?;
+            let outbuf =
+                plugin.invoke(PluginCommand::Print as u32, PLUGIN_SUBCMD_NULL, unsafe {
+                    p0.get_buffer()
+                })?;
 
             trace_println!(
                 "[+] TA received out value {:?} outlen {:?}",

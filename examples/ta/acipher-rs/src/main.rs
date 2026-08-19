@@ -83,7 +83,7 @@ fn encrypt(rsa: &mut RsaCipher, (p0, p1, _, _): &mut ParametersAny<'_>) -> Resul
         key_info.object_size(),
     )?;
     cipher.set_key(&rsa.key)?;
-    let cipher_text = cipher.encrypt(&[], p0.get_buffer())?;
+    let cipher_text = cipher.encrypt(&[], unsafe { p0.get_buffer() })?;
     p1.set_output(cipher_text)?;
     Ok(())
 }
@@ -97,7 +97,7 @@ fn decrypt(rsa: &mut RsaCipher, (p0, p1, _, _): &mut ParametersAny<'_>) -> Resul
         key_info.object_size(),
     )?;
     cipher.set_key(&rsa.key)?;
-    let plain_text = cipher.decrypt(&[], p0.get_buffer())?;
+    let plain_text = cipher.decrypt(&[], unsafe { p0.get_buffer() })?;
     p1.set_output(plain_text)
 }
 

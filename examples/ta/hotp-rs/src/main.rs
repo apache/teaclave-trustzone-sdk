@@ -87,7 +87,7 @@ pub fn register_shared_key(
     hotp: &mut HmacOtp,
     (p0, _, _, _): &mut ParametersAny<'_>,
 ) -> Result<()> {
-    let buffer = p0.as_memref_input()?.get_buffer();
+    let buffer = unsafe { p0.as_memref_input()?.get_buffer() };
     hotp.key_len = buffer.len();
     hotp.key[..hotp.key_len].clone_from_slice(buffer);
     Ok(())

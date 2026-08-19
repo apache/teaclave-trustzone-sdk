@@ -80,7 +80,7 @@ fn invoke_command(
 ) -> Result<()> {
     trace_println!("[+] TA invoke command");
     let input: proto::message_passing_interface::EnclaveInput =
-        serde_json::from_slice(p0.get_buffer()).map_err(|e| {
+        serde_json::from_slice(unsafe { p0.get_buffer() }).map_err(|e| {
             trace_println!("Failed to deserialize input: {}", e);
             ErrorKind::BadFormat
         })?;

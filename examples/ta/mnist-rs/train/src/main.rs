@@ -19,7 +19,7 @@
 #![no_main]
 extern crate alloc;
 
-use burn::backend::{ndarray::NdArrayDevice, Autodiff, NdArray};
+use burn::backend::{Autodiff, NdArray, ndarray::NdArrayDevice};
 use optee_utee::prelude::*;
 use optee_utee::{ErrorKind, Result};
 use proto::mnist::train::Command;
@@ -47,10 +47,11 @@ fn open_session(
         ParameterNone,
     ),
 ) -> Result<()> {
-    let learning_rate = f64::from_le_bytes(p0.get_buffer().try_into().map_err(|err| {
-        trace_println!("bad parameter {:?}", err);
-        ErrorKind::BadParameters
-    })?);
+    let learning_rate =
+        f64::from_le_bytes(unsafe { p0.get_buffer() }.try_into().map_err(|err| {
+            trace_println!("bad parameter {:?}", err);
+            ErrorKind::BadParameters
+        })?);
     trace_println!("Initialize with learning_rate: {}", learning_rate);
 
     let mut trainer = TRAINER.lock();
@@ -73,8 +74,8 @@ fn destroy() {
 fn invoke_command(cmd_id: u32, (p0, p1, p2, _): &mut ParametersAny<'_>) -> Result<()> {
     match Command::try_from(cmd_id) {
         Ok(Command::Train) => {
-            let images = p0.as_memref_input()?.get_buffer();
-            let labels = p1.as_memref_input()?.get_buffer();
+            let images = unsafe { p0.as_memref_input()?.get_buffer() };
+            let labels = unsafe { p1.as_memref_input()?.get_buffer() };
 
             let mut trainer = TRAINER.lock();
             let result = trainer
@@ -88,8 +89,8 @@ fn invoke_command(cmd_id: u32, (p0, p1, p2, _): &mut ParametersAny<'_>) -> Resul
             p2.as_memref_output()?.set_output(bytes)
         }
         Ok(Command::Valid) => {
-            let images = p0.as_memref_input()?.get_buffer();
-            let labels = p1.as_memref_input()?.get_buffer();
+            let images = unsafe { p0.as_memref_input()?.get_buffer() };
+            let labels = unsafe { p1.as_memref_input()?.get_buffer() };
 
             let trainer = TRAINER.lock();
             let result = trainer

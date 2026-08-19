@@ -75,7 +75,7 @@ fn invoke_command(cmd_id: u32, (p0, p1, p2, _): &mut ParametersAny<'_>) -> Resul
             let p1 = p1.as_value_input()?;
             let p2 = p2.as_memref_input()?;
 
-            let address = core::str::from_utf8(p0.get_buffer()).map_err(|e| {
+            let address = core::str::from_utf8(unsafe { p0.get_buffer() }).map_err(|e| {
                 trace_println!("Failed to parse address from UTF-8: {}", e);
                 ErrorKind::BadParameters
             })?;
@@ -84,7 +84,7 @@ fn invoke_command(cmd_id: u32, (p0, p1, p2, _): &mut ParametersAny<'_>) -> Resul
                 trace_println!("Invalid IP version parameter");
                 ErrorKind::BadParameters
             })?;
-            let http_data = p2.get_buffer();
+            let http_data = unsafe { p2.get_buffer() };
 
             tcp_client(address, port, ip_version, http_data)
         }

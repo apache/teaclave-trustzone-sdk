@@ -73,7 +73,7 @@ fn invoke_command(cmd_id: u32, params: &mut ParametersAny<'_>) -> Result<()> {
             let param0 = params.0.as_memref_input()?;
             let param1 = params.1.as_value_input()?;
 
-            let address = core::str::from_utf8(param0.get_buffer()).map_err(|e| {
+            let address = core::str::from_utf8(unsafe { param0.get_buffer() }).map_err(|e| {
                 trace_println!("Failed to parse address from UTF-8: {}", e);
                 ErrorKind::BadParameters
             })?;

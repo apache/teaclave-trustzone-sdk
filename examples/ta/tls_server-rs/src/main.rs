@@ -22,7 +22,7 @@ use lazy_static::lazy_static;
 use optee_utee::prelude::*;
 use optee_utee::{ErrorKind, Result};
 use proto::tls_server::Command;
-use rustls::pki_types::{pem::PemObject, CertificateDer, PrivateKeyDer};
+use rustls::pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject};
 use std::collections::HashMap;
 use std::io::{Cursor, Read, Write};
 use std::sync::{Arc, Mutex, RwLock};
@@ -79,7 +79,7 @@ fn invoke_command(cmd_id: u32, params: &mut ParametersAny<'_>) -> Result<()> {
         }
         Command::DoTlsRead => {
             let p1 = params.1.as_memref_input()?;
-            let buffer = p1.get_buffer();
+            let buffer = unsafe { p1.get_buffer() };
             trace_println!("[+] do_tls_read");
             do_tls_read(session_id, buffer).map_err(|e| {
                 trace_println!("[-] Failed to read TLS data: {:?}", e);
@@ -89,7 +89,7 @@ fn invoke_command(cmd_id: u32, params: &mut ParametersAny<'_>) -> Result<()> {
         Command::DoTlsWrite => {
             trace_println!("[+] do_tls_write");
             let p1 = params.1.as_memref_output()?;
-            let lens = do_tls_write(session_id, p1.get_buffer_mut()).map_err(|e| {
+            let lens = do_tls_write(session_id, unsafe { p1.get_buffer_mut() }).map_err(|e| {
                 trace_println!("[-] Failed to write TLS data: {:?}", e);
                 ErrorKind::Generic
             })?;
