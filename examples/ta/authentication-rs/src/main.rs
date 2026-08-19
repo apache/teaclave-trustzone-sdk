@@ -21,10 +21,10 @@
 extern crate alloc;
 
 use optee_utee::prelude::*;
-use optee_utee::{AlgorithmId, OperationMode, AE};
+use optee_utee::{AE, AlgorithmId, OperationMode};
 use optee_utee::{AttributeId, AttributeMemref, TransientObject, TransientObjectType};
 use optee_utee::{ErrorKind, Result};
-use proto::authentication::{Command, Mode, AAD_LEN, BUFFER_SIZE, KEY_SIZE, TAG_LEN};
+use proto::authentication::{AAD_LEN, BUFFER_SIZE, Command, KEY_SIZE, Mode, TAG_LEN};
 
 pub const PAYLOAD_NUMBER: usize = 2;
 
@@ -90,9 +90,9 @@ pub fn prepare(ae: &mut AEOp, (p0, p1, p2, p3): &mut ParametersAny<'_>) -> Resul
         Mode::Decrypt => OperationMode::Decrypt,
         _ => OperationMode::IllegalValue,
     };
-    let nonce = p1.as_memref_input()?.get_buffer();
-    let key = p2.as_memref_input()?.get_buffer();
-    let aad = p3.as_memref_input()?.get_buffer();
+    let nonce = unsafe { p1.as_memref_input()?.get_buffer() };
+    let key = unsafe { p2.as_memref_input()?.get_buffer() };
+    let aad = unsafe { p3.as_memref_input()?.get_buffer() };
 
     ae.op = AE::allocate(AlgorithmId::AesCcm, mode, KEY_SIZE * 8)?;
 
@@ -108,7 +108,9 @@ pub fn prepare(ae: &mut AEOp, (p0, p1, p2, p3): &mut ParametersAny<'_>) -> Resul
 
 pub fn update(digest: &mut AEOp, (p0, p1, _, _): &mut ParametersAny<'_>) -> Result<()> {
     let (p0, p1) = (p0.as_memref_input()?, p1.as_memref_output()?);
-    let size = digest.op.update(p0.get_buffer(), p1.get_buffer_mut())?;
+    let size = digest
+        .op
+        .update(unsafe { p0.get_buffer() }, unsafe { p1.get_buffer_mut() })?;
     p1.set_updated_size(size)?;
     Ok(())
 }
@@ -120,10 +122,11 @@ pub fn encrypt_final(digest: &mut AEOp, (p0, p1, p2, _): &mut ParametersAny<'_>)
         p2.as_memref_output()?,
     );
 
-    let (ciph_len, tag_len) =
-        digest
-            .op
-            .encrypt_final(p0.get_buffer(), p1.get_buffer_mut(), p2.get_buffer_mut())?;
+    let (ciph_len, tag_len) = digest.op.encrypt_final(
+        unsafe { p0.get_buffer() },
+        unsafe { p1.get_buffer_mut() },
+        unsafe { p2.get_buffer_mut() },
+    )?;
     p1.set_updated_size(ciph_len)?;
     p2.set_updated_size(tag_len)?;
     Ok(())
@@ -136,9 +139,11 @@ pub fn decrypt_final(digest: &mut AEOp, (p0, p1, p2, _): &mut ParametersAny<'_>)
         p2.as_memref_input()?,
     );
 
-    let len = digest
-        .op
-        .decrypt_final(p0.get_buffer(), p1.get_buffer_mut(), p2.get_buffer())?;
+    let len = digest.op.decrypt_final(
+        unsafe { p0.get_buffer() },
+        unsafe { p1.get_buffer_mut() },
+        unsafe { p2.get_buffer() },
+    )?;
     p1.set_updated_size(len)?;
     Ok(())
 }

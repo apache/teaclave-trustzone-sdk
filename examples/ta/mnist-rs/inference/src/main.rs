@@ -20,7 +20,7 @@
 extern crate alloc;
 
 use burn::{
-    backend::{ndarray::NdArrayDevice, NdArray},
+    backend::{NdArray, ndarray::NdArrayDevice},
     tensor::cast::ToElement,
 };
 
@@ -51,7 +51,7 @@ fn open_session(
 ) -> Result<()> {
     let mut model = MODEL.lock();
     model.replace(
-        Model::import(&DEVICE, p0.get_buffer().to_vec()).map_err(|err| {
+        Model::import(&DEVICE, unsafe { p0.get_buffer() }.to_vec()).map_err(|err| {
             trace_println!("import failed: {:?}", err);
             ErrorKind::BadParameters
         })?,
@@ -81,7 +81,7 @@ fn invoke_command(
     ),
 ) -> Result<()> {
     trace_println!("[+] TA invoke command");
-    let images: &[Image] = bytemuck::cast_slice(p0.get_buffer());
+    let images: &[Image] = bytemuck::cast_slice(unsafe { p0.get_buffer() });
     let input = NoStdModel::images_to_tensors(&DEVICE, images);
 
     let output = MODEL

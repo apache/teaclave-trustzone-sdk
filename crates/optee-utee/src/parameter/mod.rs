@@ -176,7 +176,10 @@ fn check_type_is(raw_type: RawParamType, exp_type: ParamType) -> Result<()> {
 /// match param {
 ///     ParameterAny::None => { /* no parameter */ }
 ///     ParameterAny::MemrefInput(p) => {
-///         let data: &[u8] = p.get_buffer();
+///         // SAFETY: this application guarantees the REE will not mutate the
+///         // buffer while `data` is in use and does not fetch it again after
+///         // validation, preventing a TOCTOU mismatch.
+///         let data: &[u8] = unsafe { p.get_buffer() };
 ///         // process data ...
 ///     }
 ///     ParameterAny::ValueInput(p) => {
