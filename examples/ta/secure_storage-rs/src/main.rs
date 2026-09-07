@@ -115,13 +115,17 @@ pub fn read_raw_object((p0, p1, _, _): &mut ParametersAny<'_>) -> Result<()> {
         DataFlag::ACCESS_READ | DataFlag::SHARE_READ,
     )?;
     let obj_info = object.info()?;
+    let data_size = obj_info.data_size();
+    if p1.get_capacity() < data_size {
+        return Err(ErrorKind::ShortBuffer.into());
+    }
 
-    let read_bytes = object.read(unsafe { p1.get_buffer_mut() })?;
-    if read_bytes != obj_info.data_size() as u32 {
+    let data = object.read_remaining_to_vec()?;
+    if data.len() != data_size {
         return Err(ErrorKind::ExcessData.into());
     }
 
-    p1.set_updated_size(read_bytes as usize)?;
+    p1.set_output(&data)?;
 
     Ok(())
 }
