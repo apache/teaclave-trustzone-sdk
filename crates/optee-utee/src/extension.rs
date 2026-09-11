@@ -102,7 +102,7 @@ impl LoadablePlugin {
     /// let mut cmd = plugin.invoke_with_capacity(command_id, subcommand_id, capacity);
     /// serde_json::to_writer(Wrapper(&mut cmd), &request_data).map_err(|err| {
     ///     trace_println!("serde error: {:?}", err);
-    ///     ErrorKind::Unknown
+    ///     ErrorKind::Generic
     /// })?;
     /// let result = cmd.call()?;
     ///
