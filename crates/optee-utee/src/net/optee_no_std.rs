@@ -28,10 +28,15 @@ use super::{Setup, Socket, SocketAdapter, SocketError};
 ///     TcpStream::open(setup)
 /// }
 ///
-/// fn connect_with_compact_trait(host: &str, port: u16) -> Result<TcpStream, SocketError> {
-///     use optee_utee::net::StdCompatConnect;
+/// fn connect_with_compact_trait(host: &str, port: u16) {
+///     // `as _` imports the trait for method resolution only: under `std`
+///     // the inherent `connect_v4` below wins, under no-std the trait
+///     // method does. Either way the call shape is one line; only the
+///     // error type differs, so the result is discarded here instead of
+///     // being annotated.
+///     use optee_utee::net::StdCompatConnect as _;
 ///
-///     TcpStream::connect_v4(host, port)
+///     let _ = TcpStream::connect_v4(host, port);
 /// }
 /// ```
 pub trait StdCompatConnect: Sized {

@@ -58,6 +58,12 @@ jobs:
             cargo test -p optee-teec -vv && \
             cargo test -p optee-utee-build -vv)
 
+          # Run optee-utee tests with std as well: some doctests only
+          # compile under one feature set (e.g. the net compat-trait
+          # examples resolve to different TcpStream methods per feature).
+          (cd crates && \
+            cargo test -p optee-utee --features std -vv)
+
           # Build Rust optee-utee and optee-teec
           (cd crates && \
             cargo build -p optee-utee --target aarch64-unknown-linux-gnu -vv && \
