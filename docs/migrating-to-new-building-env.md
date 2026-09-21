@@ -27,29 +27,12 @@ We have retained almost the same structure as the original but removed
 we have some modification on `ta/ta_static.rs`, `ta/build.rs` and all 
 `Makefile`s. (See the explanation in next part). 
 
-For example the current `examples/acipher-rs/`:
+For example the current `examples/{ca,ta}/acipher-rs/` (the 2024 layout kept
+host / ta / proto under one example directory; examples later split by side):
 ```
-examples/acipher-rs/
-├── host
-│   ├── Cargo.toml
-│   ├── Makefile
-│   └── src
-│       └── main.rs
-├── Makefile
-├── proto
-│   ├── build.rs
-│   ├── Cargo.toml
-│   └── src
-│       └── lib.rs
-├── ta
-│   ├── build.rs
-│   ├── Cargo.toml
-│   ├── Makefile
-│   ├── src
-│   │   └── main.rs
-│   ├── ta_static.rs
-│   └── Xargo.toml
-└── uuid.txt
+examples/ca/acipher-rs/          # Client Application (was host/)
+examples/ta/acipher-rs/          # Trusted Application
+examples/ta/proto/               # Shared command IDs and TA UUID
 ```
 
 
@@ -99,18 +82,18 @@ examples/acipher-rs/
 
 5. **ENV variables**:  
    The original script for setting the toolchain path has some modifications. 
-   Due to the more complex building options mentioned above, `CROSS_COMPILE_{HOST, TA}` 
-   and `TARGET_{HOST, TA}` should be set by `source environment`. 
-   You should also set whether you want to build in `STD` mode (`export STD=y`) 
-   and specify the target architecture (`ARM32` or `AArch64`) for both CA and TA. 
-   Running `source environment` will set up all toolchains and libraries.
+   Set whether you want to build in `STD` mode (`export STD=y`) and the target 
+   architecture. `ARCH_HOST` / `ARCH_TA` (`arm` or `aarch64`) are shorthands 
+   for `source environment`; it derives `TARGET_{HOST,TA}`, `TA_DEV_KIT_DIR`, 
+   and `OPTEE_CLIENT_EXPORT`. Make talks to cargo-optee from those triples; 
+   cargo-optee owns the cross compiler, crate features, and cargo flags.
 
 6. **Makefile Polishing**:  
-   a. Top-level Makefile (`examples/*/Makefile`): Reads the `CROSS_COMPILE_{HOST, TA}` 
-   and `TARGET_{HOST, TA}`.  
-   b. `host/Makefile`: Simplified and polished for the changes in ENV variables.  
-   c. `ta/Makefile`: For `std` TAs, checks if the `STD` environment variable is set, 
-   and further simplifications and polish are done.
+   a. Top-level Makefile (`examples/Makefile`): Passes `STD` and 
+   `TARGET_{HOST,TA}`. `--arch` is derived from the triple.  
+   b. `examples/ca/Makefile.include`: CA / plugin wrapper around cargo-optee.  
+   c. `examples/ta/Makefile.include`: TA wrapper; `--std` from `STD` or from a 
+   `*-unknown-optee` triple.
 
 ### Step 1: Migrating Projects
 
@@ -118,9 +101,10 @@ examples/acipher-rs/
 If you have developed based on one of our example structures and haven't 
 modified the build scripts mentioned above, you can simply copy a current 
 example and move your code into it.  
-Note that the `Makefile` for `std` TAs has tiny differences from the `no_std` 
-one. If you are using a `no_std` TA, refer to `hello_world-rs`. For `std` TAs, 
-refer to `serde-rs`.
+`no_std` and `std` TAs now share `examples/ta/Makefile.include`; `--std` is
+derived from `STD` or from a `*-unknown-optee` triple. Use `hello_world-rs`
+as the `no_std` template and `serde-rs` as the `std` template for application
+code.
 
 We provide a shell script to assist with this migration (you may need to make 
 small adjustments based on whether you are building in `no_std` or `std` mode). 
@@ -132,29 +116,45 @@ OLD_ROOT_PATH="/path/to/old/sdk"
 NEW_PATH="/path/to/current/sdk"
 
 # Duplicate the hello-world example in the new path as a template
-cp -r ${NEW_PATH}/examples/hello_world-rs ${NEW_PATH}/examples/${TARGET_EXAMPLE}
+cp -r ${NEW_PATH}/examples/ca/hello_world-rs ${NEW_PATH}/examples/ca/${TARGET_EXAMPLE}
+cp -r ${NEW_PATH}/examples/ta/hello_world-rs ${NEW_PATH}/examples/ta/${TARGET_EXAMPLE}
 
 # Remove the source code directory and copy from the old path to the new path
-# including: src/ and Cargo.toml in host, ta, proto
-(cd ${NEW_PATH}/examples/${TARGET_EXAMPLE}/host && rm -rf src/ Cargo.* && \
+# including: src/ and Cargo.toml in host (now ca/), ta, proto
+(cd ${NEW_PATH}/examples/ca/${TARGET_EXAMPLE} && rm -rf src/ Cargo.* && \
 cp -r ${OLD_ROOT_PATH}/examples/${TARGET_EXAMPLE}/host/src . && \
 cp ${OLD_ROOT_PATH}/examples/${TARGET_EXAMPLE}/host/Cargo.toml .)
-(cd ${NEW_PATH}/examples/${TARGET_EXAMPLE}/ta && rm -rf src/ Cargo.* && \
+(cd ${NEW_PATH}/examples/ta/${TARGET_EXAMPLE} && rm -rf src/ Cargo.* && \
 cp -r ${OLD_ROOT_PATH}/examples/${TARGET_EXAMPLE}/ta/src . && \
 cp ${OLD_ROOT_PATH}/examples/${TARGET_EXAMPLE}/ta/Cargo.toml .)
-(cd ${NEW_PATH}/examples/${TARGET_EXAMPLE}/proto && rm -rf src/ Cargo.* && \
-cp -r ${OLD_ROOT_PATH}/examples/${TARGET_EXAMPLE}/proto/src . && \
-cp ${OLD_ROOT_PATH}/examples/${TARGET_EXAMPLE}/proto/Cargo.toml .)
 
-# Copy the UUID file from the old path to the new path
-cp ${OLD_ROOT_PATH}/examples/${TARGET_EXAMPLE}/uuid.txt \
-${NEW_PATH}/examples/${TARGET_EXAMPLE}/uuid.txt
+# Proto is a workspace crate at examples/ta/proto/. Add a module named after
+# the example (hyphens → underscores, drop a trailing -rs) and put the TA UUID
+# there as a string constant (same value as the old uuid.txt):
+#   pub const UUID: &str = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx";
+# Register it in examples/ta/proto/src/lib.rs (`pub mod your_project;`).
+#
+# The copied hello_world template still has
+#   proto::hello_world::UUID
+# in ta/build.rs, so the signed .ta would keep the Hello World UUID until you
+# point build.rs (and CA `use proto::hello_world`) at the new module:
+PROTO_MOD="$(echo "${TARGET_EXAMPLE%-rs}" | tr '-' '_')"
+sed -i "s/proto::hello_world::/proto::${PROTO_MOD}::/g" \
+  ${NEW_PATH}/examples/ta/${TARGET_EXAMPLE}/build.rs
 
-# Update binary names in host/Cargo.toml and host/Makefile
+# Overlaying the old Cargo.toml drops `{ workspace = true }`. Restore proto,
+# optee-utee / optee-teec, and optee-utee-build to workspace deps like the
+# hello_world template, then port any extra crates from the old manifest.
+
+# Update remaining hello_world-rs names in the CA/TA Cargo.toml and Makefile
 sed -i "s/hello_world-rs/${TARGET_EXAMPLE}/g" \
-${NEW_PATH}/examples/${TARGET_EXAMPLE}/host/Cargo.toml
+${NEW_PATH}/examples/ca/${TARGET_EXAMPLE}/Cargo.toml
 sed -i "s/hello_world-rs/${TARGET_EXAMPLE}/g" \
-${NEW_PATH}/examples/${TARGET_EXAMPLE}/host/Makefile
+${NEW_PATH}/examples/ca/${TARGET_EXAMPLE}/Makefile
+sed -i "s/hello_world-rs/${TARGET_EXAMPLE}/g" \
+${NEW_PATH}/examples/ta/${TARGET_EXAMPLE}/Cargo.toml
+sed -i "s/hello_world-rs/${TARGET_EXAMPLE}/g" \
+${NEW_PATH}/examples/ta/${TARGET_EXAMPLE}/Makefile
 ```
 
 #### Case 2: Custom Migration (With Modified Build Scripts)

@@ -33,23 +33,17 @@ $ docker run -it --rm \
 
 ## 2. Build the Hello World Example
 
-Update: cargo-optee is available as an alternative to the original Makefile
-system. See the [cargo-optee documentation](../tools/cargo-optee/README.md) for
-details.
-
-### If you use Makefile:
-
 **Still in Terminal A** (inside the Docker container, at the repository root):
 ```bash
 # Build the Hello World example (both CA and TA)
 make -C examples hello_world-rs
 ```
-Under the hood, the top-level `examples/Makefile` builds both the Trusted
-Application (TA) and the Client Application (CA) separately. The example is
-split across two crates: the CA crate lives in `examples/ca/hello_world-rs/`
-and the TA crate lives in `examples/ta/hello_world-rs/`. After a successful
-build, you'll find the resulting binaries in the shared workspace target
-directories:
+The example Makefiles invoke [cargo-optee](../tools/cargo-optee/README.md) to
+build, strip, and sign. The top-level `examples/Makefile` builds the Trusted
+Application (TA) and the Client Application (CA) separately. The CA crate lives
+in `examples/ca/hello_world-rs/` and the TA crate lives in
+`examples/ta/hello_world-rs/`. After a successful build, you'll find the
+resulting binaries in the shared workspace target directories:
 ```bash
 TA=examples/ta/target/aarch64-unknown-linux-gnu/release/133af0ca-bdab-11eb-9130-43bf7873bf67.ta
 HOST_APP=examples/ca/target/aarch64-unknown-linux-gnu/release/hello_world-rs
@@ -63,10 +57,9 @@ You can verify both artifacts exist before moving on:
 ls $TA $HOST_APP
 ```
 
-### If you use cargo-optee:
-
-You can see the [cargo-optee Quick Build for Hello
-World](../tools/cargo-optee/README.md#quick-build-for-hello-world) for details.
+To call cargo-optee yourself instead of through Make, see the [cargo-optee
+Quick Build for Hello
+World](../tools/cargo-optee/README.md#quick-build-for-hello-world).
 
 ## 3. Make the Artifacts Accessible to the Emulator
 After building the Hello World example, the next step is to make the compiled
@@ -76,7 +69,6 @@ There are **two approaches** to do this. You can choose either based on your
 preference:
 - 📦 **Manual sync**: Explicitly sync host and TA binaries to the emulator
 - ⚙️ **Makefile integration**: Use `make emulate` to build and sync in one step
-  (only when you use Makefile for building)
 
 #### Option 1: Manual Sync via `sync_to_emulator`
 We provide a helper command called `sync_to_emulator`, which simplifies the
@@ -89,6 +81,9 @@ sync_to_emulator --host $HOST_APP
 Run `sync_to_emulator -h` for more usage options.
 
 #### Option 2: Integrate sync with the example Makefiles
+
+The `emulate` target uses `cargo-optee install` to build and copy the current
+artifact into `$QEMU_HOST_SHARE_DIR/ta` or `$QEMU_HOST_SHARE_DIR/host`.
 For convenience during daily development, the sync invocation can be integrated
 into the Makefiles. Both the CA crate (`examples/ca/hello_world-rs`) and the TA
 crate (`examples/ta/hello_world-rs`) provide an `emulate` target, which builds

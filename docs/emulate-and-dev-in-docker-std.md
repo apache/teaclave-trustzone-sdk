@@ -56,8 +56,11 @@ $ ln -s $RUST_STD_DIR rust
 The key difference is the **unified configuration system** that allows switching
 between std/no-std modes and different architectures on demand.
 
-And [cargo-optee](../tools/cargo-optee/README.md#configuration-system) is available as
-an alternative to the original configuration management tool: switch_config.
+Example Makefiles invoke [cargo-optee](../tools/cargo-optee/README.md) after
+`switch_config` (or `source environment`) has set `STD` and the target
+architecture. You can also pass `--std` / `--arch` to cargo-optee directly;
+see the [cargo-optee configuration
+system](../tools/cargo-optee/README.md#configuration-system).
 
 ### If you use switch_config:
 
@@ -92,11 +95,6 @@ $ switch_config --host arm32         # Use 32-bit host
 $ switch_config --host arm32 && switch_config --ta std/aarch64
 ```
 
-### If you use cargo-optee:
-
-You can see the [cargo-optee configuration
-system](../tools/cargo-optee/README.md#configuration-system) for details.
-
 ## 3. Building and Target Differences
 
 Follow the [original building
@@ -105,8 +103,8 @@ note these important target differences:
 
 | Configuration | TA Target | Build Tool | Host Target |
 |---------------|-----------|------------|-------------|
-| `std/*` | `*-unknown-optee` | `cargo -Z build-std` | `*-unknown-linux-gnu` |
-| `no-std/*` | `*-unknown-linux-gnu` | `cargo` | `*-unknown-linux-gnu` |
+| `std/*` | `*-unknown-optee` | `cargo-optee --std` | `*-unknown-linux-gnu` |
+| `no-std/*` | `*-unknown-linux-gnu` | `cargo-optee --no-std` | `*-unknown-linux-gnu` |
 
 **Example std build output:**
 ```bash
@@ -138,9 +136,8 @@ $ make clean && make
 TA=examples/ta/target/aarch64-unknown-linux-gnu/release/133af0ca-bdab-11eb-9130-43bf7873bf67.ta
 ```
 
-If you are using cargo-optee, the relevant workflow is already clearly
-documented in the [cargo-optee appendix](../tools/cargo-optee/README.md#appendix), so
-it will not be repeated here.
+To invoke cargo-optee without Make, see the [cargo-optee
+appendix](../tools/cargo-optee/README.md#appendix).
 
 ## 5. Emulation and Execution
 

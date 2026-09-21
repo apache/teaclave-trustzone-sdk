@@ -8,10 +8,12 @@ All OP-TEE Rust examples are suffixed with `-rs`, which work as standalone host
 application and corresponding TA (Trusted Application) and can be found in
 separate directories.
 
-To install all examples in `SDK_ROOT_DIR/out/`, run `make examples-install`
+To install all examples in `SDK_ROOT_DIR/out/`, run `make install`
 after `make examples`.
 
-To compile one of the examples, run `make -C examples/EXAMPLE_DIR`.
+To compile one of the examples, run `make -C examples EXAMPLE_DIR`
+(for example `make -C examples hello_world-rs`). The CA lives in
+`examples/ca/EXAMPLE_DIR/` and the TA in `examples/ta/EXAMPLE_DIR/`.
 
 | Host application name        | TA UUID                                | Description                                                  | Std/No-std Support |
 | ---------------------------- | -------------------------------------- | ------------------------------------------------------------ | ------------------ |

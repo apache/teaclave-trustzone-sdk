@@ -26,7 +26,7 @@ you can try the develop version using `git pull`:
 
 ```sh
 cd [YOUR_OPTEE_DIR]/optee_rust/
-git pull github master
+git pull github main
 ```
 
 ### Develop on Other Platforms
@@ -88,12 +88,24 @@ Currently, we support building on both `aarch64` and `x86_64` host machines, and
 
 3. Before building applications, set up the configuration:
 
-   a. By default, the target platform is `aarch64` for both CA and TA. If 
-   you want to build for the `arm` target, you can set up `ARCH`:
+   a. By default, the target platform is `aarch64` for both CA and TA. To
+   build for `arm`, set the shorthands that `source environment` turns into
+   `TARGET_HOST` / `TARGET_TA` (Make derives cargo-optee `--arch` from those
+   triples; you can also export the triples directly):
 
    ```sh
    export ARCH_HOST=arm
    export ARCH_TA=arm
+   ```
+
+   Re-sourcing `environment` refreshes `TARGET_*` when they still hold the
+   triple this script last derived from `ARCH_*` / `STD`. An explicit
+   `TARGET_TA` / `TARGET_HOST` is kept. To throw away a pinned triple and
+   derive again:
+
+   ```sh
+   unset TARGET_TA TARGET_HOST
+   source environment
    ```
 
    b. By default, the build is for `no-std` TA. If you want to enable 
@@ -117,17 +129,25 @@ Run this command to build all Rust examples:
 make examples
 ```
 
-Or build your own CA and TA:
+Or build a single example (CA and TA):
 
 ```sh
-make -C examples/[YOUR_APPLICATION]
+make -C examples hello_world-rs
+```
+
+The CA crate is `examples/ca/<name>/` and the TA crate is
+`examples/ta/<name>/`. You can also invoke those directories directly:
+
+```sh
+make -C examples/ca/hello_world-rs
+make -C examples/ta/hello_world-rs
 ```
 
 Besides, you can collect all example CAs and TAs to
 `/teaclave-trustzone-sdk/out`:
 
 ```sh
-make examples-install
+make install
 ```
 
 ## Run Rust Applications
@@ -150,7 +170,7 @@ Recompile QEMU in OP-TEE to enable QEMU VirtFS:
 
 ```sh
 mkdir shared_folder
-cd [YOUR_OPTEE_DIR]/optee_rust/ && make examples-install)
+cd [YOUR_OPTEE_DIR]/optee_rust/ && make install
 cp -r [YOUR_OPTEE_DIR]/optee_rust/out/* shared_folder/
 ```
 
