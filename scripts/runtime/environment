@@ -62,6 +62,13 @@ source "$SCRIPT_DIR/ta/active"
 # Load active Host configuration  
 source "$SCRIPT_DIR/host/active"
 
+# cargo-optee owns CROSS_COMPILE, crate features, and cargo flags.
+unset FEATURES CARGO_FLAGS CROSS_COMPILE_TA CROSS_COMPILE_HOST \
+  CROSS_COMPILE32 CROSS_COMPILE64 RUST_TARGET_PATH
+if [ -z "${STD:-}" ]; then
+    unset __CARGO_TESTS_ONLY_SRC_ROOT
+fi
+
 # Validate OP-TEE directories exist
 if [ ! -d "$TA_DEV_KIT_DIR" ]; then
     echo "Error: TA_DEV_KIT_DIR=$TA_DEV_KIT_DIR does not exist" >&2
@@ -91,13 +98,12 @@ echo "TA:   $(readlink "$SCRIPT_DIR/ta/active")"
 echo "Host: $(readlink "$SCRIPT_DIR/host/active")"
 echo ""
 echo "TA Configuration:"
+echo "  STD: ${STD:-}"
 echo "  TARGET_TA: $TARGET_TA"
-echo "  CROSS_COMPILE_TA: $CROSS_COMPILE_TA"
 echo "  TA_DEV_KIT_DIR: $TA_DEV_KIT_DIR"
 echo ""
 echo "Host Configuration:"
 echo "  TARGET_HOST: $TARGET_HOST"
-echo "  CROSS_COMPILE_HOST: $CROSS_COMPILE_HOST"
 echo "  OPTEE_CLIENT_EXPORT: $OPTEE_CLIENT_EXPORT"
 echo ""
 echo "QEMU Shared Directory: $QEMU_HOST_SHARE_DIR"

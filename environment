@@ -16,8 +16,10 @@
 # under the License.
 
 export PATH=$PATH:$HOME/.cargo/bin
-# for std: specify the target json file
-export RUST_TARGET_PATH="$(pwd)"
+
+# cargo-optee owns CROSS_COMPILE, crate features, and cargo flags.
+unset FEATURES CARGO_FLAGS CROSS_COMPILE_TA CROSS_COMPILE_HOST \
+  CROSS_COMPILE32 CROSS_COMPILE64 RUST_TARGET_PATH
 
 # Disable incremental compilation to avoid ICE with recent nightly
 # error: internal compiler error: encountered incremental compilation error 
@@ -33,49 +35,50 @@ fi
 export OPTEE_OS_DIR="$OPTEE_DIR/optee_os"
 export OPTEE_CLIENT_DIR="$OPTEE_DIR/optee_client"
 
-export CROSS_COMPILE32="arm-linux-gnueabihf-"
-export CROSS_COMPILE64="aarch64-linux-gnu-"
-
-if [ "$ARCH_TA" = "arm" ]
+# TARGET_* is the Make/OP-TEE interface. ARCH_TA/ARCH_HOST are shorthands that
+# fill TARGET_* when it is unset, or when it still has the value this script
+# last derived. An explicit TARGET_TA/TARGET_HOST is left alone. To force a
+# fresh shorthand derivation: unset TARGET_TA TARGET_HOST
+if [ -z "$TARGET_TA" ] || [ "$TARGET_TA" = "${_TEACLAVE_DERIVED_TARGET_TA:-}" ]
 then
-  # build TA as 32-bit
-  export TA_DEV_KIT_DIR="$OPTEE_OS_DIR/out/arm-plat-vexpress/export-ta_arm32"
-  if [ "$STD" ]
+  if [ "$ARCH_TA" = "arm" ]
   then
-    export TARGET_TA="arm-unknown-optee"
-    echo "set TARGET_TA=$TARGET_TA (std)"
-    export FEATURES="--features std"
-    export CARGO_FLAGS="-Z build-std=std,panic_abort -Z json-target-spec"
-    export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Z unstable-options"
-    export __CARGO_TESTS_ONLY_SRC_ROOT="$(pwd)/rust/rust/library"
+    if [ "$STD" ]
+    then
+      export TARGET_TA="arm-unknown-optee"
+    else
+      export TARGET_TA="arm-unknown-linux-gnueabihf"
+    fi
   else
-    export TARGET_TA="arm-unknown-linux-gnueabihf"
-    echo "set TARGET_TA=$TARGET_TA (no-std)"
-    export FEATURES=""
-    export CARGO_FLAGS=""
+    if [ "$STD" ]
+    then
+      export TARGET_TA="aarch64-unknown-optee"
+    else
+      export TARGET_TA="aarch64-unknown-linux-gnu"
+    fi
   fi
-  export CROSS_COMPILE_TA="$CROSS_COMPILE32"
-  echo "set CROSS_COMPILE_TA=$CROSS_COMPILE_TA"
-else
-  # build TA as 64-bit by default
-  export TA_DEV_KIT_DIR="$OPTEE_OS_DIR/out/arm-plat-vexpress/export-ta_arm64"
-  if [ "$STD" ]
-  then
-    export TARGET_TA="aarch64-unknown-optee"
-    echo "set TARGET_TA=$TARGET_TA (std)"
-    export FEATURES="--features std"
-    export CARGO_FLAGS="-Z build-std=std,panic_abort -Z json-target-spec"
-    export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Z unstable-options"
-    export __CARGO_TESTS_ONLY_SRC_ROOT="$(pwd)/rust/rust/library"
-  else
-    export TARGET_TA="aarch64-unknown-linux-gnu"
-    echo "set TARGET_TA=$TARGET_TA (no-std)"
-    export FEATURES=""
-    export CARGO_FLAGS=""
-  fi
-  export CROSS_COMPILE_TA="$CROSS_COMPILE64"
-  echo "set CROSS_COMPILE_TA=$CROSS_COMPILE_TA"
+  export _TEACLAVE_DERIVED_TARGET_TA="$TARGET_TA"
 fi
+
+case "$TARGET_TA" in
+  arm-unknown-*)
+    export TA_DEV_KIT_DIR="$OPTEE_OS_DIR/out/arm-plat-vexpress/export-ta_arm32"
+    ;;
+  *)
+    export TA_DEV_KIT_DIR="$OPTEE_OS_DIR/out/arm-plat-vexpress/export-ta_arm64"
+    ;;
+esac
+
+case "$TARGET_TA" in
+  *-unknown-optee)
+    echo "set TARGET_TA=$TARGET_TA (std)"
+    export __CARGO_TESTS_ONLY_SRC_ROOT="$(pwd)/rust/rust/library"
+    ;;
+  *)
+    echo "set TARGET_TA=$TARGET_TA (no-std)"
+    unset __CARGO_TESTS_ONLY_SRC_ROOT
+    ;;
+esac
 
 # check if libraries exist
 if [ -d "$TA_DEV_KIT_DIR" ]
@@ -86,22 +89,27 @@ else
   unset OPTEE_DIR
 fi
 
-if [ "$ARCH_HOST" = "arm" ]
+if [ -z "$TARGET_HOST" ] || [ "$TARGET_HOST" = "${_TEACLAVE_DERIVED_TARGET_HOST:-}" ]
 then
-  # build host as 32-bit
-  export OPTEE_CLIENT_EXPORT="$OPTEE_CLIENT_DIR/export_arm32"
-  export TARGET_HOST="arm-unknown-linux-gnueabihf"
-  echo "set TARGET_HOST=$TARGET_HOST"
-  export CROSS_COMPILE_HOST="$CROSS_COMPILE32"
-  echo "set CROSS_COMPILE_HOST=$CROSS_COMPILE_HOST"
-else
-  # build host as 64-bit by default
-  export OPTEE_CLIENT_EXPORT="$OPTEE_CLIENT_DIR/export_arm64"
-  export TARGET_HOST="aarch64-unknown-linux-gnu"
-  echo "set TARGET_HOST=$TARGET_HOST"
-  export CROSS_COMPILE_HOST="$CROSS_COMPILE64"
-  echo "set CROSS_COMPILE_HOST=$CROSS_COMPILE_HOST"
+  if [ "$ARCH_HOST" = "arm" ]
+  then
+    export TARGET_HOST="arm-unknown-linux-gnueabihf"
+  else
+    export TARGET_HOST="aarch64-unknown-linux-gnu"
+  fi
+  export _TEACLAVE_DERIVED_TARGET_HOST="$TARGET_HOST"
 fi
+
+case "$TARGET_HOST" in
+  arm-unknown-*)
+    export OPTEE_CLIENT_EXPORT="$OPTEE_CLIENT_DIR/export_arm32"
+    ;;
+  *)
+    export OPTEE_CLIENT_EXPORT="$OPTEE_CLIENT_DIR/export_arm64"
+    ;;
+esac
+
+echo "set TARGET_HOST=$TARGET_HOST"
 
 if [ -d "$OPTEE_CLIENT_EXPORT" ]
 then 

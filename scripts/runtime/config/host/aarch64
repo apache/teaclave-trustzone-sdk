@@ -17,4 +17,3 @@
 
 export OPTEE_CLIENT_EXPORT="$OPTEE_CLIENT_DIR/export_arm64"
 export TARGET_HOST="aarch64-unknown-linux-gnu"
-export CROSS_COMPILE_HOST="aarch64-linux-gnu-"
