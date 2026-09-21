@@ -25,10 +25,7 @@ pub enum Command {
     Unknown,
 }
 
-// If Uuid::parse_str() returns an InvalidLength error, there may be an extra
-// newline in your uuid.txt file. You can remove it by running
-// `truncate -s 36 ta_uuid.txt`.
-pub const TA_UUID: &str = include_str!("../../supp_plugin-rs/ta_uuid.txt");
+pub const TA_UUID: &str = "255fc838-de89-42d3-9a8e-d044c50fa57c";
 
 //for plugin
 #[derive(FromPrimitive, IntoPrimitive)]
@@ -40,7 +37,4 @@ pub enum PluginCommand {
 }
 
 pub const PLUGIN_SUBCMD_NULL: u32 = 0xFFFFFFFF;
-// If Uuid::parse_str() returns an InvalidLength error, there may be an extra
-// newline in your uuid.txt file. You can remove it by running
-// `truncate -s 36 plugin_uuid.txt`.
-pub const PLUGIN_UUID: &str = include_str!("../../../ca/supp_plugin-rs-plugin/plugin_uuid.txt");
+pub const PLUGIN_UUID: &str = "ef620757-fa2b-4f19-a1c4-6e51cfe4c0f9";

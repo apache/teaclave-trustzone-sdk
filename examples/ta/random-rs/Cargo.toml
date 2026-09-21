@@ -36,5 +36,3 @@ optee-utee = { workspace = true }
 proto = { workspace = true }
 optee-utee-build = { workspace = true }
 
-[package.metadata.optee.ta]
-uuid-path = "uuid.txt"

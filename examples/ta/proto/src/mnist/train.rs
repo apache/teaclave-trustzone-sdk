@@ -30,4 +30,4 @@ pub struct Output {
     pub accuracy: f32,
 }
 
-pub const UUID: &str = include_str!("../../../mnist-rs/train/uuid.txt");
+pub const UUID: &str = "1b5f5b74-e9cf-4e62-8c3e-7e41da6d76f6";

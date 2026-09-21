@@ -28,7 +28,4 @@ pub enum Command {
     Unknown,
 }
 
-// If Uuid::parse_str() returns an InvalidLength error, there may be an extra
-// newline in your uuid.txt file. You can remove it by running
-// `truncate -s 36 uuid.txt`.
-pub const UUID: &str = include_str!("../../acipher-rs/uuid.txt");
+pub const UUID: &str = "057f4b66-bdab-11eb-96cf-33d6e41cc849";

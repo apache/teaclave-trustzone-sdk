@@ -41,7 +41,4 @@ pub struct EnclaveOutput {
     pub message: String,
 }
 
-// If Uuid::parse_str() returns an InvalidLength error, there may be an extra
-// newline in your uuid.txt file. You can remove it by running
-// `truncate -s 36 uuid.txt`.
-pub const UUID: &str = include_str!("../../message_passing_interface-rs/uuid.txt");
+pub const UUID: &str = "17556a46-bdab-11eb-b325-d38c9a9af725";

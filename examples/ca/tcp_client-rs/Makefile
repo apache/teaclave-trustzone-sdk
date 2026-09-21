@@ -15,6 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-NAME := tcp_client-rs
 
 include ../Makefile.include

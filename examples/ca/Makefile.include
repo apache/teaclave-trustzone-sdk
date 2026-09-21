@@ -15,40 +15,44 @@
 # specific language governing permissions and limitations
 # under the License.
 
-TARGET ?= aarch64-unknown-linux-gnu
-CROSS_COMPILE ?= aarch64-linux-gnu-
-LINKER_CFG := target.$(TARGET).linker=\"$(CROSS_COMPILE)gcc\"
-OUT_DIR ?= $(CURDIR)/../target/$(TARGET)/release
-
-CLIPPY_LINTS := -D warnings -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
-
-.PHONY: all clippy host emulate clean
-
-ifeq ($(PLUGIN),y)
-
-all: clippy host
-
-host: clippy
-	@cargo build --target $(TARGET) --release --config $(LINKER_CFG)
-	@cp $(OUT_DIR)/lib$(NAME).so $(OUT_DIR)/$(PLUGIN_UUID).plugin.so
-
+# TARGET is the OP-TEE rust.mk / `source environment` interface.
+# cargo-optee --arch is derived from that triple.
+TARGET ?= $(or $(TARGET_HOST),aarch64-unknown-linux-gnu)
+ifneq ($(filter arm-unknown-%,$(TARGET)),)
+OPTEE_ARCH := --arch arm
 else
-
-all: clippy host
-
-host: clippy
-	@cargo build --target $(TARGET) --release --config $(LINKER_CFG)
-
-ifeq ($(EMULATE),y)
-emulate: all
-	@sync_to_emulator --host $(OUT_DIR)/$(NAME)
+OPTEE_ARCH := --arch aarch64
+endif
+ifneq ($(CROSS_COMPILE_HOST),)
+CROSS_COMPILE := $(CROSS_COMPILE_HOST)
+endif
+ifneq ($(CROSS_COMPILE),)
+export CROSS_COMPILE
 endif
 
-endif
+SDK_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../..)
+CARGO_OPTEE ?= cargo run --manifest-path $(SDK_ROOT)/tools/Cargo.toml -q -p cargo-optee --
+OPTEE_COMPONENT := $(if $(filter y,$(PLUGIN)),plugin,ca)
+INSTALL_DIR ?= $(CURDIR)/shared
+
+.PHONY: all clippy host install emulate clean
+
+all: host
 
 clippy:
-	@cargo fmt
-	@cargo clippy --target $(TARGET) -- $(CLIPPY_LINTS)
+	@$(CARGO_OPTEE) clippy $(OPTEE_COMPONENT) $(OPTEE_ARCH)
+
+host: clippy
+	@$(CARGO_OPTEE) build $(OPTEE_COMPONENT) $(OPTEE_ARCH)
+
+install: clippy
+	@mkdir -p "$(INSTALL_DIR)"
+	@$(CARGO_OPTEE) install $(OPTEE_COMPONENT) $(OPTEE_ARCH) --target-dir "$(INSTALL_DIR)"
+
+ifeq ($(EMULATE),y)
+emulate: INSTALL_DIR = $(if $(QEMU_HOST_SHARE_DIR),$(QEMU_HOST_SHARE_DIR)/$(if $(filter y,$(PLUGIN)),plugin,host),$(error QEMU_HOST_SHARE_DIR must be set))
+emulate: install
+endif
 
 clean:
 	@cargo clean

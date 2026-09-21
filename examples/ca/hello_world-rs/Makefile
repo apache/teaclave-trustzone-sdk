@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-NAME := hello_world-rs
 EMULATE := y
 
 include ../Makefile.include

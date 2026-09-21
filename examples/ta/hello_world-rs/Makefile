@@ -15,8 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-UUID ?= $(shell cat uuid.txt)
-NAME := hello_world-rs-ta
 EMULATE := y
 
 include ../Makefile.include

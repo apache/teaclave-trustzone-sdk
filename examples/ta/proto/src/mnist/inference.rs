@@ -15,4 +15,4 @@
 // specific language governing permissions and limitations
 // under the License.
 
-pub const UUID: &str = include_str!("../../../mnist-rs/inference/uuid.txt");
+pub const UUID: &str = "ff09aa8a-fbb9-4734-ae8c-d7cd1a3f6744";

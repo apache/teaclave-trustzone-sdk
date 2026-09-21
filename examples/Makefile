@@ -15,15 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Default build parameters if not specified
+# Default build parameters if not specified.
+# TARGET_* is the OP-TEE / `source environment` interface. --arch is derived
+# from the triple at the cargo-optee invocation.
 TARGET ?= aarch64-unknown-linux-gnu
-CROSS_COMPILE ?= aarch64-linux-gnu-
-CROSS_COMPILE_HOST ?= $(CROSS_COMPILE)
-CROSS_COMPILE_TA ?= $(CROSS_COMPILE)
 TARGET_HOST ?= $(TARGET)
 TARGET_TA ?= $(TARGET)
-FEATURES ?=
-CARGO_FLAGS ?=
 
 # All CA crates and all TA crates now share their respective workspace target
 # directories. Do not run multiple per-example Cargo commands concurrently,
@@ -86,17 +83,26 @@ no-std-only-examples: $(NO_STD_ONLY_EXAMPLES)
 # Build common examples (always built)
 common-examples: $(COMMON_EXAMPLES)
 
-# Individual example build rules
+# Installation uses cargo-optee to locate artifacts for the active std/arch.
+BUILD_TARGET ?= all
+TA_INSTALL_DIR ?= $(CURDIR)/../out/lib/optee_armtz
+CA_INSTALL_DIR ?= $(CURDIR)/../out/usr/bin
+PLUGIN_INSTALL_DIR ?= $(CURDIR)/../out/usr/lib/tee-supplicant/plugins
+install: BUILD_TARGET = install
+install: $(if $(or $(STD),$(filter %-unknown-optee,$(TARGET_TA))),std-examples,no-std-examples)
+
 $(STD_ONLY_EXAMPLES) $(NO_STD_ONLY_EXAMPLES) $(COMMON_EXAMPLES):
-	$(q)make -C ca/$@ TARGET=$(TARGET_HOST) \
-		CROSS_COMPILE=$(CROSS_COMPILE_HOST) \
-		OPTEE_CLIENT_EXPORT=$(OPTEE_CLIENT_EXPORT)
-	$(q)make -C ta/$@ TARGET=$(TARGET_TA) \
-		CROSS_COMPILE=$(CROSS_COMPILE_TA) \
-		TA_DEV_KIT_DIR=$(TA_DEV_KIT_DIR) \
-		FEATURES="$(FEATURES)" \
-		CARGO_FLAGS="$(CARGO_FLAGS)"
-	$(if $(filter supp_plugin-rs,$@),$(q)make -C ca/supp_plugin-rs-plugin TARGET=$(TARGET_HOST) CROSS_COMPILE=$(CROSS_COMPILE_HOST) OPTEE_CLIENT_EXPORT=$(OPTEE_CLIENT_EXPORT))
+	$(q)$(MAKE) -C ca/$@ $(BUILD_TARGET) TARGET=$(TARGET_HOST) \
+		INSTALL_DIR="$(abspath $(CA_INSTALL_DIR))" \
+		$(if $(CROSS_COMPILE_HOST),CROSS_COMPILE=$(CROSS_COMPILE_HOST))
+	$(q)$(MAKE) -C ta/$@ $(BUILD_TARGET) TARGET=$(TARGET_TA) \
+		INSTALL_DIR="$(abspath $(TA_INSTALL_DIR))" \
+		$(if $(STD),STD="$(STD)") \
+		$(if $(CROSS_COMPILE_TA),CROSS_COMPILE=$(CROSS_COMPILE_TA)) \
+		$(if $(TA_SIGN_KEY),TA_SIGN_KEY="$(TA_SIGN_KEY)")
+	$(if $(filter supp_plugin-rs,$@),$(q)$(MAKE) -C ca/supp_plugin-rs-plugin $(BUILD_TARGET) TARGET=$(TARGET_HOST) \
+		INSTALL_DIR="$(abspath $(PLUGIN_INSTALL_DIR))" \
+		$(if $(CROSS_COMPILE_HOST),CROSS_COMPILE=$(CROSS_COMPILE_HOST)))
 
 # Clean targets
 clean: $(STD_ONLY_EXAMPLES_CLEAN) $(NO_STD_ONLY_EXAMPLES_CLEAN) $(COMMON_EXAMPLES_CLEAN)
@@ -116,6 +122,6 @@ help:
 	@echo "  common-examples      - Build examples that work in both modes"
 	@echo "  clean                - Clean all examples"
 
-.PHONY: std-examples no-std-examples std-only-examples no-std-only-examples common-examples \
+.PHONY: install std-examples no-std-examples std-only-examples no-std-only-examples common-examples \
 	$(STD_ONLY_EXAMPLES) $(NO_STD_ONLY_EXAMPLES) $(COMMON_EXAMPLES) \
 	$(STD_ONLY_EXAMPLES_CLEAN) $(NO_STD_ONLY_EXAMPLES_CLEAN) $(COMMON_EXAMPLES_CLEAN) clean help

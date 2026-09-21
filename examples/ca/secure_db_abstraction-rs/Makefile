@@ -15,6 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-NAME := secure_db_abstraction-rs
 
 include ../Makefile.include

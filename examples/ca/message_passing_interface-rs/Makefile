@@ -15,6 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-NAME := message_passing_interface-rs
 
 include ../Makefile.include

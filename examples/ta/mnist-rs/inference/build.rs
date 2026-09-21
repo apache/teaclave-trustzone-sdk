@@ -18,7 +18,7 @@
 use optee_utee_build::{Error, TaConfig};
 
 fn main() -> Result<(), Error> {
-    let config = TaConfig::new_default_with_cargo_env(proto::mnist::train::UUID)?
+    let config = TaConfig::new_default_with_cargo_env(proto::mnist::inference::UUID)?
         .ta_data_size(1024 * 1024)
         .ta_stack_size(1024 * 1024);
     optee_utee_build::build(config)

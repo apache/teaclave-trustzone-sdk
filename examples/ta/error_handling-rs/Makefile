@@ -15,7 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-UUID ?= $(shell cat uuid.txt)
-NAME := error_handling-rs-ta
 
 include ../Makefile.include

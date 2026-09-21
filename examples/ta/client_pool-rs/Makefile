@@ -15,7 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-UUID ?= $(shell cat uuid.txt)
-NAME := client_pool-rs-ta
 
 include ../Makefile.include

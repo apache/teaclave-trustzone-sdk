@@ -56,7 +56,4 @@ pub enum KeySize {
     Unknown = 0,
 }
 
-// If Uuid::parse_str() returns an InvalidLength error, there may be an extra
-// newline in your uuid.txt file. You can remove it by running
-// `truncate -s 36 uuid.txt`.
-pub const UUID: &str = include_str!("../../aes-rs/uuid.txt");
+pub const UUID: &str = "0864c8ec-bdab-11eb-8926-c7fa47a8c92d";

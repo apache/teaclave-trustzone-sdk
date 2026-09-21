@@ -15,8 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-UUID ?= $(shell cat uuid.txt)
-NAME := tls_server-rs-ta
 TARGET ?= aarch64-unknown-optee
 
 include ../Makefile.include

@@ -35,16 +35,14 @@ endif
 export q
 
 TARGET ?= aarch64-unknown-linux-gnu
-CROSS_COMPILE ?= aarch64-linux-gnu-
 
 # If _HOST or _TA specific compiler/target are not specified, then use common
-# compiler/target for both
+# compiler/target for both. OP-TEE rust.mk still passes TARGET_* / CROSS_COMPILE_*.
+# Do not default CROSS_COMPILE_*; cargo-optee derives the prefix from --arch.
 CROSS_COMPILE_HOST ?= $(CROSS_COMPILE)
 CROSS_COMPILE_TA ?= $(CROSS_COMPILE)
 TARGET_HOST ?= $(TARGET)
 TARGET_TA ?= $(TARGET)
-BUILDER ?= cargo
-FEATURES ?=
 
 .PHONY: all examples std-examples no-std-examples \
 	install clean examples-clean help
@@ -60,26 +58,19 @@ endif
 examples: no-std-examples
 
 # Delegate all examples-related targets to examples/Makefile
-std-examples no-std-examples:
-	$(q)$(MAKE) -C examples $@ TARGET_HOST=$(TARGET_HOST) \
+std-examples no-std-examples install:
+	$(q)$(MAKE) -C examples $@ \
+		TA_INSTALL_DIR="$(abspath $(out-dir))/lib/optee_armtz" \
+		CA_INSTALL_DIR="$(abspath $(out-dir))$(bindir)" \
+		PLUGIN_INSTALL_DIR="$(abspath $(out-dir))$(libdir)/tee-supplicant/plugins" \
+		$(if $(STD),STD="$(STD)") \
+		TARGET_HOST=$(TARGET_HOST) \
 		TARGET_TA=$(TARGET_TA) \
 		CROSS_COMPILE_HOST=$(CROSS_COMPILE_HOST) \
 		CROSS_COMPILE_TA=$(CROSS_COMPILE_TA) \
 		TA_DEV_KIT_DIR=$(TA_DEV_KIT_DIR) \
 		OPTEE_CLIENT_EXPORT=$(OPTEE_CLIENT_EXPORT) \
-		BUILDER=$(BUILDER) \
-		FEATURES="$(FEATURES)"
-
-install: examples
-	$(echo) '  INSTALL ${out-dir}/lib/optee_armtz'
-	$(q)mkdir -p ${out-dir}/lib/optee_armtz
-	$(q)find examples/ta/target/$(TARGET_TA)/ -name *.ta -exec cp {} ${out-dir}/lib/optee_armtz \;
-	$(echo) '  INSTALL ${out-dir}${bindir}'
-	$(q)mkdir -p ${out-dir}${bindir}
-	$(q)cp examples/ca/target/$(TARGET_HOST)/release/*-rs ${out-dir}${bindir}
-	$(echo) '  INSTALL ${out-dir}${libdir}/tee-supplicant/plugins/'
-	$(q)mkdir -p ${out-dir}${libdir}/tee-supplicant/plugins/
-	$(q)find examples/ca/target/$(TARGET_HOST)/ -name *.plugin.so -exec cp {} ${out-dir}${libdir}/tee-supplicant/plugins/ \;
+		$(if $(TA_SIGN_KEY),TA_SIGN_KEY="$(TA_SIGN_KEY)")
 
 clean: examples-clean out-clean
 
@@ -94,6 +85,6 @@ help:
 	@echo "  examples              - Build no-std examples (default, backward compatible)"
 	@echo "  std-examples          - Build std examples (std-only + common)"
 	@echo "  no-std-examples       - Build no-std examples (no-std-only + common)"
-	@echo "  install               - Install built examples to out directory"
+	@echo "  install               - Build and install examples to out directory"
 	@echo "  clean                 - Clean all examples and output directory"
 	@echo ""

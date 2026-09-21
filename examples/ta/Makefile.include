@@ -15,63 +15,71 @@
 # specific language governing permissions and limitations
 # under the License.
 
-TARGET ?= aarch64-unknown-linux-gnu
-CROSS_COMPILE ?= aarch64-linux-gnu-
-OBJCOPY := $(CROSS_COMPILE)objcopy
-LINKER_CFG := target.$(TARGET).linker=\"$(CROSS_COMPILE)gcc\"
-OUT_DIR ?= $(CURDIR)/../target/$(TARGET)/release
-CARGO_FLAGS ?=
-FEATURES ?=
+# TARGET is the OP-TEE rust.mk / `source environment` interface.
+# cargo-optee --arch / --std are derived from that triple.
+TARGET ?= $(or $(TARGET_TA),aarch64-unknown-linux-gnu)
+ifneq ($(filter arm-unknown-%,$(TARGET)),)
+OPTEE_ARCH := --arch arm
+else
+OPTEE_ARCH := --arch aarch64
+endif
+ifneq ($(STD),)
+OPTEE_STD := --std
+else ifneq ($(filter %-unknown-optee,$(TARGET)),)
+OPTEE_STD := --std
+else
+OPTEE_STD := --no-std
+endif
+ifneq ($(CROSS_COMPILE_TA),)
+CROSS_COMPILE := $(CROSS_COMPILE_TA)
+endif
+ifneq ($(CROSS_COMPILE),)
+export CROSS_COMPILE
+endif
+ifneq ($(TA_SIGN_KEY),)
+OPTEE_SIGNING_KEY := --signing-key "$(TA_SIGN_KEY)"
+endif
 
-.PHONY: all clippy ta strip sign emulate clean
+SDK_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../..)
+CARGO_OPTEE ?= cargo run --manifest-path $(SDK_ROOT)/tools/Cargo.toml -q -p cargo-optee --
+INSTALL_DIR ?= $(CURDIR)/shared
+
+.PHONY: all clippy ta strip sign install emulate clean
 
 ifeq ($(GROUP),y)
 
-all:
+all clippy ta install clean:
 	@set -e; for member in $(MEMBERS); do \
-		$(MAKE) -C $$member TARGET=$(TARGET) CROSS_COMPILE=$(CROSS_COMPILE) \
-			TA_DEV_KIT_DIR=$(TA_DEV_KIT_DIR) FEATURES="$(FEATURES)" CARGO_FLAGS="$(CARGO_FLAGS)"; \
+		$(MAKE) -C $$member $@ TARGET=$(TARGET) \
+			INSTALL_DIR="$(abspath $(INSTALL_DIR))" \
+			$(if $(STD),STD="$(STD)") \
+			$(if $(CROSS_COMPILE),CROSS_COMPILE=$(CROSS_COMPILE)) \
+			$(if $(TA_SIGN_KEY),TA_SIGN_KEY="$(TA_SIGN_KEY)"); \
 	done
-
-clean:
-	@cargo clean --manifest-path ../Cargo.toml
 
 else
 
-ifeq ($(findstring panic=abort,$(RUSTFLAGS)),)
-RUSTFLAGS += -C panic=abort
-endif
-ifneq ($(findstring json-target-spec,$(CARGO_FLAGS)),)
-ifeq ($(findstring unstable-options,$(RUSTFLAGS)),)
-RUSTFLAGS += -Z unstable-options
-endif
-endif
-TA_SIGN_KEY ?= $(TA_DEV_KIT_DIR)/keys/default_ta.pem
-SIGN := $(TA_DEV_KIT_DIR)/scripts/sign_encrypt.py
-CLIPPY_LINTS := -D warnings -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic
-
-all: clippy ta strip sign
+all: ta
 
 clippy:
-	@cargo fmt
-	@RUSTFLAGS="$(RUSTFLAGS)" cargo clippy $(CARGO_FLAGS) --target $(TARGET) $(FEATURES) -- $(CLIPPY_LINTS)
+	@$(CARGO_OPTEE) clippy ta $(OPTEE_ARCH) $(OPTEE_STD)
 
 ta: clippy
-	@RUSTFLAGS="$(RUSTFLAGS)" cargo build $(CARGO_FLAGS) --target $(TARGET) --release $(FEATURES) --config $(LINKER_CFG)
+	@$(CARGO_OPTEE) build ta $(OPTEE_ARCH) $(OPTEE_STD) $(OPTEE_SIGNING_KEY)
 
-strip: ta
-	@$(OBJCOPY) --strip-unneeded $(OUT_DIR)/$(NAME) $(OUT_DIR)/stripped_$(NAME)
-
-sign: strip
-	@$(SIGN) --uuid $(UUID) --key $(TA_SIGN_KEY) --in $(OUT_DIR)/stripped_$(NAME) --out $(OUT_DIR)/$(UUID).ta
-	@echo "SIGN =>  $(UUID)"
-
-ifeq ($(EMULATE),y)
-emulate: all
-	@sync_to_emulator --ta $(OUT_DIR)/$(UUID).ta
-endif
+install: clippy
+	@mkdir -p "$(INSTALL_DIR)"
+	@$(CARGO_OPTEE) install ta $(OPTEE_ARCH) $(OPTEE_STD) $(OPTEE_SIGNING_KEY) --target-dir "$(INSTALL_DIR)"
 
 clean:
 	@cargo clean
 
+endif
+
+# Compatibility aliases: cargo-optee owns stripping and signing.
+strip sign: ta
+
+ifeq ($(EMULATE),y)
+emulate: INSTALL_DIR = $(if $(QEMU_HOST_SHARE_DIR),$(QEMU_HOST_SHARE_DIR)/ta,$(error QEMU_HOST_SHARE_DIR must be set))
+emulate: install
 endif

@@ -26,10 +26,7 @@ pub enum Command {
     Unknown,
 }
 
-// If Uuid::parse_str() returns an InvalidLength error, there may be an extra
-// newline in your uuid.txt file. You can remove it by running
-// `truncate -s 36 uuid.txt`.
-pub const UUID: &str = include_str!("../../inter_ta-rs/uuid.txt");
+pub const UUID: &str = "fa9ea860-ef3b-4d59-8457-5564a60c0379";
 
 // For TA-TA invocation testcases:
 #[derive(FromPrimitive, IntoPrimitive)]

@@ -15,8 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-NAME := syslog_plugin
-PLUGIN_UUID := $(shell cat plugin_uuid.txt)
 PLUGIN := y
 
 include ../Makefile.include

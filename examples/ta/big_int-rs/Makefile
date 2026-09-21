@@ -15,7 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-UUID ?= $(shell cat uuid.txt)
-NAME := big_int-rs-ta
 
 include ../Makefile.include

@@ -15,6 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-NAME := error_handling-rs
 
 include ../Makefile.include

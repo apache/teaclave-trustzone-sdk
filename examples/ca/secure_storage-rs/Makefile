@@ -15,6 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-NAME := secure_storage-rs
 
 include ../Makefile.include

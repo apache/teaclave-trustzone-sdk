@@ -15,6 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-NAME := signature_verification-rs
 
 include ../Makefile.include

@@ -15,21 +15,32 @@
 # specific language governing permissions and limitations
 # under the License.
 
-NAME := eth_wallet-rs
+TARGET ?= $(or $(TARGET_HOST),aarch64-unknown-linux-gnu)
+ifneq ($(filter arm-unknown-%,$(TARGET)),)
+OPTEE_ARCH := --arch arm
+else
+OPTEE_ARCH := --arch aarch64
+endif
+ifneq ($(CROSS_COMPILE_HOST),)
+CROSS_COMPILE := $(CROSS_COMPILE_HOST)
+endif
+ifneq ($(CROSS_COMPILE),)
+export CROSS_COMPILE
+endif
+SDK_ROOT := $(abspath $(CURDIR)/../../../..)
+CARGO_OPTEE ?= cargo run --manifest-path $(SDK_ROOT)/tools/Cargo.toml -q -p cargo-optee --
 
-TARGET ?= aarch64-unknown-linux-gnu
-CROSS_COMPILE ?= aarch64-linux-gnu-
-OBJCOPY := $(CROSS_COMPILE)objcopy
-LINKER_CFG := target.$(TARGET).linker=\"$(CROSS_COMPILE)gcc\"
+.PHONY: all clippy host strip clean
 
-OUT_DIR := $(CURDIR)/target/$(TARGET)/release
-all: host strip
+all: host
 
-host:
-	@cargo build --target $(TARGET_HOST) --release --config $(LINKER_CFG)
+clippy:
+	@$(CARGO_OPTEE) clippy ca $(OPTEE_ARCH)
+
+host: clippy
+	@$(CARGO_OPTEE) build ca $(OPTEE_ARCH)
 
 strip: host
-	@$(OBJCOPY) --strip-unneeded $(OUT_DIR)/$(NAME) $(OUT_DIR)/$(NAME)
 
 clean:
 	@cargo clean

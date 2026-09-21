@@ -15,8 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-UUID ?= $(shell cat uuid.txt)
-NAME := train
-OUT_DIR = $(CURDIR)/../../target/$(TARGET)/release
 
 include ../../Makefile.include

@@ -42,7 +42,4 @@ pub const KEY_SIZE: usize = 16;
 pub const AAD_LEN: usize = 16;
 pub const TAG_LEN: usize = 16;
 
-// If Uuid::parse_str() returns an InvalidLength error, there may be an extra
-// newline in your uuid.txt file. You can remove it by running
-// `truncate -s 36 uuid.txt`.
-pub const UUID: &str = include_str!("../../authentication-rs/uuid.txt");
+pub const UUID: &str = "0a5a06b2-bdab-11eb-add0-77f29de31296";

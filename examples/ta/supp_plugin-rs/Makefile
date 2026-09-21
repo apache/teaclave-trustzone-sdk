@@ -15,7 +15,5 @@
 # specific language governing permissions and limitations
 # under the License.
 
-UUID ?= $(shell cat ta_uuid.txt)
-NAME := supp_plugin-rs-ta
 
 include ../Makefile.include

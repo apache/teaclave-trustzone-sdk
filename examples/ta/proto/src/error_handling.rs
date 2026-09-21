@@ -28,7 +28,4 @@ pub enum Command {
     Unknown,
 }
 
-// If Uuid::parse_str() returns an InvalidLength error, there may be an extra
-// newline in your uuid.txt file. You can remove it by running
-// `truncate -s 36 uuid.txt`.
-pub const UUID: &str = include_str!("../../error_handling-rs/uuid.txt");
+pub const UUID: &str = "ec59c1fc-b9e0-4c3c-8756-0a3cc48f0088";

@@ -28,8 +28,3 @@ edition = "2018"
 libc = { workspace = true }
 proto = { workspace = true }
 optee-teec = { workspace = true }
-
-[package.metadata.optee.ca]
-arch = "aarch64"
-debug = false
-optee-client-export = { aarch64 = "/opt/teaclave/optee/optee_client/export_arm64", arm = "/opt/teaclave/optee/optee_client/export_arm32" }

@@ -31,7 +31,4 @@ pub enum IpVersion {
     V6 = 2,
 }
 
-// If Uuid::parse_str() returns an InvalidLength error, there may be an extra
-// newline in your uuid.txt file. You can remove it by running
-// `truncate -s 36 uuid.txt`.
-pub const UUID: &str = include_str!("../../tcp_client-rs/uuid.txt");
+pub const UUID: &str = "59db8536-e5e6-11eb-8e9b-a316ce7a6568";

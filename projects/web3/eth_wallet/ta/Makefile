@@ -17,39 +17,37 @@
 
 # STD-ONLY example
 
-UUID ?= $(shell cat "../uuid.txt")
+TARGET ?= $(or $(TARGET_TA),aarch64-unknown-linux-gnu)
+ifneq ($(filter arm-unknown-%,$(TARGET)),)
+OPTEE_ARCH := --arch arm
+else
+OPTEE_ARCH := --arch aarch64
+endif
+ifneq ($(CROSS_COMPILE_TA),)
+CROSS_COMPILE := $(CROSS_COMPILE_TA)
+endif
+ifneq ($(CROSS_COMPILE),)
+export CROSS_COMPILE
+endif
+ifneq ($(TA_SIGN_KEY),)
+OPTEE_SIGNING_KEY := --signing-key "$(TA_SIGN_KEY)"
+endif
+SDK_ROOT := $(abspath $(CURDIR)/../../../..)
+CARGO_OPTEE ?= cargo run --manifest-path $(SDK_ROOT)/tools/Cargo.toml -q -p cargo-optee --
 
-TARGET ?= aarch64-unknown-optee
-CROSS_COMPILE ?= aarch64-linux-gnu-
-OBJCOPY := $(CROSS_COMPILE_TA)objcopy
-# Configure the linker to use GCC, which works on both cross-compilation and ARM machines
-LINKER_CFG := target.$(TARGET).linker=\"$(CROSS_COMPILE)gcc\"
+.PHONY: all clippy ta strip sign clean
 
-# fix for the error: "unwinding panics are not supported without std" reported by clippy
-# Set panic=abort for std and no-std
-RUSTFLAGS := -C panic=abort -Z unstable-options
-# CARGO_FLAGS is set by sourcing environment (e.g. -Z build-std=std,panic_abort for std builds)
-CARGO_FLAGS ?= 
-
-TA_SIGN_KEY ?= $(TA_DEV_KIT_DIR)/keys/default_ta.pem
-SIGN := $(TA_DEV_KIT_DIR)/scripts/sign_encrypt.py
-OUT_DIR := $(CURDIR)/target/$(TARGET_TA)/release
-
-all: clippy ta strip sign
+all: ta
 
 clippy:
-	@cargo fmt
-	@RUSTFLAGS="$(RUSTFLAGS)" cargo clippy $(CARGO_FLAGS) --target $(TARGET) -- -D warnings
+	@$(CARGO_OPTEE) clippy ta $(OPTEE_ARCH) --std
 
 ta: clippy
-	@RUSTFLAGS="$(RUSTFLAGS)" cargo build $(CARGO_FLAGS) --target $(TARGET) --release --config $(LINKER_CFG)
+	@$(CARGO_OPTEE) build ta $(OPTEE_ARCH) --std $(OPTEE_SIGNING_KEY)
 
 strip: ta
-	@$(OBJCOPY) --strip-unneeded $(OUT_DIR)/ta $(OUT_DIR)/stripped_ta
 
 sign: strip
-	@$(SIGN) --uuid $(UUID) --key $(TA_SIGN_KEY) --in $(OUT_DIR)/stripped_ta --out $(OUT_DIR)/$(UUID).ta
-	@echo "SIGN =>  ${UUID}"
 
 clean:
 	@cargo clean

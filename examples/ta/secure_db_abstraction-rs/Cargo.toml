@@ -40,5 +40,3 @@ serde = { workspace = true, features = ["derive"] }
 proto = { workspace = true }
 optee-utee-build = { workspace = true }
 
-[package.metadata.optee.ta]
-uuid-path = "uuid.txt"
