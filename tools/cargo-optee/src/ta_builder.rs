@@ -15,14 +15,15 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::cargo_command;
 use crate::common;
 use crate::common::{
-    BuildMode, ChangeDirectoryGuard, get_package_name, get_target_and_cross_compile,
-    get_target_directory_from_metadata, print_cargo_command, print_output_and_bail,
-    read_uuid_from_file,
+    BuildArtifact, BuildMode, CargoArtifactKind, absolute_dir, apply_clippy_deny_lints,
+    cargo_command_in, manifest_path, print_cargo_command, print_output_and_bail, publish_tempfile,
+    resolve_target_and_cross_compile, set_ta_file_permissions, unique_cargo_artifact,
+    unique_tempfile_in,
 };
 use crate::config::TaBuildConfig;
+use crate::elf_uuid;
 
 use anyhow::{Result, bail};
 use std::env;
@@ -36,10 +37,10 @@ const AARCH64_TARGET_JSON: &str = include_str!("../aarch64-unknown-optee.json");
 const ARM_TARGET_JSON: &str = include_str!("../arm-unknown-optee.json");
 
 // Main function to build the TA, optionally installing to a target directory
-pub fn build_ta(config: TaBuildConfig, install_dir: Option<&Path>) -> Result<()> {
-    // Verify we're in a valid Rust project directory
-    let manifest_path = config.path.join("Cargo.toml");
-    if !manifest_path.exists() {
+pub fn build_ta(mut config: TaBuildConfig, install_dir: Option<&Path>) -> Result<()> {
+    config.path = absolute_dir(&config.path)?;
+    let manifest = manifest_path(&config.path);
+    if !manifest.exists() {
         bail!(
             "No Cargo.toml found in TA project directory: {:?}\n\
             Please run cargo-optee from a TA project directory or specify --manifest-path",
@@ -47,33 +48,20 @@ pub fn build_ta(config: TaBuildConfig, install_dir: Option<&Path>) -> Result<()>
         );
     }
 
-    // Change to the TA directory (RAII guard ensures we return to original directory)
-    let _guard = ChangeDirectoryGuard::new(&config.path)?;
-
     // Check if required cross-compile toolchain is available
     let build_mode = if config.std {
         BuildMode::TaStd
     } else {
         BuildMode::TaNoStd
     };
-    let (_, cross_compile_prefix) = get_target_and_cross_compile(config.arch, build_mode)?;
+    let (_, cross_compile_prefix) = resolve_target_and_cross_compile(config.arch, build_mode)?;
     check_toolchain_exists(&cross_compile_prefix)?;
 
-    // Get the absolute path for better clarity
-    let absolute_path = std::fs::canonicalize(&config.path).unwrap_or_else(|_| config.path.clone());
-    println!("Building TA in directory: {}", absolute_path.display());
+    println!("Building TA in directory: {}", config.path.display());
 
-    // Step 1: Run clippy for code quality checks
-    run_clippy(&config)?;
-
-    // Step 2: Build the TA
-    build_binary(&config)?;
-
-    // Step 3: Strip the binary
-    let (stripped_path, target_dir) = strip_binary(&config)?;
-
-    // Step 4: Sign the TA
-    sign_ta(&config, &stripped_path, &target_dir)?;
+    let elf_path = build_binary(&config)?;
+    let stripped = strip_binary(&config, &elf_path)?;
+    let artifact = sign_ta(&config, stripped.path())?;
 
     // Step 5: Install if requested
     if let Some(install_dir) = install_dir {
@@ -82,20 +70,9 @@ pub fn build_ta(config: TaBuildConfig, install_dir: Option<&Path>) -> Result<()>
             bail!("Install directory does not exist: {:?}", install_dir);
         }
 
-        let uuid_path = config
-            .uuid_path
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("UUID path is required but not configured"))?;
-        let uuid = read_uuid_from_file(uuid_path)?;
-        let ta_file = common::join_format_and_check::<&str>(
-            &target_dir,
-            &[],
-            &format!("{}.ta", uuid),
-            "Signed TA file",
-        )?;
-
-        let dest_path = install_dir.join(format!("{}.ta", uuid));
-        fs::copy(ta_file, &dest_path)?;
+        let dest_path = install_dir.join(format!("{}.ta", artifact.uuid));
+        fs::copy(&artifact.path, &dest_path)?;
+        set_ta_file_permissions(&dest_path)?;
 
         println!(
             "TA installed to: {:?}",
@@ -108,11 +85,30 @@ pub fn build_ta(config: TaBuildConfig, install_dir: Option<&Path>) -> Result<()>
     Ok(())
 }
 
+/// Run cargo fmt and clippy with the same target/env as a TA build. Does not
+/// strip or sign, so a signing key is not required.
+pub fn clippy_ta(mut config: TaBuildConfig) -> Result<()> {
+    config.path = absolute_dir(&config.path)?;
+    let manifest = manifest_path(&config.path);
+    if !manifest.exists() {
+        bail!(
+            "No Cargo.toml found in TA project directory: {:?}\n\
+            Please run cargo-optee from a TA project directory or specify --manifest-path",
+            config.path
+        );
+    }
+
+    run_clippy(&config)
+}
+
 fn run_clippy(config: &TaBuildConfig) -> Result<()> {
     println!("Running cargo fmt and clippy...");
 
-    // Run cargo fmt (we're already in the project directory via ChangeDirectoryGuard)
-    let fmt_output = cargo_command().arg("fmt").output()?;
+    let fmt_output = cargo_command_in(&config.path)
+        .arg("fmt")
+        .arg("--manifest-path")
+        .arg(manifest_path(&config.path))
+        .output()?;
 
     if !fmt_output.status.success() {
         print_output_and_bail("cargo fmt", &fmt_output)?;
@@ -120,12 +116,7 @@ fn run_clippy(config: &TaBuildConfig) -> Result<()> {
 
     // Setup clippy command with common environment
     let (mut clippy_cmd, _temp_dir) = setup_build_command(config, "clippy")?;
-
-    clippy_cmd.arg("--");
-    clippy_cmd.arg("-D").arg("warnings");
-    clippy_cmd.arg("-D").arg("clippy::unwrap_used");
-    clippy_cmd.arg("-D").arg("clippy::expect_used");
-    clippy_cmd.arg("-D").arg("clippy::panic");
+    apply_clippy_deny_lints(&mut clippy_cmd);
 
     let clippy_output = clippy_cmd.output()?;
 
@@ -136,16 +127,15 @@ fn run_clippy(config: &TaBuildConfig) -> Result<()> {
     Ok(())
 }
 
-fn build_binary(config: &TaBuildConfig) -> Result<()> {
+fn build_binary(config: &TaBuildConfig) -> Result<PathBuf> {
     // Determine target and cross-compile based on arch and std mode
     let build_mode = if config.std {
         BuildMode::TaStd
     } else {
         BuildMode::TaNoStd
     };
-    let (target, cross_compile) = get_target_and_cross_compile(config.arch, build_mode)?;
+    let (target, cross_compile) = resolve_target_and_cross_compile(config.arch, build_mode)?;
 
-    // Setup build command with common environment (we're already in the project directory)
     let (mut build_cmd, _temp_dir) = setup_build_command(config, "build")?;
 
     if !config.debug {
@@ -156,6 +146,7 @@ fn build_binary(config: &TaBuildConfig) -> Result<()> {
     let linker = format!("{}gcc", cross_compile);
     let linker_cfg = format!("target.{}.linker=\"{}\"", target, linker);
     build_cmd.arg("--config").arg(&linker_cfg);
+    build_cmd.arg("--message-format=json");
 
     // Print the full cargo build command for debugging
     print_cargo_command(&build_cmd, "Building TA binary");
@@ -163,60 +154,60 @@ fn build_binary(config: &TaBuildConfig) -> Result<()> {
     let build_output = build_cmd.output()?;
 
     if !build_output.status.success() {
+        let _ = unique_cargo_artifact(
+            &build_output.stdout,
+            &manifest_path(&config.path),
+            CargoArtifactKind::Bin,
+        );
         print_output_and_bail("build", &build_output)?;
     }
 
-    Ok(())
+    unique_cargo_artifact(
+        &build_output.stdout,
+        &manifest_path(&config.path),
+        CargoArtifactKind::Bin,
+    )
 }
 
-fn strip_binary(config: &TaBuildConfig) -> Result<(PathBuf, PathBuf)> {
+fn strip_binary(config: &TaBuildConfig, binary_path: &Path) -> Result<tempfile::NamedTempFile> {
     println!("Stripping binary...");
 
-    // Determine target based on arch and std mode
     let build_mode = if config.std {
         BuildMode::TaStd
     } else {
         BuildMode::TaNoStd
     };
-    let (target, cross_compile) = get_target_and_cross_compile(config.arch, build_mode)?;
+    let (_, cross_compile) = resolve_target_and_cross_compile(config.arch, build_mode)?;
 
-    let profile = if config.debug { "debug" } else { "release" };
-
-    // Use cargo metadata to get the target directory (supports workspace and CARGO_TARGET_DIR)
-    let target_directory = get_target_directory_from_metadata()?;
-    let profile_dir = target_directory.join(target).join(profile);
-
-    // Get the actual package name from Cargo.toml (we're already in the project directory)
-    let package_name = get_package_name()?;
-
-    let binary_path = common::join_and_check(&profile_dir, &[&package_name], "Binary")?;
-
-    let stripped_path = profile_dir.join(format!("stripped_{}", package_name));
+    let file_name = binary_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| anyhow::anyhow!("Binary path has no file name: {:?}", binary_path))?;
+    let parent = binary_path
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("Binary path has no parent: {:?}", binary_path))?;
+    let stripped = unique_tempfile_in(parent, &format!("stripped_{file_name}."), "")?;
 
     let objcopy = format!("{}objcopy", cross_compile);
 
     let strip_output = Command::new(&objcopy)
         .arg("--strip-unneeded")
-        .arg(&binary_path)
-        .arg(&stripped_path)
+        .arg(binary_path)
+        .arg(stripped.path())
         .output()?;
 
     if !strip_output.status.success() {
         print_output_and_bail(&objcopy, &strip_output)?;
     }
 
-    Ok((stripped_path, profile_dir))
+    Ok(stripped)
 }
 
-fn sign_ta(config: &TaBuildConfig, stripped_path: &Path, target_dir: &Path) -> Result<()> {
+fn sign_ta(config: &TaBuildConfig, stripped_path: &Path) -> Result<BuildArtifact> {
     println!("Signing TA with signing key {:?}...", config.signing_key);
 
-    // Read UUID from specified file
-    let uuid_path = config
-        .uuid_path
-        .as_ref()
-        .ok_or_else(|| anyhow::anyhow!("UUID path is required but not configured"))?;
-    let uuid = read_uuid_from_file(uuid_path)?;
+    let uuid = elf_uuid::read_ta_uuid(stripped_path)?;
+    let uuid_str = uuid.to_string();
 
     // Validate signing key exists
     if !config.signing_key.exists() {
@@ -230,30 +221,42 @@ fn sign_ta(config: &TaBuildConfig, stripped_path: &Path, target_dir: &Path) -> R
         "Sign script",
     )?;
 
-    // Output path - use the actual target_dir
-    let output_path = target_dir.join(format!("{}.ta", uuid));
+    let parent = stripped_path
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("Stripped path has no parent: {:?}", stripped_path))?;
+    let output_path = parent.join(format!("{uuid_str}.ta"));
+    let tmp = unique_tempfile_in(parent, &format!("{uuid_str}.ta."), ".partial")?;
 
     let sign_output = Command::new("python3")
         .arg(&sign_script)
         .arg("--uuid")
-        .arg(&uuid)
+        .arg(&uuid_str)
         .arg("--key")
         .arg(&config.signing_key)
         .arg("--in")
         .arg(stripped_path)
         .arg("--out")
-        .arg(&output_path)
+        .arg(tmp.path())
         .output()?;
 
     if !sign_output.status.success() {
         print_output_and_bail("sign_encrypt.py", &sign_output)?;
     }
 
-    println!("SIGN => {}", uuid);
-    let absolute_output_path = output_path.canonicalize().unwrap_or(output_path);
+    publish_tempfile(tmp, &output_path)?;
+    // NamedTempFile is 0600; sign_encrypt.py truncates without resetting mode.
+    set_ta_file_permissions(&output_path)?;
+
+    println!("SIGN => {}", uuid_str);
+    let absolute_output_path = output_path
+        .canonicalize()
+        .unwrap_or_else(|_| output_path.clone());
     println!("TA signed and saved to: {:?}", absolute_output_path);
 
-    Ok(())
+    Ok(BuildArtifact {
+        uuid,
+        path: output_path,
+    })
 }
 
 /// Check if the required cross-compile toolchain is available
@@ -317,7 +320,7 @@ fn setup_build_command(
     } else {
         BuildMode::TaNoStd
     };
-    let (target, cross_compile) = get_target_and_cross_compile(config.arch, build_mode)?;
+    let (target, cross_compile) = resolve_target_and_cross_compile(config.arch, build_mode)?;
 
     // Setup custom targets if using std - keep TempDir alive
     let temp_dir = if config.std {
@@ -327,8 +330,9 @@ fn setup_build_command(
     };
 
     // Always use cargo; std builds use the patched standard library and JSON targets.
-    let mut cmd = cargo_command();
+    let mut cmd = cargo_command_in(&config.path);
     cmd.arg(command);
+    cmd.arg("--manifest-path").arg(manifest_path(&config.path));
     if config.std {
         cmd.arg("-Z").arg("build-std=std,panic_abort");
         cmd.arg("-Z").arg("json-target-spec");
@@ -445,7 +449,6 @@ mod tests {
             arch: Arch::Aarch64,
             debug: false,
             path: PathBuf::from("/tmp/project"),
-            uuid_path: None,
             env: Vec::new(),
             no_default_features: false,
             features: None,
@@ -454,6 +457,16 @@ mod tests {
             signing_key: PathBuf::from("/tmp/key.pem"),
         };
         let (build, _temp) = setup_build_command(&config, "build")?;
+        assert_eq!(build.get_current_dir(), Some(Path::new("/tmp/project")));
+        let args: Vec<_> = build
+            .get_args()
+            .map(|a| a.to_string_lossy().into_owned())
+            .collect();
+        assert!(
+            args.windows(2)
+                .any(|w| w[0] == "--manifest-path" && w[1] == "/tmp/project/Cargo.toml"),
+            "expected --manifest-path /tmp/project/Cargo.toml, got {args:?}"
+        );
         let value = build
             .get_envs()
             .find(|(k, _)| k.to_str() == Some("CROSS_COMPILE"))

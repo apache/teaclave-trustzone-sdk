@@ -15,10 +15,18 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 use crate::common::Arch;
+
+/// Kind of ELF whose UUID should be parsed.
+#[derive(Debug, Clone, Copy, ValueEnum)]
+#[value(rename_all = "lower")]
+pub enum UuidKind {
+    Ta,
+    Plugin,
+}
 
 #[derive(Debug, Parser)]
 #[command(version, about)]
@@ -43,6 +51,20 @@ pub enum Command {
         #[command(flatten)]
         clean_cmd: CleanCommand,
     },
+    /// Parse a UUID from an unsigned TA ELF or plugin shared library
+    #[clap(name = "inspect-uuid")]
+    InspectUuid {
+        /// Artifact kind: `ta` or `plugin`
+        #[arg(long = "kind")]
+        kind: UuidKind,
+        /// Path to the unsigned TA ELF or plugin `.so`
+        #[arg(long = "elf")]
+        elf: PathBuf,
+    },
+    /// Lint OP-TEE components (cargo fmt + clippy). Does not build, strip, or sign.
+    #[clap(name = "clippy")]
+    #[command(subcommand)]
+    Clippy(ClippyCommand),
 }
 
 #[derive(Debug, Subcommand)]
@@ -61,6 +83,28 @@ pub enum BuildCommand {
     },
     /// Build a Plugin (Shared Library)
     #[command(about = "Build a Plugin (Shared Library)")]
+    Plugin {
+        #[command(flatten)]
+        build_cmd: PluginBuildArgs,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ClippyCommand {
+    /// Lint a Trusted Application (TA)
+    #[command(about = "Lint a Trusted Application (TA)")]
+    TA {
+        #[command(flatten)]
+        build_cmd: TABuildArgs,
+    },
+    /// Lint a Client Application (Host)
+    #[command(about = "Lint a Client Application (Host)")]
+    CA {
+        #[command(flatten)]
+        build_cmd: CABuildArgs,
+    },
+    /// Lint a Plugin (Shared Library)
+    #[command(about = "Lint a Plugin (Shared Library)")]
     Plugin {
         #[command(flatten)]
         build_cmd: PluginBuildArgs,
@@ -116,11 +160,11 @@ pub struct CommonBuildArgs {
     #[arg(long = "manifest-path")]
     pub manifest_path: Option<PathBuf>,
 
-    /// Target architecture (default: aarch64)
+    /// Target architecture (default: aarch64). CROSS_COMPILE overrides the derived prefix.
     #[arg(long = "arch")]
     pub arch: Option<Arch>,
 
-    /// Enable debug build (default: false)
+    /// Force a debug build. If omitted, Cargo.toml metadata is used (default: release).
     #[arg(long = "debug")]
     pub debug: bool,
 
@@ -161,13 +205,9 @@ pub struct TABuildArgs {
     #[arg(long = "ta-dev-kit-dir")]
     pub ta_dev_kit_dir: Option<PathBuf>,
 
-    /// TA signing key path (default: TA_DEV_KIT_DIR/keys/default_ta.pem)
+    /// TA signing key path (fallback: metadata, then TA_SIGN_KEY, then TA_DEV_KIT_DIR/keys/default_ta.pem)
     #[arg(long = "signing-key")]
     pub signing_key: Option<PathBuf>,
-
-    /// UUID file path (default: "../uuid.txt")
-    #[arg(long = "uuid-path")]
-    pub uuid_path: Option<PathBuf>,
 }
 
 /// CA-specific build arguments
@@ -190,10 +230,6 @@ pub struct PluginBuildArgs {
     /// OP-TEE client export directory (fallback: OPTEE_CLIENT_EXPORT)
     #[arg(long = "optee-client-export")]
     pub optee_client_export: Option<PathBuf>,
-
-    /// UUID file path (default: "../uuid.txt")
-    #[arg(long = "uuid-path")]
-    pub uuid_path: Option<PathBuf>,
 }
 
 /// Parse environment variable in KEY=VALUE format

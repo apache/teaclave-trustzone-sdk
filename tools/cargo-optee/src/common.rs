@@ -15,33 +15,42 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
+use cargo_metadata::Message;
 use clap::ValueEnum;
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::io::Cursor;
+use std::os::unix::fs::PermissionsExt;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
-use toml::Value;
 
-use crate::cargo_command;
+use uuid::Uuid;
 
-/// RAII guard to ensure we return to the original directory
-pub struct ChangeDirectoryGuard {
-    original: PathBuf,
+/// Canonical project directory. Does not change the process cwd.
+pub fn absolute_dir(path: &Path) -> Result<PathBuf> {
+    fs::canonicalize(path).with_context(|| format!("project directory {}", path.display()))
 }
 
-impl ChangeDirectoryGuard {
-    pub fn new(new_dir: &PathBuf) -> Result<Self> {
-        let original = env::current_dir()?;
-        env::set_current_dir(new_dir)?;
-        Ok(Self { original })
+pub fn manifest_path(project_dir: &Path) -> PathBuf {
+    project_dir.join("Cargo.toml")
+}
+
+/// Resolve `dir` against the process cwd. Relative install paths must not be
+/// interpreted against the crate directory.
+pub fn absolute_from_cwd(dir: &Path) -> Result<PathBuf> {
+    if dir.is_absolute() {
+        Ok(dir.to_path_buf())
+    } else {
+        Ok(env::current_dir()?.join(dir))
     }
 }
 
-impl Drop for ChangeDirectoryGuard {
-    fn drop(&mut self) {
-        let _ = env::set_current_dir(&self.original);
-    }
+/// Cargo invocation rooted at `project_dir` without changing the process cwd.
+pub fn cargo_command_in(project_dir: &Path) -> Command {
+    let mut cmd = cargo_command();
+    cmd.current_dir(project_dir);
+    cmd
 }
 
 /// Target architecture for building
@@ -137,6 +146,25 @@ pub fn get_target_and_cross_compile(arch: Arch, mode: BuildMode) -> Result<(Stri
     )
 }
 
+/// Like [`get_target_and_cross_compile`], but honour `CROSS_COMPILE` from the
+/// process environment when OP-TEE rust.mk / Make supplied a toolchain prefix.
+pub fn resolve_target_and_cross_compile(arch: Arch, mode: BuildMode) -> Result<(String, String)> {
+    resolve_target_and_cross_compile_with(
+        arch,
+        mode,
+        env::var("CROSS_COMPILE").ok().filter(|s| !s.is_empty()),
+    )
+}
+
+fn resolve_target_and_cross_compile_with(
+    arch: Arch,
+    mode: BuildMode,
+    cross_compile_override: Option<String>,
+) -> Result<(String, String)> {
+    let (target, default_cc) = get_target_and_cross_compile(arch, mode)?;
+    Ok((target, cross_compile_override.unwrap_or(default_cc)))
+}
+
 /// Helper function to print command output and return error
 pub fn print_output_and_bail(cmd_name: &str, output: &Output) -> Result<()> {
     eprintln!(
@@ -178,6 +206,10 @@ pub fn print_cargo_command(cmd: &Command, description: &str) {
         println!("  Environment: {}", envs.join(" "));
     }
 
+    if let Some(dir) = cmd.get_current_dir() {
+        println!("  Working directory: {}", dir.display());
+    }
+
     // Print command
     println!(
         "  Command: {} {}",
@@ -189,48 +221,153 @@ pub fn print_cargo_command(cmd: &Command, description: &str) {
     );
 }
 
-/// Get the target directory using cargo metadata
-pub fn get_target_directory_from_metadata() -> Result<PathBuf> {
-    // We're already in the project directory, so no need for --manifest-path
-    let output = cargo_command()
-        .arg("metadata")
-        .arg("--format-version")
-        .arg("1")
-        .arg("--no-deps")
-        .output()?;
-
-    if !output.status.success() {
-        bail!("Failed to get cargo metadata");
-    }
-
-    let metadata: serde_json::Value = serde_json::from_slice(&output.stdout)?;
-    let target_directory = metadata
-        .get("target_directory")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow::anyhow!("Could not get target directory from cargo metadata"))?;
-
-    Ok(PathBuf::from(target_directory))
+/// Invoke Cargo, honoring the `CARGO` environment variable.
+pub fn cargo_command() -> Command {
+    const ENV_CARGO: &str = "CARGO";
+    Command::new(std::env::var_os(ENV_CARGO).unwrap_or_else(|| "cargo".into()))
 }
 
-/// Read UUID from a file (e.g., uuid.txt)
-pub fn read_uuid_from_file(uuid_path: &std::path::Path) -> Result<String> {
-    if !uuid_path.exists() {
-        bail!("UUID file not found: {}", uuid_path.display());
+/// Artifact produced by a TA or plugin build, named from the UUID parsed out of
+/// the unsigned ELF rather than from any external configuration.
+#[derive(Debug, Clone)]
+pub struct BuildArtifact {
+    pub uuid: Uuid,
+    pub path: PathBuf,
+}
+
+/// Kind of Cargo compiler artifact to collect from `--message-format=json`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CargoArtifactKind {
+    Bin,
+    Cdylib,
+}
+
+/// Collect the current package's compiler artifacts from `cargo --message-format=json`.
+pub fn collect_cargo_artifacts(
+    stdout: &[u8],
+    manifest_path: &std::path::Path,
+    kind: CargoArtifactKind,
+) -> Result<Vec<PathBuf>> {
+    let expected =
+        std::fs::canonicalize(manifest_path).unwrap_or_else(|_| manifest_path.to_path_buf());
+    let mut artifacts = Vec::new();
+
+    for message in Message::parse_stream(Cursor::new(stdout)) {
+        let message = match message {
+            Ok(message) => message,
+            Err(_) => continue,
+        };
+        match message {
+            Message::CompilerMessage(msg) => {
+                if let Some(rendered) = &msg.message.rendered {
+                    eprint!("{rendered}");
+                }
+            }
+            Message::CompilerArtifact(artifact) => {
+                let artifact_manifest = artifact.manifest_path.into_std_path_buf();
+                let artifact_manifest =
+                    std::fs::canonicalize(&artifact_manifest).unwrap_or(artifact_manifest);
+                if artifact_manifest != expected {
+                    continue;
+                }
+                if artifact.profile.test {
+                    continue;
+                }
+                if artifact.target.kind.iter().any(|k| k == "custom-build") {
+                    continue;
+                }
+                match kind {
+                    CargoArtifactKind::Bin => {
+                        if let Some(path) = artifact.executable {
+                            artifacts.push(path.into_std_path_buf());
+                        }
+                    }
+                    CargoArtifactKind::Cdylib => {
+                        if !artifact.target.crate_types.iter().any(|t| t == "cdylib") {
+                            continue;
+                        }
+                        for path in artifact.filenames {
+                            if path.as_str().ends_with(".so") {
+                                artifacts.push(path.into_std_path_buf());
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 
-    let uuid_content = fs::read_to_string(uuid_path)?;
-    let uuid = uuid_content.trim().to_string();
+    Ok(artifacts)
+}
 
-    if uuid.is_empty() {
-        bail!("UUID file is empty: {}", uuid_path.display());
+pub fn unique_cargo_artifact(
+    stdout: &[u8],
+    manifest_path: &std::path::Path,
+    kind: CargoArtifactKind,
+) -> Result<PathBuf> {
+    let mut artifacts = collect_cargo_artifacts(stdout, manifest_path, kind)?;
+    artifacts.sort();
+    artifacts.dedup();
+    match artifacts.len() {
+        1 => Ok(artifacts.remove(0)),
+        0 => bail!(
+            "Cargo produced no {:?} artifact for {}",
+            kind,
+            manifest_path.display()
+        ),
+        _ => bail!(
+            "Cargo produced multiple {:?} artifacts for {}: {:?}. Use a single bin/cdylib target.",
+            kind,
+            manifest_path.display(),
+            artifacts
+        ),
     }
+}
 
-    Ok(uuid)
+/// Create a unique tempfile in `parent` so a later rename onto a sibling path
+/// stays on the same filesystem.
+pub fn unique_tempfile_in(
+    parent: &Path,
+    prefix: &str,
+    suffix: &str,
+) -> Result<tempfile::NamedTempFile> {
+    tempfile::Builder::new()
+        .prefix(prefix)
+        .suffix(suffix)
+        .tempfile_in(parent)
+        .with_context(|| format!("create unique temp in {}", parent.display()))
+}
+
+/// Move a unique tempfile onto `dest`, replacing it on Unix.
+pub fn publish_tempfile(tmp: tempfile::NamedTempFile, dest: &Path) -> Result<()> {
+    let (_file, path) = tmp.keep().map_err(|e| e.error)?;
+    fs::rename(&path, dest)
+        .with_context(|| format!("failed to publish {} to {}", path.display(), dest.display()))
+}
+
+/// Mode for signed `.ta` files. `NamedTempFile` is 0600; `sign_encrypt.py`
+/// truncates `--out` without resetting it. tee-supplicant may not be the
+/// build user, so keep the artifact world-readable.
+pub const TA_FILE_MODE: u32 = 0o644;
+
+pub fn set_ta_file_permissions(path: &Path) -> Result<()> {
+    fs::set_permissions(path, fs::Permissions::from_mode(TA_FILE_MODE))
+        .with_context(|| format!("set permissions on {}", path.display()))
+}
+
+/// Deny lints used by `cargo-optee clippy` and the former in-build clippy step.
+pub fn apply_clippy_deny_lints(cmd: &mut Command) {
+    cmd.arg("--");
+    cmd.arg("-D").arg("warnings");
+    cmd.arg("-D").arg("clippy::unwrap_used");
+    cmd.arg("-D").arg("clippy::expect_used");
+    cmd.arg("-D").arg("clippy::panic");
 }
 
 /// Join path segments and check if the resulting path exists
-pub fn join_and_check<P: AsRef<std::path::Path>>(
-    base: &std::path::Path,
+pub fn join_and_check<P: AsRef<Path>>(
+    base: &Path,
     segments: &[P],
     error_context: &str,
 ) -> Result<PathBuf> {
@@ -246,34 +383,15 @@ pub fn join_and_check<P: AsRef<std::path::Path>>(
     Ok(path)
 }
 
-/// Join path segments with a formatted final segment and check if the resulting path exists
-pub fn join_format_and_check<P: AsRef<std::path::Path>>(
-    base: &std::path::Path,
-    segments: &[P],
-    formatted_segment: &str,
-    error_context: &str,
-) -> Result<PathBuf> {
-    let mut path = base.to_path_buf();
-    for segment in segments {
-        path = path.join(segment);
-    }
-
-    let final_path = path.join(formatted_segment);
-
-    if !final_path.exists() {
-        bail!("{} does not exist: {:?}", error_context, final_path);
-    }
-
-    Ok(final_path)
-}
-
 /// Clean build artifacts for any OP-TEE component (TA, CA, Plugin)
 pub fn clean_project(project_path: &std::path::Path) -> Result<()> {
+    let project_path = absolute_dir(project_path)?;
     println!("Cleaning build artifacts in: {:?}", project_path);
 
-    let output = cargo_command()
+    let output = cargo_command_in(&project_path)
         .arg("clean")
-        .current_dir(project_path)
+        .arg("--manifest-path")
+        .arg(manifest_path(&project_path))
         .output()?;
 
     if !output.status.success() {
@@ -291,22 +409,100 @@ pub fn clean_project(project_path: &std::path::Path) -> Result<()> {
     Ok(())
 }
 
-/// Get the package name from Cargo.toml in the current directory
-pub fn get_package_name() -> Result<String> {
-    // We assume we're already in the project directory (via ChangeDirectoryGuard)
-    let manifest_path = PathBuf::from("Cargo.toml");
-    if !manifest_path.exists() {
-        bail!("Cargo.toml not found in current directory");
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Guarantee: cargo is rooted at the crate via child cwd; the process
+    /// cwd is unchanged so relative `--target-dir` follows make/emulate.
+    #[test]
+    fn cargo_command_in_sets_child_cwd_only() {
+        let dir = PathBuf::from("/tmp/project");
+        let cmd = cargo_command_in(&dir);
+        assert_eq!(cmd.get_current_dir(), Some(dir.as_path()));
     }
 
-    let cargo_toml_content = fs::read_to_string(&manifest_path)?;
-    let cargo_toml: Value = toml::from_str(&cargo_toml_content)?;
+    /// Guarantee: a non-empty `CROSS_COMPILE` replaces the arch default
+    /// prefix, so `cc` build scripts use the OP-TEE toolchain.
+    #[test]
+    fn cross_compile_override_replaces_default() {
+        let (_, cc) = resolve_target_and_cross_compile_with(
+            Arch::Aarch64,
+            BuildMode::TaNoStd,
+            Some("custom-none-".into()),
+        )
+        .unwrap();
+        assert_eq!(cc, "custom-none-");
+    }
 
-    let package_name = cargo_toml
-        .get("package")
-        .and_then(|p| p.get("name"))
-        .and_then(|n| n.as_str())
-        .ok_or_else(|| anyhow::anyhow!("Could not find package name in Cargo.toml"))?;
+    /// Guarantee: two temps with the same prefix/suffix in one directory
+    /// get distinct paths, so parallel strip/sign cannot clobber each other.
+    #[test]
+    fn unique_tempfiles_do_not_share_a_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let a = unique_tempfile_in(dir.path(), "ta.", ".partial").unwrap();
+        let b = unique_tempfile_in(dir.path(), "ta.", ".partial").unwrap();
+        assert_ne!(a.path(), b.path());
+    }
 
-    Ok(package_name.to_string())
+    /// Guarantee: publishing onto an existing path replaces its contents,
+    /// so a rebuild cannot leave make/emulate installing a stale `.ta`.
+    #[test]
+    fn publish_tempfile_replaces_destination() {
+        let dir = tempfile::tempdir().unwrap();
+        let dest = dir.path().join("out.ta");
+        std::fs::write(&dest, b"old").unwrap();
+        let tmp = unique_tempfile_in(dir.path(), "ta.", ".partial").unwrap();
+        std::fs::write(tmp.path(), b"new").unwrap();
+        publish_tempfile(tmp, &dest).unwrap();
+        assert_eq!(std::fs::read(&dest).unwrap(), b"new");
+    }
+
+    /// Guarantee: `unique_tempfile_in` creates a 0600 file. `sign_encrypt.py`
+    /// truncates `--out` without resetting mode, so this is the `.ta` mode
+    /// unless `set_ta_file_permissions` runs after publish.
+    #[test]
+    fn unique_tempfile_is_owner_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let tmp = unique_tempfile_in(dir.path(), "ta.", ".partial").unwrap();
+        let mode = fs::metadata(tmp.path()).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o600);
+    }
+
+    /// Guarantee: after `set_ta_file_permissions`, the published `.ta` and
+    /// the install copy are 0644, so tee-supplicant can read them.
+    #[test]
+    fn published_ta_is_world_readable() {
+        let dir = tempfile::tempdir().unwrap();
+        let dest = dir.path().join("out.ta");
+        let tmp = unique_tempfile_in(dir.path(), "ta.", ".partial").unwrap();
+        std::fs::write(tmp.path(), b"ta").unwrap();
+        publish_tempfile(tmp, &dest).unwrap();
+        set_ta_file_permissions(&dest).unwrap();
+        let mode = fs::metadata(&dest).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, TA_FILE_MODE);
+
+        let installed = dir.path().join("installed.ta");
+        fs::copy(&dest, &installed).unwrap();
+        set_ta_file_permissions(&installed).unwrap();
+        let installed_mode = fs::metadata(&installed).unwrap().permissions().mode() & 0o777;
+        assert_eq!(installed_mode, TA_FILE_MODE);
+    }
+
+    /// Guarantee: an absolute `--target-dir` is returned unchanged, not
+    /// joined onto the process cwd.
+    #[test]
+    fn absolute_from_cwd_keeps_absolute_paths() {
+        let abs = PathBuf::from("/tmp/dist");
+        assert_eq!(absolute_from_cwd(&abs).unwrap(), abs);
+    }
+
+    /// Guarantee: unset `CROSS_COMPILE` still yields the arch default
+    /// prefix, so `cc` build scripts do not compile C for the host.
+    #[test]
+    fn cross_compile_default_when_unset() {
+        let (_, cc) =
+            resolve_target_and_cross_compile_with(Arch::Aarch64, BuildMode::TaNoStd, None).unwrap();
+        assert_eq!(cc, "aarch64-linux-gnu-");
+    }
 }

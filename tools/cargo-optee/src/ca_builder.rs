@@ -15,40 +15,32 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::cargo_command;
-use crate::common;
 use crate::common::{
-    BuildMode, ChangeDirectoryGuard, get_package_name, get_target_and_cross_compile,
-    get_target_directory_from_metadata, print_cargo_command, print_output_and_bail,
-    read_uuid_from_file,
+    BuildMode, CargoArtifactKind, absolute_dir, apply_clippy_deny_lints, cargo_command_in,
+    manifest_path, print_cargo_command, print_output_and_bail, publish_tempfile,
+    resolve_target_and_cross_compile, unique_cargo_artifact, unique_tempfile_in,
 };
 use crate::config::CaBuildConfig;
+use crate::elf_uuid;
 
 use anyhow::{Result, bail};
 use std::path::{Path, PathBuf};
 
 // Main function to build the CA, optionally installing to a target directory
-pub fn build_ca(config: CaBuildConfig, install_dir: Option<&Path>) -> Result<()> {
-    // Change to the CA directory
-    let _guard = ChangeDirectoryGuard::new(&config.path)?;
+pub fn build_ca(mut config: CaBuildConfig, install_dir: Option<&Path>) -> Result<()> {
+    config.path = absolute_dir(&config.path)?;
 
     let component_type = if config.plugin { "Plugin" } else { "CA" };
-    // Get the absolute path for better clarity
-    let absolute_path = std::fs::canonicalize(&config.path).unwrap_or_else(|_| config.path.clone());
     println!(
         "Building {} in directory: {}",
         component_type,
-        absolute_path.display()
+        config.path.display()
     );
 
-    // Step 1: Run clippy for code quality checks
-    run_clippy(&config)?;
-
-    // Step 2: Build the CA
-    build_binary(&config)?;
+    let built_path = build_binary(&config)?;
 
     // Step 3: Post-build processing (strip for binaries, copy for plugins)
-    let final_binary = post_build(&config)?;
+    let final_binary = post_build(&config, &built_path)?;
 
     // Print the final binary path with descriptive prompt
     let absolute_final_binary = final_binary
@@ -72,14 +64,10 @@ pub fn build_ca(config: CaBuildConfig, install_dir: Option<&Path>) -> Result<()>
             bail!("Install directory does not exist: {:?}", install_dir);
         }
 
-        // Get package name from the final binary path
-        let package_name = final_binary
+        let dest_name = final_binary
             .file_name()
-            .and_then(|name| name.to_str())
             .ok_or_else(|| anyhow::anyhow!("Could not get binary name"))?;
-
-        // Copy binary to install directory
-        let dest_path = install_dir.join(package_name);
+        let dest_path = install_dir.join(dest_name);
         fs::copy(&final_binary, &dest_path)?;
 
         println!(
@@ -94,31 +82,27 @@ pub fn build_ca(config: CaBuildConfig, install_dir: Option<&Path>) -> Result<()>
     Ok(())
 }
 
+/// Run cargo fmt and clippy with the same target/env as a CA/plugin build.
+pub fn clippy_ca(mut config: CaBuildConfig) -> Result<()> {
+    config.path = absolute_dir(&config.path)?;
+    run_clippy(&config)
+}
+
 fn run_clippy(config: &CaBuildConfig) -> Result<()> {
     println!("Running cargo fmt and clippy...");
 
-    // Run cargo fmt
-    let fmt_output = cargo_command().arg("fmt").output()?;
+    let fmt_output = cargo_command_in(&config.path)
+        .arg("fmt")
+        .arg("--manifest-path")
+        .arg(manifest_path(&config.path))
+        .output()?;
 
     if !fmt_output.status.success() {
         print_output_and_bail("cargo fmt", &fmt_output)?;
     }
 
-    // Determine target based on arch (CA runs in Normal World Linux)
-    let (target, _cross_compile) = get_target_and_cross_compile(config.arch, BuildMode::Ca)?;
-
-    let mut clippy_cmd = cargo_command();
-    clippy_cmd.arg("clippy");
-    clippy_cmd.arg("--target").arg(&target);
-
-    // Set OPTEE_CLIENT_EXPORT environment variable for build scripts
-    clippy_cmd.env("OPTEE_CLIENT_EXPORT", &config.optee_client_export);
-
-    clippy_cmd.arg("--");
-    clippy_cmd.arg("-D").arg("warnings");
-    clippy_cmd.arg("-D").arg("clippy::unwrap_used");
-    clippy_cmd.arg("-D").arg("clippy::expect_used");
-    clippy_cmd.arg("-D").arg("clippy::panic");
+    let mut clippy_cmd = setup_ca_cargo_command(config, "clippy")?;
+    apply_clippy_deny_lints(&mut clippy_cmd);
 
     let clippy_output = clippy_cmd.output()?;
 
@@ -129,130 +113,141 @@ fn run_clippy(config: &CaBuildConfig) -> Result<()> {
     Ok(())
 }
 
-fn build_binary(config: &CaBuildConfig) -> Result<()> {
+fn setup_ca_cargo_command(config: &CaBuildConfig, command: &str) -> Result<std::process::Command> {
+    let (target, _cross_compile) = resolve_target_and_cross_compile(config.arch, BuildMode::Ca)?;
+    let mut cmd = cargo_command_in(&config.path);
+    cmd.arg(command);
+    cmd.arg("--manifest-path").arg(manifest_path(&config.path));
+    cmd.arg("--target").arg(&target);
+    if config.no_default_features {
+        cmd.arg("--no-default-features");
+    }
+    if let Some(ref features) = config.features {
+        cmd.arg("--features").arg(features);
+    }
+    cmd.env("OPTEE_CLIENT_EXPORT", &config.optee_client_export);
+    for (key, value) in &config.env {
+        cmd.env(key, value);
+    }
+    Ok(cmd)
+}
+
+fn build_binary(config: &CaBuildConfig) -> Result<PathBuf> {
     let component_type = if config.plugin { "Plugin" } else { "CA" };
     println!("Building {} binary...", component_type);
 
-    // Determine target and cross-compile based on arch (CA runs in Normal World Linux)
-    let (target, cross_compile) = get_target_and_cross_compile(config.arch, BuildMode::Ca)?;
+    let (target, cross_compile) = resolve_target_and_cross_compile(config.arch, BuildMode::Ca)?;
 
-    let mut build_cmd = cargo_command();
-    build_cmd.arg("build");
-    build_cmd.arg("--target").arg(&target);
-
-    // Add --no-default-features if specified
-    if config.no_default_features {
-        build_cmd.arg("--no-default-features");
-    }
-
-    // Add additional features if specified
-    if let Some(ref features) = config.features {
-        build_cmd.arg("--features").arg(features);
-    }
-
+    let mut build_cmd = setup_ca_cargo_command(config, "build")?;
     if !config.debug {
         build_cmd.arg("--release");
     }
 
-    // Configure linker
     let linker = format!("{}gcc", cross_compile);
     let linker_cfg = format!("target.{}.linker=\"{}\"", target, linker);
     build_cmd.arg("--config").arg(&linker_cfg);
+    build_cmd.arg("--message-format=json");
 
-    // Set OPTEE_CLIENT_EXPORT environment variable
-    build_cmd.env("OPTEE_CLIENT_EXPORT", &config.optee_client_export);
-
-    // Apply custom environment variables
-    for (key, value) in &config.env {
-        build_cmd.env(key, value);
-    }
-
-    // Print the full cargo build command for debugging
     print_cargo_command(&build_cmd, "Building CA binary");
 
     let build_output = build_cmd.output()?;
+    let kind = if config.plugin {
+        CargoArtifactKind::Cdylib
+    } else {
+        CargoArtifactKind::Bin
+    };
+    let manifest = manifest_path(&config.path);
 
     if !build_output.status.success() {
+        let _ = unique_cargo_artifact(&build_output.stdout, &manifest, kind);
         print_output_and_bail("build", &build_output)?;
     }
 
-    Ok(())
+    unique_cargo_artifact(&build_output.stdout, &manifest, kind)
 }
 
-fn post_build(config: &CaBuildConfig) -> Result<PathBuf> {
+fn post_build(config: &CaBuildConfig, built_path: &Path) -> Result<PathBuf> {
     if config.plugin {
-        copy_plugin(config)
+        copy_plugin(built_path)
     } else {
-        strip_binary(config)
+        strip_binary(config, built_path)
     }
 }
 
-fn copy_plugin(config: &CaBuildConfig) -> Result<PathBuf> {
+fn copy_plugin(plugin_src: &Path) -> Result<PathBuf> {
     println!("Processing plugin...");
 
-    // Determine target based on arch (CA runs in Normal World Linux)
-    let (target, _cross_compile) = get_target_and_cross_compile(config.arch, BuildMode::Ca)?;
-
-    let profile = if config.debug { "debug" } else { "release" };
-
-    // Use cargo metadata to get the target directory (supports workspace and CARGO_TARGET_DIR)
-    let target_directory = get_target_directory_from_metadata()?;
-    let target_dir = target_directory.join(target).join(profile);
-
-    // Get the library name from Cargo.toml (we're already in the project directory)
-    let lib_name = get_package_name()?;
-
-    // Plugin is built as a shared library (lib<name>.so)
-    let plugin_src = common::join_format_and_check::<&str>(
-        &target_dir,
-        &[],
-        &format!("lib{}.so", lib_name),
-        "Plugin library",
-    )?;
-
-    // Read UUID from specified file
-    let uuid = read_uuid_from_file(
-        config
-            .uuid_path
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("UUID path is required for plugin builds"))?,
-    )?;
-
-    // Copy to <uuid>.plugin.so
-    let plugin_dest = target_dir.join(format!("{}.plugin.so", uuid));
-    std::fs::copy(plugin_src, &plugin_dest)?;
+    let uuid = elf_uuid::read_plugin_uuid(plugin_src)?;
+    let plugin_dest = plugin_src.with_file_name(format!("{}.plugin.so", uuid));
+    let parent = plugin_src
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("Plugin path has no parent: {:?}", plugin_src))?;
+    let tmp = unique_tempfile_in(parent, &format!("{}.plugin.so.", uuid), "")?;
+    std::fs::copy(plugin_src, tmp.path())?;
+    publish_tempfile(tmp, &plugin_dest)?;
 
     Ok(plugin_dest)
 }
 
-fn strip_binary(config: &CaBuildConfig) -> Result<PathBuf> {
+fn strip_binary(config: &CaBuildConfig, binary_path: &Path) -> Result<PathBuf> {
     println!("Stripping binary...");
 
-    // Determine target and cross-compile based on arch (CA runs in Normal World Linux)
-    let (target, cross_compile) = get_target_and_cross_compile(config.arch, BuildMode::Ca)?;
-
-    let profile = if config.debug { "debug" } else { "release" };
-
-    // Use cargo metadata to get the target directory (supports workspace and CARGO_TARGET_DIR)
-    let target_directory = get_target_directory_from_metadata()?;
-    let target_dir = target_directory.join(target).join(profile);
-
-    // Get the binary name from Cargo.toml (we're already in the project directory)
-    let binary_name = get_package_name()?;
-
-    let binary_path = common::join_and_check(&target_dir, &[binary_name], "Binary")?;
-
+    let (_, cross_compile) = resolve_target_and_cross_compile(config.arch, BuildMode::Ca)?;
     let objcopy = format!("{}objcopy", cross_compile);
 
     let strip_output = std::process::Command::new(&objcopy)
         .arg("--strip-unneeded")
-        .arg(&binary_path)
-        .arg(&binary_path) // Strip in place
+        .arg(binary_path)
+        .arg(binary_path) // Strip in place
         .output()?;
 
     if !strip_output.status.success() {
         print_output_and_bail(&objcopy, &strip_output)?;
     }
 
-    Ok(binary_path)
+    Ok(binary_path.to_path_buf())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::Arch;
+
+    fn ca_config() -> CaBuildConfig {
+        CaBuildConfig {
+            arch: Arch::Aarch64,
+            debug: false,
+            path: PathBuf::from("/tmp/project"),
+            env: vec![("CUSTOM".into(), "1".into())],
+            no_default_features: true,
+            features: Some("needed".into()),
+            optee_client_export: PathBuf::from("/tmp/client-export"),
+            plugin: false,
+        }
+    }
+
+    /// Guarantee: `clippy` and `build` receive the same `--features`,
+    /// `--no-default-features`, and custom env, so clippy lints the crate
+    /// graph that will be signed and installed.
+    #[test]
+    fn clippy_and_build_share_package_flags() {
+        let config = ca_config();
+        let clippy = setup_ca_cargo_command(&config, "clippy").unwrap();
+        let build = setup_ca_cargo_command(&config, "build").unwrap();
+        for cmd in [&clippy, &build] {
+            let args: Vec<_> = cmd
+                .get_args()
+                .map(|a| a.to_string_lossy().into_owned())
+                .collect();
+            assert!(args.contains(&"--features".to_string()));
+            assert!(args.contains(&"needed".to_string()));
+            assert!(args.contains(&"--no-default-features".to_string()));
+            let env = cmd
+                .get_envs()
+                .find(|(k, _)| k.to_str() == Some("CUSTOM"))
+                .and_then(|(_, v)| v)
+                .map(|v| v.to_string_lossy().into_owned());
+            assert_eq!(env.as_deref(), Some("1"));
+        }
+    }
 }

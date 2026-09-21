@@ -5,10 +5,9 @@ Applications (CAs) in Rust.
 
 ## Overview
 
-`cargo-optee` simplifies the development workflow for OP-TEE applications by
-replacing complex Makefiles with a unified, type-safe command-line interface. It
-handles cross-compilation, custom target specifications, environment setup, and
-signing automatically.
+`cargo-optee` simplifies the development workflow for OP-TEE applications. SDK
+example Makefiles invoke it for clippy, cross-compilation, stripping, and
+signing; you can also call the same CLI directly.
 
 ## High-Level Design
 
@@ -38,11 +37,9 @@ signing automatically.
         │  └──────────────────┬─────────────────────┘  │
         │                     │                        │
         │  ┌──────────────────▼─────────────────────┐  │
-        │  │  3. Execute Build Pipeline             │  │
-        │  │     - Run clippy (linting)             │  │
-        │  │     - Build binary: cargo + gcc        │  │
-        │  │     - Strip symbols: objcopy           │  │
-        │  │     - Sign TA: Python script (TA only) │  │
+        │  │  3. Execute command                    │  │
+        │  │     clippy: cargo fmt + clippy         │  │
+        │  │     build: cargo + strip + sign TA     │  │
         │  └──────────────────┬─────────────────────┘  │
         │                     │                        │
         └─────────────────────┼────────────────────────┘
@@ -178,10 +175,17 @@ After building, you can:
 2. **Cargo.toml Metadata** - Project-specific configuration in
    `[package.metadata.optee.*]` sections (see [Build through
    metadata](#build-through-metadata))
-3. **Defaults** - Built-in sensible defaults
+3. **Environment variables** - Used when CLI and metadata omit a value:
+   - `TA_DEV_KIT_DIR`, `OPTEE_CLIENT_EXPORT` for kit / client export paths
+   - `TA_SIGN_KEY` for the TA signing key
+   - `CROSS_COMPILE` for the toolchain prefix (no CLI or metadata equivalent;
+     otherwise derived from `--arch`)
+4. **Defaults** - Built-in sensible defaults (for example
+   `<ta-dev-kit-dir>/keys/default_ta.pem`)
 
 This allows projects to define their standard configuration in `Cargo.toml`
-while still permitting CLI overrides for specific builds.
+while still permitting CLI overrides for specific builds. Make wrappers pass
+`CROSS_COMPILE` and `TA_SIGN_KEY` through the environment.
 
 ### Project Structure
 
@@ -189,12 +193,11 @@ Cargo-optee expects the following project structure by default.
 
 ```
 project/
-├── uuid.txt           # TA UUID
 ├── ta/                # Trusted Application
 │   ├── Cargo.toml
 │   ├── src/
 │   │   └── main.rs
-│   └── build.rs       # Build script
+│   └── build.rs       # Build script (optional; UUID lives in the TA header)
 ├── host/              # Client Application (host)
 │   ├── Cargo.toml
 │   ├── src/
@@ -205,16 +208,27 @@ project/
         └── lib.rs
 ```
 
+The TA UUID is defined in the TA's own header (`ta_head.uuid`) and, if you use a
+shared proto crate, as a Rust constant consumed by the CA and the TA build
+script. `cargo-optee` parses the UUID from the unsigned ELF after the crate is
+built. The same rule applies to plugins (`plugin_method.uuid`). Shared proto
+crates and `optee-utee-build` / `optee-teec-build` are optional development
+helpers — UUID extraction depends only on the OP-TEE 4.10.0 ABI.
+
 See examples in the SDK for reference, such as `hello_world-rs`. Note that in
 this SDK's `examples/` directory the layout is split by side instead of by
-project: the TA crate lives in `examples/ta/hello_world-rs/` (with `uuid.txt`
-next to it), the CA crate lives in `examples/ca/hello_world-rs/` (named `ca/`
-rather than `host/`), and the shared definitions live in the workspace crate
-`examples/ta/proto`. The `cargo new`
-command (planned, not yet available) will generate a project template with this
-structure. For now, copy an existing example as a starting point.
+project: the TA crate lives in `examples/ta/hello_world-rs/`, the CA crate lives
+in `examples/ca/hello_world-rs/` (named `ca/` rather than `host/`), and the
+shared definitions live in the workspace crate `examples/ta/proto`. The `cargo
+new` command (planned, not yet available) will generate a project template with
+this structure. For now, copy an existing example as a starting point.
 
-### Usage Workflows (including future design)
+### Usage Workflows
+
+Implemented commands are `build`, `clippy`, `install`, `clean`, and
+`inspect-uuid`. `cargo-optee new` and a single `install --target` / `clean --all`
+that cover a whole project are not implemented; use the per-component commands
+below.
 
 #### Development/Emulation Environment
 
@@ -240,8 +254,16 @@ cargo-optee build ca \
   --manifest-path ./host/Cargo.toml \
   --arch aarch64
 
-# 3. Install to specific folder (future), e.g. QEMU shared folder for emulation
-cargo-optee install --target /tmp/qemu-shared-folder
+# 3. Install (copies the built TA/CA into --target-dir, resolved from the
+#    process cwd — not the crate directory)
+cargo-optee install ta \
+  --target-dir /tmp/qemu-shared-folder \
+  --ta-dev-kit-dir $TA_DEV_KIT_DIR \
+  --manifest-path ./ta/Cargo.toml
+cargo-optee install ca \
+  --target-dir /tmp/qemu-shared-folder \
+  --optee-client-export $OPTEE_CLIENT_EXPORT \
+  --manifest-path ./host/Cargo.toml
 ```
 
 **Using metadata configuration:**
@@ -281,11 +303,12 @@ cargo-optee build ca \
   --manifest-path ./host/Cargo.toml \
   --arch aarch64
 
-# Install to staging area (future)
-cargo-optee install --target ./dist
+# Install (implemented: install ta|ca|plugin --target-dir <DIR>)
+cargo-optee install ta --target-dir ./dist --manifest-path ./ta/Cargo.toml
+cargo-optee install ca --target-dir ./dist --manifest-path ./host/Cargo.toml
 
-# Clean build artifacts to save space (future)
-cargo-optee clean --all
+# Clean the crate (implemented: cargo-optee clean [--manifest-path ...])
+cargo-optee clean --manifest-path ./ta/Cargo.toml
 ```
 
 ### Build through CLI
@@ -300,7 +323,6 @@ cargo-optee build ta \
   [--std] \
   [--no-std] \
   [--signing-key <PATH>] \
-  [--uuid-path <PATH>] \
   [--debug]
 ```
 
@@ -312,12 +334,17 @@ cargo-optee build ta \
 - `--arch <ARCH>`: Target architecture (default: `aarch64`)
   - `aarch64`: ARM 64-bit architecture
   - `arm`: ARM 32-bit architecture
+  The cross-compiler prefix is derived from this; set `CROSS_COMPILE` in the
+  environment to override (there is no CLI flag).
 - `--std`: Build with std support (uses `cargo -Z build-std` and custom target)
 - `--no-std`: Build without std support (mutually exclusive with --std)
-- `--signing-key <PATH>`: Path to signing key (default:
-  `<ta-dev-kit-dir>/keys/default_ta.pem`)
-- `--uuid-path <PATH>`: Path to UUID file (default: `../uuid.txt`)
-- `--debug`: Build in debug mode (default: release mode)
+- `--signing-key <PATH>`: Path to signing key (fallback: Cargo.toml metadata,
+  then `TA_SIGN_KEY`, then `<ta-dev-kit-dir>/keys/default_ta.pem`)
+- `--debug`: Force a debug build. If omitted, Cargo.toml metadata is used
+  (default: release)
+
+The UUID used for signing and the `<uuid>.ta` name is parsed from the unsigned
+TA ELF (`ta_head.uuid`).
 
 **Example:**
 ```bash
@@ -364,7 +391,8 @@ cargo-optee build ca \
   `OPTEE_CLIENT_EXPORT`.
 - `--manifest-path <PATH>`: Path to Cargo.toml manifest file
 - `--arch <ARCH>`: Target architecture (default: `aarch64`)
-- `--debug`: Build in debug mode (default: release mode)
+- `--debug`: Force a debug build. If omitted, Cargo.toml metadata is used
+  (default: release)
 
 **Example:**
 ```bash
@@ -388,7 +416,6 @@ We have one example for plugin: `examples/ca/supp_plugin-rs-plugin`.
 ```bash
 cargo-optee build plugin \
   [--optee-client-export <PATH>] \
-  --uuid-path <PATH> \
   [--manifest-path <PATH>] \
   [--arch aarch64|arm] \
   [--debug]
@@ -399,10 +426,13 @@ cargo-optee build plugin \
 - `--optee-client-export <PATH>`: Path to the OP-TEE client export directory.
   If omitted, cargo-optee reads it from Cargo.toml metadata, then
   `OPTEE_CLIENT_EXPORT`.
-- `--uuid-path <PATH>`: Path to UUID file for naming the plugin
 - `--manifest-path <PATH>`: Path to Cargo.toml manifest file
 - `--arch <ARCH>`: Target architecture (default: `aarch64`)
-- `--debug`: Build in debug mode (default: release mode)
+- `--debug`: Force a debug build. If omitted, Cargo.toml metadata is used
+  (default: release)
+
+The plugin is copied to `<uuid>.plugin.so` using the UUID parsed from the
+dynamic `plugin_method` export.
 
 **Example:**
 ```bash
@@ -410,12 +440,47 @@ cargo-optee build plugin \
 cargo-optee build plugin \
   --optee-client-export /opt/optee/export-client \
   --manifest-path ./examples/ca/supp_plugin-rs-plugin/Cargo.toml \
-  --uuid-path ./examples/ca/supp_plugin-rs-plugin/plugin_uuid.txt \
   --arch aarch64
 ```
 
 **Output:**
 - Plugin binary: `target/<target-triple>/release/<uuid>.plugin.so`
+
+#### Inspect UUID
+
+```bash
+cargo-optee inspect-uuid --kind ta --elf path/to/ta.elf
+cargo-optee inspect-uuid --kind plugin --elf path/to/plugin.so
+```
+
+Prints the UUID to stdout. Same parser as `build ta` / `build plugin`.
+
+#### Clippy
+
+Lint only. Same target and environment as the corresponding `build` command;
+does not compile the final binary, strip, or sign, and does not require a
+signing key.
+
+```bash
+cargo-optee clippy ta \
+  --manifest-path examples/ta/hello_world-rs/Cargo.toml \
+  --arch aarch64 \
+  --no-std
+
+cargo-optee clippy ca --manifest-path examples/ca/hello_world-rs/Cargo.toml
+cargo-optee clippy plugin --manifest-path examples/ca/supp_plugin-rs-plugin/Cargo.toml
+```
+
+Example Makefiles keep the original target split: `make clippy` calls this
+command; `make ta` / `make host` depend on it and then call `build`.
+
+`make install` delegates to `cargo-optee install` for each selected example;
+`STD` / `TARGET_TA` select the std or no-std set. `O`, `bindir`, and `libdir`
+control the installation layout. A component can also be installed with
+`make -C examples/ta/hello_world-rs install INSTALL_DIR=/path/to/destination`.
+`make emulate` uses the same install command with the `ta` or `host` directory
+under `QEMU_HOST_SHARE_DIR`. Makefiles do not infer Cargo artifact paths or
+scan target directories for previously built binaries.
 
 ### Build through metadata
 
@@ -428,10 +493,9 @@ Configure TA builds in your `Cargo.toml`:
 arch = "aarch64"                    # Target architecture: "aarch64" | "arm" (optional, default: "aarch64")
 debug = false                       # Debug build: true | false (optional, default: false)
 std = false                         # Use std library: true | false (optional, default: false)
-uuid-path = "../uuid.txt"           # Path to UUID file (optional, default: "../uuid.txt")
 # Architecture-specific configuration (omitted architectures default to null/unsupported)
 ta-dev-kit-dir = { aarch64 = "/opt/optee/export-ta_arm64", arm = "/opt/optee/export-ta_arm32" }
-signing-key = "/path/to/key.pem"    # Path to signing key (optional, defaults to ta-dev-kit/keys/default_ta.pem)
+signing-key = "/path/to/key.pem"    # optional; else TA_SIGN_KEY, else ta-dev-kit/keys/default_ta.pem
 ```
 
 **Allowed entries:**
@@ -439,10 +503,12 @@ signing-key = "/path/to/key.pem"    # Path to signing key (optional, defaults to
 - `arch`: Target architecture (`"aarch64"` or `"arm"`)
 - `debug`: Build in debug mode (`true` or `false`) 
 - `std`: Enable std library support (`true` or `false`)
-- `uuid-path`: Relative or absolute path to UUID file
 - `ta-dev-kit-dir`: Architecture-specific paths to the TA development kit. If
   omitted, `TA_DEV_KIT_DIR` is used.
-- `signing-key`: Path to signing key file
+- `signing-key`: Path to signing key file. If omitted, `TA_SIGN_KEY` then
+  `<ta-dev-kit-dir>/keys/default_ta.pem`.
+
+The TA UUID is taken from the TA header after the crate is built.
 
 #### Client Application (CA) Metadata
 
@@ -472,7 +538,6 @@ Configure plugin builds in your `Cargo.toml`:
 [package.metadata.optee.plugin]
 arch = "aarch64"                    # Target architecture: "aarch64" | "arm" (optional, default: "aarch64")  
 debug = false                       # Debug build: true | false (optional, default: false)
-uuid-path = "../plugin_uuid.txt"    # Path to UUID file (required for plugins)
 # Architecture-specific configuration
 optee-client-export = { aarch64 = "/opt/optee/export-client_arm64", arm = "/opt/optee/export-client_arm32" }
 ```
@@ -481,20 +546,23 @@ optee-client-export = { aarch64 = "/opt/optee/export-client_arm64", arm = "/opt/
 
 - `arch`: Target architecture (`"aarch64"` or `"arm"`)
 - `debug`: Build in debug mode (`true` or `false`)
-- `uuid-path`: Relative or absolute path to UUID file (required for plugins)
 - `optee-client-export`: Architecture-specific paths to OP-TEE client export
   (falls back to `OPTEE_CLIENT_EXPORT`)
+
+The plugin UUID is parsed from the dynamically exported `struct plugin_method`.
 
 ## Implementation Status
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| `build ta` | ✅ Implemented | Supports aarch64/arm, std/no-std |
+| `build ta` | ✅ Implemented | cargo + strip + sign; aarch64/arm, std/no-std |
 | `build ca` | ✅ Implemented | Supports aarch64/arm |
 | `build plugin` | ✅ Implemented | Supports aarch64/arm, builds shared library plugins |
-| `clean` | ✅ Implemented | Remove build artifacts |
+| `clippy ta/ca/plugin` | ✅ Implemented | cargo fmt + clippy only |
+| `inspect-uuid` | ✅ Implemented | Parse UUID from an unsigned TA ELF or plugin `.so` |
+| `install ta/ca/plugin` | ✅ Implemented | Copy the built artifact to `--target-dir` (cwd-relative) |
+| `clean` | ✅ Implemented | `cargo clean` for one crate (`--manifest-path`) |
 | `new` | ⏳ Planned | Project scaffolding |
-| `install` | ⏳ Planned | Deploy to target filesystem |
 
 -----
 ## Appendix
@@ -515,30 +583,24 @@ cargo-optee build ta \
 
 **cargo-optee translates to:**
 ```bash
-# 1. Clippy
-cd ./ta
+# cargo-optee does not chdir the process; each command uses current_dir +
+# --manifest-path pointing at the crate.
 TA_DEV_KIT_DIR=/opt/optee/export-ta_arm64 \
 RUSTFLAGS="-C panic=abort" \
-cargo clippy --target aarch64-unknown-linux-gnu --release
-
-# 2. Build
-TA_DEV_KIT_DIR=/opt/optee/export-ta_arm64 \
-RUSTFLAGS="-C panic=abort" \
-cargo build --target aarch64-unknown-linux-gnu --release \
-  --manifest-path ./ta/Cargo.toml \
+cargo build --manifest-path ./ta/Cargo.toml --target aarch64-unknown-linux-gnu --release \
   --config target.aarch64-unknown-linux-gnu.linker="aarch64-linux-gnu-gcc"
 
-# 3. Strip
+# 2. Strip (unique tempfile, then discarded after signing)
 aarch64-linux-gnu-objcopy --strip-unneeded \
   target/aarch64-unknown-linux-gnu/release/ta \
-  target/aarch64-unknown-linux-gnu/release/stripped_ta
+  target/aarch64-unknown-linux-gnu/release/stripped_ta.<unique>
 
-# 4. Sign
+# 3. Sign (unique .ta.partial, then rename onto <uuid>.ta)
 python3 /opt/optee/export-ta_arm64/scripts/sign_encrypt.py \
-  --uuid <uuid-from-file> \
+  --uuid <uuid-parsed-from-stripped-elf> \
   --key /opt/optee/export-ta_arm64/keys/default_ta.pem \
-  --in target/aarch64-unknown-linux-gnu/release/stripped_ta \
-  --out target/aarch64-unknown-linux-gnu/release/<uuid>.ta
+  --in target/aarch64-unknown-linux-gnu/release/stripped_ta.<unique> \
+  --out target/aarch64-unknown-linux-gnu/release/<uuid>.ta.<unique>.partial
 ```
 
 #### Example 2: Build arm std TA
@@ -554,35 +616,25 @@ cargo-optee build ta \
 
 **cargo-optee translates to:**
 ```bash
-# 1. Clippy
-cd ./ta
 TA_DEV_KIT_DIR=/opt/optee/export-ta_arm32 \
 RUSTFLAGS="-C panic=abort" \
 RUST_TARGET_PATH=/tmp/cargo-optee-XXXXX \
 __CARGO_TESTS_ONLY_SRC_ROOT=/path/to/rust/library \
-cargo -Z build-std=std,panic_abort -Z json-target-spec clippy --target arm-unknown-optee --features std --release \
-  --manifest-path ./ta/Cargo.toml
-
-# 2. Build
-TA_DEV_KIT_DIR=/opt/optee/export-ta_arm32 \
-RUSTFLAGS="-C panic=abort" \
-RUST_TARGET_PATH=/tmp/cargo-optee-XXXXX \
-__CARGO_TESTS_ONLY_SRC_ROOT=/path/to/rust/library \
-cargo -Z build-std=std,panic_abort -Z json-target-spec build --target arm-unknown-optee --features std --release \
-  --manifest-path ./ta/Cargo.toml \
+cargo -Z build-std=std,panic_abort -Z json-target-spec build \
+  --manifest-path ./ta/Cargo.toml --target arm-unknown-optee --features std --release \
   --config target.arm-unknown-optee.linker="arm-linux-gnueabihf-gcc"
 
-# 3. Strip
+# 2. Strip (unique tempfile)
 arm-linux-gnueabihf-objcopy --strip-unneeded \
   target/arm-unknown-optee/release/ta \
-  target/arm-unknown-optee/release/stripped_ta
+  target/arm-unknown-optee/release/stripped_ta.<unique>
 
-# 4. Sign
+# 3. Sign (unique .ta.partial, then rename onto <uuid>.ta)
 python3 /opt/optee/export-ta_arm32/scripts/sign_encrypt.py \
-  --uuid <uuid-from-file> \
+  --uuid <uuid-parsed-from-stripped-elf> \
   --key /opt/optee/export-ta_arm32/keys/default_ta.pem \
-  --in target/arm-unknown-optee/release/stripped_ta \
-  --out target/arm-unknown-optee/release/<uuid>.ta
+  --in target/arm-unknown-optee/release/stripped_ta.<unique> \
+  --out target/arm-unknown-optee/release/<uuid>.ta.<unique>.partial
 ```
 
 **Note:** `/tmp/cargo-optee-XXXXX` is a temporary directory containing the
@@ -599,19 +651,11 @@ cargo-optee build ca \
 
 **cargo-optee translates to:**
 ```bash
-# 1. Clippy
-cd ./host
 OPTEE_CLIENT_EXPORT=/opt/optee/export-client \
-cargo clippy --target aarch64-unknown-linux-gnu \
-  --manifest-path ./host/Cargo.toml
-
-# 2. Build
-OPTEE_CLIENT_EXPORT=/opt/optee/export-client \
-cargo build --target aarch64-unknown-linux-gnu --release \
-  --manifest-path ./host/Cargo.toml \
+cargo build --manifest-path ./host/Cargo.toml --target aarch64-unknown-linux-gnu --release \
   --config target.aarch64-unknown-linux-gnu.linker="aarch64-linux-gnu-gcc"
 
-# 3. Strip
+# 2. Strip
 aarch64-linux-gnu-objcopy --strip-unneeded \
   target/aarch64-unknown-linux-gnu/release/<binary> \
   target/aarch64-unknown-linux-gnu/release/<binary>

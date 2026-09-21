@@ -15,18 +15,19 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use cargo_optee::ca_builder;
+use cargo_optee::cli::{
+    BuildCommand, Cli, ClippyCommand, Command, CommonBuildArgs, InstallCommand, UuidKind,
+};
+use cargo_optee::common::absolute_from_cwd;
+use cargo_optee::config;
+use cargo_optee::elf_uuid;
+use cargo_optee::ta_builder;
 use clap::Parser;
 use std::env;
-use std::path::PathBuf;
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
 use std::process;
-
-mod ca_builder;
-mod cli;
-mod common;
-mod config;
-mod ta_builder;
-
-use cli::{BuildCommand, Cli, Command, CommonBuildArgs, InstallCommand};
 
 fn main() {
     // Drop extra `optee` argument provided by `cargo`.
@@ -46,7 +47,7 @@ fn main() {
     let result = execute_command(cli.cmd);
 
     if let Err(e) = result {
-        eprintln!("Error: {}", e);
+        eprintln!("Error: {e:#}");
         process::exit(1);
     }
 }
@@ -55,7 +56,6 @@ fn execute_command(cmd: Command) -> anyhow::Result<()> {
     match cmd {
         Command::Build(build_cmd) => match build_cmd {
             BuildCommand::TA { build_cmd } => {
-                // Convert bool flags to Option<bool>: --std -> Some(true), --no-std -> Some(false), neither -> None
                 let std_mode = match (build_cmd.std, build_cmd.no_std) {
                     (true, false) => Some(true),
                     (false, true) => Some(false),
@@ -67,23 +67,23 @@ fn execute_command(cmd: Command) -> anyhow::Result<()> {
                     std_mode,
                     build_cmd.ta_dev_kit_dir,
                     build_cmd.signing_key,
-                    build_cmd.uuid_path,
                     None,
+                    false,
                 )
             }
             BuildCommand::CA { build_cmd } => execute_ca_command(
                 build_cmd.common,
                 build_cmd.optee_client_export,
-                None,
                 false,
                 None,
+                false,
             ),
             BuildCommand::Plugin { build_cmd } => execute_ca_command(
                 build_cmd.common,
                 build_cmd.optee_client_export,
-                build_cmd.uuid_path,
                 true,
                 None,
+                false,
             ),
         },
         Command::Install(install_cmd) => match install_cmd {
@@ -91,7 +91,6 @@ fn execute_command(cmd: Command) -> anyhow::Result<()> {
                 target_dir,
                 build_cmd,
             } => {
-                // Convert bool flags to Option<bool>: --std -> Some(true), --no-std -> Some(false), neither -> None
                 let std_mode = match (build_cmd.std, build_cmd.no_std) {
                     (true, false) => Some(true),
                     (false, true) => Some(false),
@@ -103,8 +102,8 @@ fn execute_command(cmd: Command) -> anyhow::Result<()> {
                     std_mode,
                     build_cmd.ta_dev_kit_dir,
                     build_cmd.signing_key,
-                    build_cmd.uuid_path,
-                    Some(&target_dir),
+                    Some(absolute_from_cwd(&target_dir)?),
+                    false,
                 )
             }
             InstallCommand::CA {
@@ -113,9 +112,9 @@ fn execute_command(cmd: Command) -> anyhow::Result<()> {
             } => execute_ca_command(
                 build_cmd.common,
                 build_cmd.optee_client_export,
-                None,
                 false,
-                Some(&target_dir),
+                Some(absolute_from_cwd(&target_dir)?),
+                false,
             ),
             InstallCommand::Plugin {
                 target_dir,
@@ -123,18 +122,59 @@ fn execute_command(cmd: Command) -> anyhow::Result<()> {
             } => execute_ca_command(
                 build_cmd.common,
                 build_cmd.optee_client_export,
-                build_cmd.uuid_path,
                 true,
-                Some(&target_dir),
+                Some(absolute_from_cwd(&target_dir)?),
+                false,
+            ),
+        },
+        Command::Clippy(clippy_cmd) => match clippy_cmd {
+            ClippyCommand::TA { build_cmd } => {
+                let std_mode = match (build_cmd.std, build_cmd.no_std) {
+                    (true, false) => Some(true),
+                    (false, true) => Some(false),
+                    _ => None,
+                };
+
+                execute_ta_command(
+                    build_cmd.common,
+                    std_mode,
+                    build_cmd.ta_dev_kit_dir,
+                    None,
+                    None,
+                    true,
+                )
+            }
+            ClippyCommand::CA { build_cmd } => execute_ca_command(
+                build_cmd.common,
+                build_cmd.optee_client_export,
+                false,
+                None,
+                true,
+            ),
+            ClippyCommand::Plugin { build_cmd } => execute_ca_command(
+                build_cmd.common,
+                build_cmd.optee_client_export,
+                true,
+                None,
+                true,
             ),
         },
         Command::Clean { clean_cmd } => {
             let project_path = resolve_project_path(clean_cmd.manifest_path.as_ref())?;
-
-            // Clean build artifacts using the common function
-            crate::common::clean_project(&project_path)
+            cargo_optee::common::clean_project(&project_path)
         }
+        Command::InspectUuid { kind, elf } => inspect_uuid(kind, &elf),
     }
+}
+
+fn inspect_uuid(kind: UuidKind, elf: &Path) -> anyhow::Result<()> {
+    let uuid = match kind {
+        UuidKind::Ta => elf_uuid::read_ta_uuid(elf)?,
+        UuidKind::Plugin => elf_uuid::read_plugin_uuid(elf)?,
+    };
+    let mut stdout = io::stdout().lock();
+    writeln!(stdout, "{uuid}")?;
+    Ok(())
 }
 
 /// Execute TA build or install (shared logic)
@@ -143,60 +183,70 @@ fn execute_ta_command(
     std: Option<bool>,
     ta_dev_kit_dir: Option<PathBuf>,
     signing_key: Option<PathBuf>,
-    uuid_path: Option<PathBuf>,
-    install_target_dir: Option<&PathBuf>,
+    install_target_dir: Option<PathBuf>,
+    lint_only: bool,
 ) -> anyhow::Result<()> {
-    // Resolve project path from manifest or current directory
     let project_path = resolve_project_path(common.manifest_path.as_ref())?;
 
-    // Resolve TA build configuration with priority: CLI > metadata > default
     let ta_config = config::TaBuildConfig::resolve(
         &project_path,
-        common.arch,
-        Some(common.debug),
-        uuid_path,
-        common.env,
-        common.no_default_features,
-        common.features,
-        std, // None means read from config, Some(true/false) means CLI override
+        config::BuildOverrides {
+            arch: common.arch,
+            debug: cli_debug_override(common.debug),
+            env: common.env,
+            no_default_features: common.no_default_features,
+            features: common.features,
+        },
+        std,
         ta_dev_kit_dir,
         signing_key,
+        !lint_only,
     )?;
 
-    // Print the final configuration being used
-    ta_config.print_config();
-
-    ta_builder::build_ta(ta_config, install_target_dir.map(|p| p.as_path()))
+    if lint_only {
+        ta_config.print_lint_config();
+        ta_builder::clippy_ta(ta_config)
+    } else {
+        ta_config.print_config();
+        ta_builder::build_ta(ta_config, install_target_dir.as_deref())
+    }
 }
 
 /// Execute CA build or install (shared logic)
 fn execute_ca_command(
     common: CommonBuildArgs,
     optee_client_export: Option<PathBuf>,
-    uuid_path: Option<PathBuf>,
     plugin: bool,
-    install_target_dir: Option<&PathBuf>,
+    install_target_dir: Option<PathBuf>,
+    lint_only: bool,
 ) -> anyhow::Result<()> {
-    // Resolve project path from manifest or current directory
     let project_path = resolve_project_path(common.manifest_path.as_ref())?;
 
-    // Resolve CA build configuration with priority: CLI > metadata > default
     let ca_config = config::CaBuildConfig::resolve(
         &project_path,
-        common.arch,
-        Some(common.debug),
-        uuid_path,
-        common.env,
-        common.no_default_features,
-        common.features,
+        config::BuildOverrides {
+            arch: common.arch,
+            debug: cli_debug_override(common.debug),
+            env: common.env,
+            no_default_features: common.no_default_features,
+            features: common.features,
+        },
         optee_client_export,
         plugin,
     )?;
 
-    // Print the final configuration being used
-    ca_config.print_config();
+    if lint_only {
+        ca_config.print_lint_config();
+        ca_builder::clippy_ca(ca_config)
+    } else {
+        ca_config.print_config();
+        ca_builder::build_ca(ca_config, install_target_dir.as_deref())
+    }
+}
 
-    ca_builder::build_ca(ca_config, install_target_dir.map(|p| p.as_path()))
+/// `--debug` means force debug. Omitting it leaves metadata/default in place.
+fn cli_debug_override(debug: bool) -> Option<bool> {
+    debug.then_some(true)
 }
 
 /// Resolve project path from manifest path or current directory
@@ -206,12 +256,9 @@ fn resolve_project_path(manifest_path: Option<&PathBuf>) -> anyhow::Result<PathB
             .parent()
             .ok_or_else(|| anyhow::anyhow!("Invalid manifest path"))?;
 
-        // Normalize: if parent is empty (e.g., manifest is just "Cargo.toml"),
-        // use current directory instead
         if parent.as_os_str().is_empty() {
             std::env::current_dir().map_err(Into::into)
         } else {
-            // Canonicalize must succeed, otherwise treat as invalid manifest path
             parent
                 .canonicalize()
                 .map_err(|_| anyhow::anyhow!("Invalid manifest path"))
@@ -219,14 +266,4 @@ fn resolve_project_path(manifest_path: Option<&PathBuf>) -> anyhow::Result<PathB
     } else {
         std::env::current_dir().map_err(Into::into)
     }
-}
-
-// Get Cargo Command.
-// As a Cargo plugin, this tool requires an existing Cargo installation.
-// It also follows standard Cargo conventions by prioritizing the `CARGO`
-// environment variable when invoking the binary.
-fn cargo_command() -> process::Command {
-    // https://doc.rust-lang.org/cargo/reference/environment-variables.html#environment-variables-cargo-reads
-    const ENV_CARGO: &str = "CARGO";
-    process::Command::new(env::var_os(ENV_CARGO).unwrap_or_else(|| "cargo".into()))
 }

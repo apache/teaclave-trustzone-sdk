@@ -18,6 +18,7 @@
 use anyhow::{Result, bail};
 use cargo_metadata::MetadataCommand;
 use serde_json::Value;
+use std::env;
 use std::path::{Path, PathBuf};
 
 use crate::common::Arch;
@@ -54,10 +55,9 @@ enum PathType {
 
 #[derive(Clone)]
 pub struct TaBuildConfig {
-    pub arch: Arch,                 // Architecture
-    pub debug: bool,                // Debug mode (default false = release)
-    pub path: PathBuf,              // Path to TA directory
-    pub uuid_path: Option<PathBuf>, // Path to UUID file
+    pub arch: Arch,    // Architecture
+    pub debug: bool,   // Debug mode (default false = release)
+    pub path: PathBuf, // Path to TA directory
     // Customized variables
     pub env: Vec<(String, String)>, // Custom environment variables for cargo build
     pub no_default_features: bool,  // Disable default features
@@ -68,29 +68,37 @@ pub struct TaBuildConfig {
     pub signing_key: PathBuf,    // Path to signing key
 }
 
+/// CLI overrides shared by TA and CA/plugin resolution.
+pub struct BuildOverrides {
+    pub arch: Option<Arch>,
+    pub debug: Option<bool>,
+    pub env: Vec<(String, String)>,
+    pub no_default_features: bool,
+    pub features: Option<String>,
+}
+
 impl TaBuildConfig {
     pub fn resolve(
         project_path: &Path,
-        cmd_arch: Option<Arch>,
-        cmd_debug: Option<bool>,
-        cmd_uuid_path: Option<PathBuf>,
-        common_env: Vec<(String, String)>,
-        common_no_default_features: bool,
-        common_features: Option<String>,
+        overrides: BuildOverrides,
         cmd_std: Option<bool>,
         cmd_ta_dev_kit_dir: Option<PathBuf>,
         cmd_signing_key: Option<PathBuf>,
+        need_signing_key: bool,
     ) -> Result<Self> {
         // Get base configuration from metadata
-        let metadata_config = MetadataConfig::resolve(project_path, ComponentType::Ta, cmd_arch)?;
+        let metadata_config =
+            MetadataConfig::resolve(project_path, ComponentType::Ta, overrides.arch)?;
 
         // Determine final arch: CLI > metadata > default
-        let arch = cmd_arch
+        let arch = overrides
+            .arch
             .or_else(|| metadata_config.as_ref().map(|c| c.arch))
             .unwrap_or(Arch::Aarch64);
 
         // Handle priority: CLI > metadata > default
-        let debug = cmd_debug
+        let debug = overrides
+            .debug
             .or_else(|| metadata_config.as_ref().map(|c| c.debug))
             .unwrap_or(false);
 
@@ -116,33 +124,29 @@ impl TaBuildConfig {
             "TA development kit directory",
         )?;
 
-        // Handle signing_key: CLI > metadata > default (ta_dev_kit_dir/keys/default_ta.pem)
-        let signing_key_config = cmd_signing_key
-            .or_else(|| metadata_config.as_ref().and_then(|c| c.signing_key.clone()))
-            .unwrap_or_else(|| ta_dev_kit_dir_config.join("keys").join("default_ta.pem"));
-
-        // Resolve signing_key path (relative to absolute)
-        let signing_key = resolve_path_relative_to_project(
-            &signing_key_config,
-            project_path,
-            PathType::File,
-            "Signing key file",
-        )?;
-
-        // Handle uuid_path: CLI > metadata > default (../uuid.txt)
-        let uuid_path = resolve_uuid_path(
-            cmd_uuid_path,
-            metadata_config.as_ref().and_then(|c| c.uuid_path.clone()),
-            project_path,
-            PathBuf::from("../uuid.txt"),
-        )?;
+        // Handle signing_key: CLI > metadata > TA_SIGN_KEY > default_ta.pem.
+        // Clippy does not sign, so skip the key file when linting.
+        let signing_key = if need_signing_key {
+            let signing_key_config = cmd_signing_key
+                .or_else(|| metadata_config.as_ref().and_then(|c| c.signing_key.clone()))
+                .or_else(|| env::var_os("TA_SIGN_KEY").map(PathBuf::from))
+                .unwrap_or_else(|| ta_dev_kit_dir_config.join("keys").join("default_ta.pem"));
+            resolve_path_relative_to_project(
+                &signing_key_config,
+                project_path,
+                PathType::File,
+                "Signing key file",
+            )?
+        } else {
+            PathBuf::new()
+        };
 
         // Merge environment variables: metadata env + CLI env (CLI overrides metadata)
         let mut env = metadata_config
             .as_ref()
             .map(|c| c.env.clone())
             .unwrap_or_default();
-        env.extend(common_env);
+        env.extend(overrides.env);
 
         Ok(TaBuildConfig {
             arch,
@@ -151,26 +155,29 @@ impl TaBuildConfig {
             ta_dev_kit_dir,
             signing_key,
             path: project_path.to_path_buf(),
-            uuid_path: Some(uuid_path),
             env,
-            no_default_features: common_no_default_features,
-            features: common_features,
+            no_default_features: overrides.no_default_features,
+            features: overrides.features,
         })
     }
 
     /// Print the final TA configuration parameters being used
     pub fn print_config(&self) {
-        println!("Building TA with:");
+        self.print_config_with("Building");
+    }
+
+    pub fn print_lint_config(&self) {
+        self.print_config_with("Linting");
+    }
+
+    fn print_config_with(&self, action: &str) {
+        println!("{} TA with:", action);
         println!("  Arch: {:?}", self.arch);
         println!("  Debug: {}", self.debug);
         println!("  Std: {}", self.std);
         println!("  TA dev kit dir: {:?}", self.ta_dev_kit_dir);
-        println!("  Signing key: {:?}", self.signing_key);
-        if let Some(ref uuid_path) = self.uuid_path {
-            let absolute_uuid_path = uuid_path
-                .canonicalize()
-                .unwrap_or_else(|_| uuid_path.clone());
-            println!("  UUID path: {:?}", absolute_uuid_path);
+        if !self.signing_key.as_os_str().is_empty() {
+            println!("  Signing key: {:?}", self.signing_key);
         }
         if !self.env.is_empty() {
             println!("  Environment variables: {} set", self.env.len());
@@ -180,10 +187,9 @@ impl TaBuildConfig {
 
 #[derive(Clone)]
 pub struct CaBuildConfig {
-    pub arch: Arch,                 // Architecture
-    pub debug: bool,                // Debug mode (default false = release)
-    pub path: PathBuf,              // Path to CA directory
-    pub uuid_path: Option<PathBuf>, // Path to UUID file (for plugins)
+    pub arch: Arch,    // Architecture
+    pub debug: bool,   // Debug mode (default false = release)
+    pub path: PathBuf, // Path to CA directory
     // Customized variables
     pub env: Vec<(String, String)>, // Custom environment variables for cargo build
     pub no_default_features: bool,  // Disable default features
@@ -196,12 +202,7 @@ pub struct CaBuildConfig {
 impl CaBuildConfig {
     pub fn resolve(
         project_path: &Path,
-        cmd_arch: Option<Arch>,
-        cmd_debug: Option<bool>,
-        cmd_uuid_path: Option<PathBuf>,
-        common_env: Vec<(String, String)>,
-        common_no_default_features: bool,
-        common_features: Option<String>,
+        overrides: BuildOverrides,
         cmd_optee_client_export: Option<PathBuf>,
         plugin: bool,
     ) -> Result<Self> {
@@ -212,15 +213,18 @@ impl CaBuildConfig {
         };
 
         // Get base configuration from metadata
-        let metadata_config = MetadataConfig::resolve(project_path, component_type, cmd_arch)?;
+        let metadata_config =
+            MetadataConfig::resolve(project_path, component_type, overrides.arch)?;
 
         // Determine final arch: CLI > metadata > default
-        let arch = cmd_arch
+        let arch = overrides
+            .arch
             .or_else(|| metadata_config.as_ref().map(|c| c.arch))
             .unwrap_or(Arch::Aarch64);
 
         // Handle priority: CLI > metadata > default
-        let debug = cmd_debug
+        let debug = overrides
+            .debug
             .or_else(|| metadata_config.as_ref().map(|c| c.debug))
             .unwrap_or(false);
 
@@ -242,33 +246,20 @@ impl CaBuildConfig {
             "OP-TEE client export directory",
         )?;
 
-        // Handle uuid_path: only for plugins, CLI > metadata > default
-        let uuid_path = if plugin {
-            Some(resolve_uuid_path(
-                cmd_uuid_path,
-                metadata_config.as_ref().and_then(|c| c.uuid_path.clone()),
-                project_path,
-                PathBuf::from("../uuid.txt"),
-            )?)
-        } else {
-            None
-        };
-
         // Merge environment variables: metadata env + CLI env (CLI overrides metadata)
         let mut env = metadata_config
             .as_ref()
             .map(|c| c.env.clone())
             .unwrap_or_default();
-        env.extend(common_env);
+        env.extend(overrides.env);
 
         Ok(CaBuildConfig {
             arch,
             debug,
             path: project_path.to_path_buf(),
-            uuid_path,
             env,
-            no_default_features: common_no_default_features,
-            features: common_features,
+            no_default_features: overrides.no_default_features,
+            features: overrides.features,
             optee_client_export,
             plugin,
         })
@@ -276,19 +267,19 @@ impl CaBuildConfig {
 
     /// Print the final CA/Plugin configuration parameters being used
     pub fn print_config(&self) {
+        self.print_config_with("Building");
+    }
+
+    pub fn print_lint_config(&self) {
+        self.print_config_with("Linting");
+    }
+
+    fn print_config_with(&self, action: &str) {
         let component_name = if self.plugin { "Plugin" } else { "CA" };
-        println!("Building {} with:", component_name);
+        println!("{} {} with:", action, component_name);
         println!("  Arch: {:?}", self.arch);
         println!("  Debug: {}", self.debug);
         println!("  OP-TEE client export: {:?}", self.optee_client_export);
-        if self.plugin
-            && let Some(ref uuid_path) = self.uuid_path
-        {
-            let absolute_uuid_path = uuid_path
-                .canonicalize()
-                .unwrap_or_else(|_| uuid_path.clone());
-            println!("  UUID path: {:?}", absolute_uuid_path);
-        }
         if !self.env.is_empty() {
             println!("  Environment variables: {} set", self.env.len());
         }
@@ -305,45 +296,22 @@ struct MetadataConfig {
     pub ta_dev_kit_dir: Option<PathBuf>,
     pub optee_client_export: Option<PathBuf>,
     pub signing_key: Option<PathBuf>,
-    pub uuid_path: Option<PathBuf>,
     /// additional environment key-value pairs, that should be passed to underlying
     /// build commands
     pub env: Vec<(String, String)>,
 }
 
 impl MetadataConfig {
-    /// Extract build configuration from metadata only
-    /// This function only parses metadata and does not handle priority resolution
-    /// Determines arch with priority: cmd_arch > metadata > default
-    /// Returns None if metadata is not found or parsing fails
+    /// Extract build configuration from metadata only.
+    /// Returns `Ok(None)` when the package has no `[package.metadata.optee.<kind>]`
+    /// table. Parse errors, including removed keys, are returned to the CLI.
     pub fn resolve(
         project_path: &Path,
         component_type: ComponentType,
         cmd_arch: Option<Arch>,
     ) -> Result<Option<Self>> {
-        // Try to find application metadata (optional)
-        let app_metadata = match discover_app_metadata(project_path) {
-            Ok(meta) => meta,
-            Err(_) => return Ok(None),
-        };
-
-        // Determine architecture with priority: cmd_arch > metadata > default
-        let arch = cmd_arch
-            .or_else(|| {
-                app_metadata
-                    .get("optee")?
-                    .get(component_type.as_str())?
-                    .get("arch")
-                    .and_then(|v| v.as_str())
-                    .and_then(|s| s.parse().ok())
-            })
-            .unwrap_or(Arch::Aarch64);
-
-        // Extract metadata config with the determined architecture
-        // Return None if metadata parsing fails (metadata not found or invalid)
-        extract_build_config_with_arch(&app_metadata, arch, component_type)
-            .map(Some)
-            .or_else(|_| Ok(None))
+        let app_metadata = discover_app_metadata(project_path)?;
+        extract_build_config(&app_metadata, component_type, cmd_arch)
     }
 }
 
@@ -389,34 +357,42 @@ fn discover_app_metadata(project_path: &Path) -> Result<Value> {
     Ok(current_package.metadata.clone())
 }
 
-/// Extract build configuration from application package metadata with specific architecture
-fn extract_build_config_with_arch(
+/// Extract build configuration from application package metadata.
+fn extract_build_config(
     metadata: &Value,
-    arch: Arch,
     component_type: ComponentType,
-) -> Result<MetadataConfig> {
-    let optee_metadata = metadata
-        .get("optee")
-        .ok_or_else(|| anyhow::anyhow!("No optee metadata found in application package"))?;
+    cmd_arch: Option<Arch>,
+) -> Result<Option<MetadataConfig>> {
+    let Some(optee_metadata) = metadata.get("optee") else {
+        return Ok(None);
+    };
+    let Some(component_metadata) = optee_metadata.get(component_type.as_str()) else {
+        return Ok(None);
+    };
 
-    let component_metadata = optee_metadata.get(component_type.as_str()).ok_or_else(|| {
-        anyhow::anyhow!(
-            "No {} metadata found in optee section",
+    if component_metadata.get("uuid-path").is_some() {
+        bail!(
+            "package.metadata.optee.{}.uuid-path is not supported; UUID is parsed from the unsigned ELF",
             component_type.as_str()
-        )
-    })?;
+        );
+    }
 
-    // Parse debug with fallback to false
-    let debug = component_metadata
-        .get("debug")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
+    let arch = match cmd_arch {
+        Some(arch) => arch,
+        None => match component_metadata.get("arch") {
+            None => Arch::Aarch64,
+            Some(v) => {
+                let s = v
+                    .as_str()
+                    .ok_or_else(|| anyhow::anyhow!("metadata key arch must be a string"))?;
+                s.parse()
+                    .map_err(|e: String| anyhow::anyhow!("invalid metadata arch {s:?}: {e}"))?
+            }
+        },
+    };
 
-    // Parse std with fallback to false
-    let std = component_metadata
-        .get("std")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
+    let debug = metadata_bool(component_metadata, "debug")?;
+    let std = metadata_bool(component_metadata, "std")?;
 
     // Architecture-specific path resolution
     let arch_key = match arch {
@@ -497,48 +473,23 @@ fn extract_build_config_with_arch(
         })
         .unwrap_or_default();
 
-    // Parse uuid_path from metadata (for TA and Plugin)
-    // component_metadata already points to the correct section (optee.ta or optee.plugin)
-    let uuid_path =
-        if component_type == ComponentType::Ta || component_type == ComponentType::Plugin {
-            component_metadata
-                .get("uuid-path")
-                .and_then(|v| v.as_str())
-                .filter(|s| !s.is_empty())
-                .map(PathBuf::from)
-        } else {
-            None // CA doesn't need uuid_path
-        };
-
-    Ok(MetadataConfig {
+    Ok(Some(MetadataConfig {
         arch,
         debug,
         std,
         ta_dev_kit_dir,
         optee_client_export,
         signing_key,
-        uuid_path,
         env,
-    })
+    }))
 }
 
-/// Resolve uuid_path with priority: CLI > metadata > default
-/// Returns the resolved absolute path
-fn resolve_uuid_path(
-    cmd_uuid_path: Option<PathBuf>,
-    metadata_uuid_path: Option<PathBuf>,
-    project_path: &Path,
-    default: PathBuf,
-) -> Result<PathBuf> {
-    let uuid_path_was_from_cli = cmd_uuid_path.is_some();
-    let uuid_path_str = cmd_uuid_path.or(metadata_uuid_path).unwrap_or(default);
-
-    if uuid_path_was_from_cli {
-        // CLI provided - resolve relative to current directory
-        Ok(std::env::current_dir()?.join(&uuid_path_str))
-    } else {
-        // From metadata or default - resolve relative to project directory
-        Ok(project_path.join(&uuid_path_str))
+fn metadata_bool(table: &Value, key: &str) -> Result<bool> {
+    match table.get(key) {
+        None => Ok(false),
+        Some(v) => v
+            .as_bool()
+            .ok_or_else(|| anyhow::anyhow!("metadata key {key} must be a boolean")),
     }
 }
 
@@ -621,4 +572,59 @@ fn resolve_path_relative_to_project(
     }
 
     Ok(resolved_path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn ta_meta(ta: Value) -> Value {
+        json!({ "optee": { "ta": ta } })
+    }
+
+    /// Guarantee: missing `debug` / `std` in metadata are false (release
+    /// and no-std).
+    #[test]
+    fn debug_and_std_default_false() {
+        let cfg = extract_build_config(&ta_meta(json!({})), ComponentType::Ta, None)
+            .unwrap()
+            .unwrap();
+        assert!(!cfg.debug);
+        assert!(!cfg.std);
+    }
+
+    /// Guarantee: metadata `debug = true` is extracted as true.
+    #[test]
+    fn debug_true_is_honored() {
+        let cfg = extract_build_config(&ta_meta(json!({ "debug": true })), ComponentType::Ta, None)
+            .unwrap()
+            .unwrap();
+        assert!(cfg.debug);
+        assert!(!cfg.std);
+    }
+
+    /// Guarantee: a non-boolean `debug` value is an error, not a silent
+    /// `false` that always builds `--release`.
+    #[test]
+    fn debug_rejects_non_bool() {
+        let err = extract_build_config(
+            &ta_meta(json!({ "debug": "true" })),
+            ComponentType::Ta,
+            None,
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("debug"));
+        assert!(err.to_string().contains("boolean"));
+    }
+
+    /// Guarantee: a non-boolean `std` value is an error, not a silent
+    /// `false` that keeps `--no-std`.
+    #[test]
+    fn std_rejects_non_bool() {
+        let err = extract_build_config(&ta_meta(json!({ "std": 1 })), ComponentType::Ta, None)
+            .unwrap_err();
+        assert!(err.to_string().contains("std"));
+        assert!(err.to_string().contains("boolean"));
+    }
 }
