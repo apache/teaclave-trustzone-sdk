@@ -79,6 +79,12 @@ jobs:
           # fmt checks
           (cd crates && cargo fmt --all --check)
 
+          # cargo-optee unit tests live in tools/, not crates/.
+          (cd tools && \
+            cargo test -p cargo-optee -vv && \
+            cargo clippy -p cargo-optee -- -D warnings && \
+            cargo fmt --all --check)
+
   build-and-test-examples-for-32bit-no-std-TAs:
     uses: ./.github/workflows/reuse_host_build_and_qemu_run.yml
     with:
