@@ -107,10 +107,11 @@ impl Builder {
 
 impl Builder {
     fn write_header_file(&self, out: PathBuf) -> Result<(), Error> {
-        let out_header_file_name = out.join(match self.header_file_name.as_ref() {
-            Some(v) => v.as_str(),
-            None => DEFAULT_HEADER_FILE_NAME,
-        });
+        let out_header_file_name = out.join(
+            self.header_file_name
+                .as_deref()
+                .unwrap_or(DEFAULT_HEADER_FILE_NAME),
+        );
         let mut buffer = File::create(out_header_file_name.clone())?;
         let header_codes = HeaderFileGenerator::new().generate(&self.ta_config)?;
         buffer.write_all(header_codes.as_bytes())?;
