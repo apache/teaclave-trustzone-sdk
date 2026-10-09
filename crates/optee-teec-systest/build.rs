@@ -19,11 +19,7 @@ use std::{env, path::PathBuf};
 
 fn main() {
     let mut cfg = ctest::TestGenerator::new();
-    let path = {
-        let mut tmp = PathBuf::from(env::var("OPTEE_CLIENT_EXPORT").unwrap());
-        tmp.push("usr/include");
-        tmp
-    };
+    let path = PathBuf::from(env::var("OPTEE_CLIENT_EXPORT").unwrap()).join("usr/include");
     cfg.language(ctest::Language::C)
         .edition(2024)
         .target("aarch64-unknown-linux-gnu")
