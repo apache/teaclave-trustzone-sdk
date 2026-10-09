@@ -15,7 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{ConnectionMethods, Error, Operation, Param, ParamNone, Result, Session, Uuid, raw};
+use crate::{
+    ConnectionMethods, Operation, Param, ParamNone, Result, Session, Uuid, raw, teec_check,
+};
 use std::{cell::RefCell, ptr, rc::Rc};
 
 pub struct InnerContext(pub raw::TEEC_Context);
@@ -59,12 +61,10 @@ impl Context {
         // SAFETY:
         // raw_ctx is a C struct(TEEC_Context), which zero value is valid.
         let mut raw_ctx = unsafe { std::mem::zeroed() };
-        match unsafe { raw::TEEC_InitializeContext(ptr::null_mut(), &mut raw_ctx) } {
-            raw::TEEC_SUCCESS => Ok(Self {
-                raw: Rc::new(RefCell::new(InnerContext(raw_ctx))),
-            }),
-            code => Err(Error::from_raw_error(code)),
-        }
+        teec_check(unsafe { raw::TEEC_InitializeContext(ptr::null_mut(), &mut raw_ctx) })?;
+        Ok(Self {
+            raw: Rc::new(RefCell::new(InnerContext(raw_ctx))),
+        })
     }
 
     /// Opens a new session with the specified trusted application.
@@ -87,12 +87,7 @@ impl Context {
     /// }
     /// ```
     pub fn open_session(&mut self, uuid: Uuid) -> Result<Session> {
-        Session::new(
-            self,
-            uuid,
-            ConnectionMethods::LoginPublic,
-            None::<&mut Operation<ParamNone, ParamNone, ParamNone, ParamNone>>,
-        )
+        self.open_session_with_login(uuid, ConnectionMethods::LoginPublic)
     }
 
     pub fn open_session_with_login(

@@ -20,7 +20,7 @@ use alloc::vec::Vec;
 use optee_utee_sys as raw;
 
 use super::{Attribute, GenericObject, ObjectHandle};
-use crate::{Error, Result};
+use crate::{Result, tee_check};
 
 /// Define types of [TransientObject](crate::TransientObject) with
 /// predefined maximum sizes.
@@ -177,12 +177,10 @@ impl TransientObject {
         // Move as much code as possible out of unsafe blocks to maximize Rust’s
         // safety checks.
         let handle_mut = &mut handle;
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_AllocateTransientObject(object_type as u32, max_object_size as u32, handle_mut)
-        } {
-            raw::TEE_SUCCESS => Ok(Self(ObjectHandle::from_raw(handle)?)),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(Self(ObjectHandle::from_raw(handle)?))
     }
 
     /// Reset the object to its initial state after allocation.
@@ -249,16 +247,13 @@ impl TransientObject {
     ///    code for this function.
     pub fn populate(&mut self, attrs: &[Attribute]) -> Result<()> {
         let p: Vec<raw::TEE_Attribute> = attrs.iter().map(|p| p.raw()).collect();
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_PopulateTransientObject(
                 *self.0.as_raw_ref(),
                 p.as_ptr() as _,
                 attrs.len() as u32,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })
     }
 
     /// Populates an uninitialized object handle with the attributes of another
@@ -315,12 +310,9 @@ impl TransientObject {
     ///    function which is not explicitly associated with a defined return
     ///    code for this function.
     pub fn copy_attribute_from<T: GenericObject>(&mut self, src_object: &T) -> Result<()> {
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_CopyObjectAttributes1(*self.as_raw_ref(), *src_object.as_raw_ref())
-        } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })
     }
 
     /// Generates a random key or a key-pair and populates a transient key
@@ -366,17 +358,14 @@ impl TransientObject {
     ///    code for this function.
     pub fn generate_key(&self, key_size: usize, params: &[Attribute]) -> Result<()> {
         let p: Vec<raw::TEE_Attribute> = params.iter().map(|p| p.raw()).collect();
-        unsafe {
-            match raw::TEE_GenerateKey(
+        tee_check(unsafe {
+            raw::TEE_GenerateKey(
                 *self.as_raw_ref(),
                 key_size as u32,
                 p.as_slice().as_ptr() as _,
                 p.len() as u32,
-            ) {
-                raw::TEE_SUCCESS => Ok(()),
-                code => Err(Error::from_raw_error(code)),
-            }
-        }
+            )
+        })
     }
 }
 

@@ -159,12 +159,8 @@ impl<'a, 'b> PluginParameters<'a, 'b> {
         if out_len > self.buf.len() {
             return Err(ErrorKind::BadParameters.into());
         }
-        match self.out_len.as_mut() {
-            None => Err(ErrorKind::BadState.into()),
-            Some(v) => {
-                **v = out_len;
-                Ok(())
-            }
-        }
+        let v = self.out_len.as_mut().ok_or(ErrorKind::BadState)?;
+        **v = out_len;
+        Ok(())
     }
 }

@@ -20,7 +20,7 @@ use core::{mem, ptr};
 
 use optee_utee_sys as raw;
 
-use crate::{Attribute, Error, GenericObject, Result, TransientObject};
+use crate::{Attribute, GenericObject, Result, TransientObject, tee_check};
 
 /// Specify one of the available cryptographic operations.
 #[repr(u32)]
@@ -178,17 +178,15 @@ impl OperationHandle {
 
     fn allocate(algo: AlgorithmId, mode: OperationMode, max_key_size: usize) -> Result<Self> {
         let raw_handle: *mut raw::TEE_OperationHandle = Box::into_raw(Box::new(ptr::null_mut()));
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_AllocateOperation(
                 raw_handle as *mut _,
                 algo as u32,
                 mode as u32,
                 max_key_size as u32,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(Self::from_raw(raw_handle)),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(Self::from_raw(raw_handle))
     }
 
     fn info(&self) -> OperationInfo {
@@ -199,15 +197,13 @@ impl OperationHandle {
 
     fn info_multiple(&self, info_buf: &mut [u8]) -> Result<OperationInfoMultiple> {
         let mut tmp_size: usize = 0;
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_GetOperationInfoMultiple(self.handle(), info_buf.as_ptr() as _, &mut tmp_size)
-        } {
-            raw::TEE_SUCCESS => Ok(OperationInfoMultiple::from_raw(
-                info_buf.as_ptr() as _,
-                tmp_size,
-            )),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(OperationInfoMultiple::from_raw(
+            info_buf.as_ptr() as _,
+            tmp_size,
+        ))
     }
 
     fn reset(&mut self) {
@@ -217,10 +213,7 @@ impl OperationHandle {
     }
 
     fn set_key<T: GenericObject>(&self, object: &T) -> Result<()> {
-        match unsafe { raw::TEE_SetOperationKey(self.handle(), *object.as_raw_ref()) } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        tee_check(unsafe { raw::TEE_SetOperationKey(self.handle(), *object.as_raw_ref()) })
     }
 
     fn set_key_2<T: GenericObject, D: GenericObject>(
@@ -228,12 +221,9 @@ impl OperationHandle {
         object1: &T,
         object2: &D,
     ) -> Result<()> {
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_SetOperationKey2(self.handle(), *object1.as_raw_ref(), *object2.as_raw_ref())
-        } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })
     }
 
     fn copy<T: OpHandle>(&mut self, src: &T) {
@@ -245,10 +235,7 @@ impl OperationHandle {
 
 /// determine whether a combination of algId and element is supported
 pub fn is_algorithm_supported(alg_id: u32, element: u32) -> Result<()> {
-    match unsafe { raw::TEE_IsAlgorithmSupported(alg_id, element) } {
-        raw::TEE_SUCCESS => Ok(()),
-        code => Err(Error::from_raw_error(code)),
-    }
+    tee_check(unsafe { raw::TEE_IsAlgorithmSupported(alg_id, element) })
 }
 
 // free before check it's not null
@@ -343,7 +330,7 @@ impl Digest {
     //hash size is dynamic changed so we returned it's updated size
     pub fn do_final(&self, chunk: &[u8], hash: &mut [u8]) -> Result<usize> {
         let mut hash_size: usize = hash.len();
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_DigestDoFinal(
                 self.handle(),
                 chunk.as_ptr() as _,
@@ -351,10 +338,8 @@ impl Digest {
                 hash.as_mut_ptr() as _,
                 &mut hash_size,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(hash_size),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(hash_size)
     }
 
     /// Create a Digest operation without any specific algorithm or other data.
@@ -628,7 +613,7 @@ impl Cipher {
     /// 4) If the Implementation detects any other error.
     pub fn update(&self, src: &[u8], dest: &mut [u8]) -> Result<usize> {
         let mut dest_size: usize = dest.len();
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_CipherUpdate(
                 self.handle(),
                 src.as_ptr() as _,
@@ -636,10 +621,8 @@ impl Cipher {
                 dest.as_mut_ptr() as _,
                 &mut dest_size,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(dest_size),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(dest_size)
     }
 
     /// Finalize the cipher operation, processing data that has not been processed by previous calls
@@ -662,7 +645,7 @@ impl Cipher {
     /// 4) If the Implementation detects any other error.
     pub fn do_final(&self, src: &[u8], dest: &mut [u8]) -> Result<usize> {
         let mut dest_size: usize = dest.len();
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_CipherDoFinal(
                 self.handle(),
                 src.as_ptr() as _,
@@ -670,10 +653,8 @@ impl Cipher {
                 dest.as_mut_ptr() as _,
                 &mut dest_size,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(dest_size),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(dest_size)
     }
 
     /// Create a Cipher operation without any specific algorithm or other data.
@@ -882,7 +863,7 @@ impl Mac {
     /// 5) If the Implementation detects any other error.
     pub fn compute_final(&self, message: &[u8], mac: &mut [u8]) -> Result<usize> {
         let mut mac_size: usize = mac.len();
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_MACComputeFinal(
                 self.handle(),
                 message.as_ptr() as _,
@@ -890,10 +871,8 @@ impl Mac {
                 mac.as_mut_ptr() as _,
                 &mut mac_size,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(mac_size),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(mac_size)
     }
 
     /// Finalize the MAC operation and compares the MAC with the buffer passed to the function.
@@ -917,7 +896,7 @@ impl Mac {
     /// 4) Hardware or cryptographic algorithm failure.
     /// 5) If the Implementation detects any other error.
     pub fn compare_final(&self, message: &[u8], mac: &[u8]) -> Result<()> {
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_MACCompareFinal(
                 self.handle(),
                 message.as_ptr() as _,
@@ -925,10 +904,7 @@ impl Mac {
                 mac.as_ptr() as _,
                 mac.len(),
             )
-        } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })
     }
 
     /// Create a Mac operation without any specific algorithm or other data.
@@ -1011,7 +987,7 @@ impl AE {
         aad_len: usize,
         pay_load_len: usize,
     ) -> Result<()> {
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_AEInit(
                 self.handle(),
                 nonce.as_ptr() as _,
@@ -1020,10 +996,7 @@ impl AE {
                 aad_len,
                 pay_load_len,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })
     }
 
     /// Feed a new chunk of Additional Authentication Data (AAD) to the AE operation.
@@ -1071,7 +1044,7 @@ impl AE {
     /// 6) If the Implementation detects any other error.
     pub fn update(&self, src: &[u8], dest: &mut [u8]) -> Result<usize> {
         let mut dest_size: usize = dest.len();
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_AEUpdate(
                 self.handle(),
                 src.as_ptr() as _,
@@ -1079,10 +1052,8 @@ impl AE {
                 dest.as_mut_ptr() as _,
                 &mut dest_size,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(dest_size),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(dest_size)
     }
     /// Process data that has not been processed by previous calls to [update](AE::update) as well as data supplied in `src`.
     /// It completes the AE operation and computes the tag.
@@ -1155,7 +1126,7 @@ impl AE {
     ) -> Result<(usize, usize)> {
         let mut dest_size: usize = dest.len();
         let mut tag_size: usize = tag.len();
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_AEEncryptFinal(
                 self.handle(),
                 src.as_ptr() as _,
@@ -1165,10 +1136,8 @@ impl AE {
                 tag.as_mut_ptr() as _,
                 &mut tag_size,
             )
-        } {
-            raw::TEE_SUCCESS => Ok((dest_size, tag_size)),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok((dest_size, tag_size))
     }
 
     /// Process data that has not been processed by previous calls to [update](AE::update) as well as data supplied in `src`.
@@ -1196,7 +1165,7 @@ impl AE {
     /// 5) If the Implementation detects any other error.
     pub fn decrypt_final(&self, src: &[u8], dest: &mut [u8], tag: &[u8]) -> Result<usize> {
         let mut dest_size: usize = dest.len();
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_AEDecryptFinal(
                 self.handle(),
                 src.as_ptr() as _,
@@ -1206,10 +1175,8 @@ impl AE {
                 tag.as_ptr() as _,
                 tag.len(),
             )
-        } {
-            raw::TEE_SUCCESS => Ok(dest_size),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(dest_size)
     }
 
     /// Create an AE operation without any specific algorithm or other data.
@@ -1322,7 +1289,7 @@ impl Asymmetric {
         let p: Vec<raw::TEE_Attribute> = params.iter().map(|p| p.raw()).collect();
         let mut res_size: usize = self.info().key_size() as usize;
         let mut res_vec: Vec<u8> = vec![0u8; res_size];
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_AsymmetricEncrypt(
                 self.handle(),
                 p.as_ptr() as _,
@@ -1332,13 +1299,9 @@ impl Asymmetric {
                 res_vec.as_mut_ptr() as _,
                 &mut res_size,
             )
-        } {
-            raw::TEE_SUCCESS => {
-                res_vec.truncate(res_size);
-                Ok(res_vec)
-            }
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        res_vec.truncate(res_size);
+        Ok(res_vec)
     }
 
     /// Decrypt a message.
@@ -1365,7 +1328,7 @@ impl Asymmetric {
         let p: Vec<raw::TEE_Attribute> = params.iter().map(|p| p.raw()).collect();
         let mut res_size: usize = self.info().key_size() as usize;
         let mut res_vec: Vec<u8> = vec![0u8; res_size];
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_AsymmetricDecrypt(
                 self.handle(),
                 p.as_ptr() as _,
@@ -1375,13 +1338,9 @@ impl Asymmetric {
                 res_vec.as_mut_ptr() as _,
                 &mut res_size,
             )
-        } {
-            raw::TEE_SUCCESS => {
-                res_vec.truncate(res_size);
-                Ok(res_vec)
-            }
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        res_vec.truncate(res_size);
+        Ok(res_vec)
     }
 
     /// Sign a message digest.
@@ -1413,7 +1372,7 @@ impl Asymmetric {
     ) -> Result<usize> {
         let p: Vec<raw::TEE_Attribute> = params.iter().map(|p| p.raw()).collect();
         let mut signature_size: usize = signature.len();
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_AsymmetricSignDigest(
                 self.handle(),
                 p.as_ptr() as _,
@@ -1423,10 +1382,8 @@ impl Asymmetric {
                 signature.as_mut_ptr() as _,
                 &mut signature_size,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(signature_size),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(signature_size)
     }
 
     /// Verify a message digest.
@@ -1457,7 +1414,7 @@ impl Asymmetric {
         signature: &[u8],
     ) -> Result<()> {
         let p: Vec<raw::TEE_Attribute> = params.iter().map(|p| p.raw()).collect();
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_AsymmetricVerifyDigest(
                 self.handle(),
                 p.as_ptr() as _,
@@ -1467,10 +1424,7 @@ impl Asymmetric {
                 signature.as_ptr() as _,
                 signature.len(),
             )
-        } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })
     }
 
     /// Create an Asymmetric operation without any specific algorithm or other data.

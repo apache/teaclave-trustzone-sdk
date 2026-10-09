@@ -60,6 +60,7 @@ mod unwind_stubs {
 pub use arithmetical::*;
 pub use crypto_op::*;
 pub use error::{Error, ErrorKind, Result};
+pub(crate) use error::{tee_check, tee_check_with_origin};
 pub use extension::*;
 pub use identity::{Identity, LoginType};
 pub use object::*;

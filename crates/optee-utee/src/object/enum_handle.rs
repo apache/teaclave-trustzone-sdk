@@ -20,7 +20,7 @@ use alloc::boxed::Box;
 use optee_utee_sys as raw;
 
 use super::ObjectInfo;
-use crate::{Error, Result};
+use crate::{Error, Result, tee_check};
 
 // TODO: The examples and detailed function explanation will be added after we
 // test this struct and its functions.
@@ -61,10 +61,7 @@ impl ObjectEnumHandle {
     /// [ObjectEnumHandle::get_next](crate::ObjectEnumHandle::get_next)
     /// repeatedly.
     pub fn start(&mut self, storage_id: u32) -> Result<()> {
-        match unsafe { raw::TEE_StartPersistentObjectEnumerator(*self.raw, storage_id) } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        tee_check(unsafe { raw::TEE_StartPersistentObjectEnumerator(*self.raw, storage_id) })
     }
 
     /// Get the next object in an enumeration and returns information about the
@@ -79,17 +76,15 @@ impl ObjectEnumHandle {
             Some(a) => &mut a.raw,
             None => core::ptr::null_mut(),
         };
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_GetNextPersistentObject(
                 *self.raw,
                 object_info,
                 object_id.as_mut_ptr() as _,
                 &mut object_id_len,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(object_id_len as u32),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(object_id_len as u32)
     }
 }
 

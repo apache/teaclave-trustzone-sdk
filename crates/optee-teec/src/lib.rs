@@ -24,6 +24,7 @@
 
 pub use self::context::Context;
 pub use self::error::{Error, ErrorKind, ErrorOrigin, Result};
+pub(crate) use self::error::{teec_check, teec_check_with_origin};
 pub use self::extension::*;
 pub use self::operation::Operation;
 pub use self::parameter::{Param, ParamNone, ParamTmpRef, ParamType, ParamTypes, ParamValue};

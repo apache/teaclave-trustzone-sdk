@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{Error, Result};
+use crate::{Result, tee_check};
 use core::fmt;
 use optee_utee_sys as raw;
 
@@ -90,10 +90,7 @@ impl Time {
     ///
     /// 1) If the Implementation detects any error.
     pub fn wait(timeout: u32) -> Result<()> {
-        match unsafe { raw::TEE_Wait(timeout) } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        tee_check(unsafe { raw::TEE_Wait(timeout) })
     }
 
     /// Retrieve the persisten time of the Trusted Application. Since the timer is not
@@ -125,10 +122,7 @@ impl Time {
     ///
     /// 1) If the Implementation detects any error.
     pub fn ta_time(&mut self) -> Result<()> {
-        match unsafe { raw::TEE_GetTAPersistentTime(self as *mut _ as _) } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        tee_check(unsafe { raw::TEE_GetTAPersistentTime(self as *mut _ as _) })
     }
 
     /// Set the persistent time of the current Trusted Application.
@@ -142,10 +136,7 @@ impl Time {
     ///
     /// 1) If the Implementation detects any error.
     pub fn set_ta_time(&self) -> Result<()> {
-        match unsafe { raw::TEE_SetTAPersistentTime(self as *const _ as _) } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        tee_check(unsafe { raw::TEE_SetTAPersistentTime(self as *const _ as _) })
     }
 
     /// Retrieve the current REE system time.

@@ -19,7 +19,7 @@ use alloc::vec::Vec;
 use optee_utee_sys as raw;
 
 use super::{DataFlag, GenericObject, ObjectHandle, ObjectStorageConstants, Whence};
-use crate::{Error, ErrorKind, Result};
+use crate::{ErrorKind, Result, tee_check};
 
 /// An object identified by an Object Identifier and including a Data Stream.
 ///
@@ -89,7 +89,7 @@ impl PersistentObject {
         // Move as much code as possible out of unsafe blocks to maximize Rust’s
         // safety checks.
         let handle_mut = &mut handle;
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_OpenPersistentObject(
                 storage_id as u32,
                 object_id.as_ptr() as _,
@@ -97,10 +97,8 @@ impl PersistentObject {
                 flags.bits(),
                 handle_mut,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(Self(ObjectHandle::from_raw(handle)?)),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(Self(ObjectHandle::from_raw(handle)?))
     }
 
     /// Create an object with initial attributes and an initial data stream
@@ -181,7 +179,7 @@ impl PersistentObject {
             Some(a) => unsafe { *a.as_raw_ref() },
             None => core::ptr::null_mut(),
         };
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_CreatePersistentObject(
                 storage_id as u32,
                 object_id.as_ptr() as _,
@@ -192,10 +190,8 @@ impl PersistentObject {
                 initial_data.len(),
                 handle_mut,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(Self(ObjectHandle::from_raw(handle)?)),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(Self(ObjectHandle::from_raw(handle)?))
     }
 
     /// Marks an object for deletion and closes the object.
@@ -251,10 +247,8 @@ impl PersistentObject {
     /// # Ok(())
     /// # }
     pub fn close_and_delete(self) -> Result<()> {
-        let result = match unsafe { raw::TEE_CloseAndDeletePersistentObject1(*self.as_raw_ref()) } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        };
+        let result =
+            tee_check(unsafe { raw::TEE_CloseAndDeletePersistentObject1(*self.as_raw_ref()) });
         // According to `GPD_TEE_Internal_Core_API_Specification_v1.3.1`:
         // At 5.7.4 TEE_CloseAndDeletePersistentObject1:
         // Deleting an object is atomic; once this function returns, the object
@@ -313,16 +307,13 @@ impl PersistentObject {
     ///    function which is not explicitly associated with a defined return
     ///    code for this function.
     pub fn rename(&mut self, new_object_id: &[u8]) -> Result<()> {
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_RenamePersistentObject(
                 *self.0.as_raw_ref(),
                 new_object_id.as_ptr() as _,
                 new_object_id.len(),
             )
-        } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })
     }
 
     /// Read requested size from the data stream associate with the object into
@@ -372,17 +363,15 @@ impl PersistentObject {
     ///    code for this function.
     pub fn read(&mut self, buf: &mut [u8]) -> Result<u32> {
         let mut count: usize = 0;
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_ReadObjectData(
                 *self.as_raw_ref(),
                 buf.as_mut_ptr() as _,
                 buf.len(),
                 &mut count,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(count as u32),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(count as u32)
     }
 
     /// Reads the remaining data from the current cursor into a new TA-private vector.
@@ -459,11 +448,9 @@ impl PersistentObject {
     ///    function which is not explicitly associated with a defined return
     ///    code for this function.
     pub fn write(&mut self, buf: &[u8]) -> Result<()> {
-        match unsafe { raw::TEE_WriteObjectData(*self.as_raw_ref(), buf.as_ptr() as _, buf.len()) }
-        {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        tee_check(unsafe {
+            raw::TEE_WriteObjectData(*self.as_raw_ref(), buf.as_ptr() as _, buf.len())
+        })
     }
 
     /// Change the size of a data stream associate with the object.
@@ -505,10 +492,7 @@ impl PersistentObject {
     ///    function which is not explicitly associated with a defined return
     ///    code for this function.
     pub fn truncate(&mut self, size: u32) -> Result<()> {
-        match unsafe { raw::TEE_TruncateObjectData(*self.as_raw_ref(), size as usize) } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        tee_check(unsafe { raw::TEE_TruncateObjectData(*self.as_raw_ref(), size as usize) })
     }
 
     /// Set the data position indicator associate with the object.
@@ -554,10 +538,9 @@ impl PersistentObject {
     ///    function which is not explicitly associated with a defined return
     ///    code for this function.
     pub fn seek(&mut self, offset: i32, whence: Whence) -> Result<()> {
-        match unsafe { raw::TEE_SeekObjectData(*self.as_raw_ref(), offset.into(), whence.into()) } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        tee_check(unsafe {
+            raw::TEE_SeekObjectData(*self.as_raw_ref(), offset.into(), whence.into())
+        })
     }
 }
 

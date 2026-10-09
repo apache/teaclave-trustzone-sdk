@@ -18,7 +18,7 @@
 use core::mem;
 
 use super::{AttributeId, ObjectInfo, UsageFlag};
-use crate::{Error, Result};
+use crate::{Result, tee_check};
 
 use optee_utee_sys as raw;
 
@@ -55,10 +55,8 @@ pub trait GenericObject {
     ///   for this function.
     fn info(&self) -> Result<ObjectInfo> {
         let mut raw_info: raw::TEE_ObjectInfo = unsafe { mem::zeroed() };
-        match unsafe { raw::TEE_GetObjectInfo1(*self.as_raw_ref(), &mut raw_info) } {
-            raw::TEE_SUCCESS => Ok(ObjectInfo::from_raw(raw_info)),
-            code => Err(Error::from_raw_error(code)),
-        }
+        tee_check(unsafe { raw::TEE_GetObjectInfo1(*self.as_raw_ref(), &mut raw_info) })?;
+        Ok(ObjectInfo::from_raw(raw_info))
     }
 
     /// Restrict the object usage flags of an object handle to contain at most
@@ -81,10 +79,7 @@ pub trait GenericObject {
     ///   function that is not explicitly associated with a defined return code
     ///   for this function.
     fn restrict_usage(&mut self, obj_usage: UsageFlag) -> Result<()> {
-        match unsafe { raw::TEE_RestrictObjectUsage1(*self.as_raw_ref(), obj_usage.bits()) } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        tee_check(unsafe { raw::TEE_RestrictObjectUsage1(*self.as_raw_ref(), obj_usage.bits()) })
     }
 
     /// Extract one buffer attribute from an object. The attribute is
@@ -120,17 +115,15 @@ pub trait GenericObject {
     ///   for this function.
     fn ref_attribute(&self, id: AttributeId, buffer: &mut [u8]) -> Result<usize> {
         let mut size = buffer.len();
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_GetObjectBufferAttribute(
                 *self.as_raw_ref(),
                 id as u32,
                 buffer as *mut _ as _,
                 &mut size,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(size),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(size)
     }
 
     /// Extract one value attribute from an object. The attribute is identified
@@ -167,16 +160,14 @@ pub trait GenericObject {
     fn value_attribute(&self, id: u32) -> Result<(u32, u32)> {
         let mut value_a: u32 = 0;
         let mut value_b: u32 = 0;
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_GetObjectValueAttribute(
                 *self.as_raw_ref(),
                 id,
                 &mut value_a as *mut _,
                 &mut value_b as *mut _,
             )
-        } {
-            raw::TEE_SUCCESS => Ok((value_a, value_b)),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok((value_a, value_b))
     }
 }

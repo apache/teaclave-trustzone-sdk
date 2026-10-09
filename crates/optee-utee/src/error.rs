@@ -37,6 +37,24 @@ use std::error;
 /// ````
 pub type Result<T> = result::Result<T, Error>;
 
+/// Checks the result of a TEE API call, converting a non-success code into
+/// [`Error`].
+pub(crate) fn tee_check(code: raw::TEE_Result) -> Result<()> {
+    match code {
+        raw::TEE_SUCCESS => Ok(()),
+        code => Err(Error::from_raw_error(code)),
+    }
+}
+
+/// Like [`tee_check`], but attaches the error origin returned by the TEE API
+/// on failure.
+pub(crate) fn tee_check_with_origin(code: raw::TEE_Result, origin: u32) -> Result<()> {
+    match code {
+        raw::TEE_SUCCESS => Ok(()),
+        code => Err(Error::from_raw_error(code).with_origin(origin.into())),
+    }
+}
+
 #[derive(Clone)]
 pub struct Error {
     kind: ErrorKind,
@@ -164,7 +182,7 @@ impl ErrorKind {
 
 impl Error {
     pub fn new(kind: ErrorKind) -> Error {
-        Error { kind, origin: None }
+        kind.into()
     }
 
     /// Creates a new instance of an `Error` from a particular TEE error code.
@@ -178,10 +196,7 @@ impl Error {
     /// assert_eq!(error.kind(), optee_utee::ErrorKind::Security);
     /// ```
     pub fn from_raw_error(code: u32) -> Error {
-        Error {
-            kind: ErrorKind::from(code),
-            origin: None,
-        }
+        ErrorKind::from(code).into()
     }
 
     pub fn with_origin(mut self, origin: ErrorOrigin) -> Self {

@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{Error, Result, TeeParams, Uuid};
+use crate::{Result, TeeParams, Uuid, tee_check_with_origin};
 use optee_utee_sys as raw;
 
 pub struct TaSessionBuilder<'a> {
@@ -64,27 +64,26 @@ impl<'a> TaSessionBuilder<'a> {
         // raw_params.as_mut_ptr() provides a valid pointer to the parameters.
         // The remaining arguments are either valid values or null/mut pointers as expected by the C API.
         // For parameters that are intended to be modified by the call, the buffer constraints are checked later in update_from_raw().
-        match unsafe {
-            raw::TEE_OpenTASession(
-                self.target_uuid.as_raw_ptr(),
-                self.timeout,
-                raw_param_types,
-                raw_params_ptr,
-                &mut raw_session,
-                &mut err_origin,
-            )
-        } {
-            raw::TEE_SUCCESS => {
-                // From this point on, ensure every error path closes the opened session.
-                let session = TaSession { raw: raw_session };
-                if let (Some(params), Some(raw_params)) = (&mut self.params, raw_params_opt) {
-                    params.update_from_raw(&raw_params)?;
-                }
-
-                Ok(session)
-            }
-            code => Err(Error::from_raw_error(code).with_origin(err_origin.into())),
+        tee_check_with_origin(
+            unsafe {
+                raw::TEE_OpenTASession(
+                    self.target_uuid.as_raw_ptr(),
+                    self.timeout,
+                    raw_param_types,
+                    raw_params_ptr,
+                    &mut raw_session,
+                    &mut err_origin,
+                )
+            },
+            err_origin,
+        )?;
+        // From this point on, ensure every error path closes the opened session.
+        let session = TaSession { raw: raw_session };
+        if let (Some(params), Some(raw_params)) = (&mut self.params, raw_params_opt) {
+            params.update_from_raw(&raw_params)?;
         }
+
+        Ok(session)
     }
 }
 
@@ -114,23 +113,22 @@ impl TaSession {
         // raw_params.as_mut_ptr() yields a valid mutable pointer to the parameters array.
         // The remaining arguments are either valid values or null/mutable pointers, as expected by the C API.
         // For parameters that are intended to be modified by the call, the buffer constraints are checked later in update_from_raw().
-        match unsafe {
-            raw::TEE_InvokeTACommand(
-                self.raw,
-                timeout,
-                command_id,
-                param_types,
-                raw_params.as_mut_ptr(),
-                &mut err_origin,
-            )
-        } {
-            raw::TEE_SUCCESS => {
-                // Update the parameters with the results
-                params.update_from_raw(&raw_params)?;
-                Ok(())
-            }
-            code => Err(Error::from_raw_error(code).with_origin(err_origin.into())),
-        }
+        tee_check_with_origin(
+            unsafe {
+                raw::TEE_InvokeTACommand(
+                    self.raw,
+                    timeout,
+                    command_id,
+                    param_types,
+                    raw_params.as_mut_ptr(),
+                    &mut err_origin,
+                )
+            },
+            err_origin,
+        )?;
+        // Update the parameters with the results
+        params.update_from_raw(&raw_params)?;
+        Ok(())
     }
 }
 

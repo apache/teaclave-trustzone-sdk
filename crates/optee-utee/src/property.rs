@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{Error, ErrorKind, Result};
+use crate::{Error, ErrorKind, Result, tee_check};
 use crate::{Identity, Uuid};
 use alloc::{ffi::CString, string::String, vec::Vec};
 use optee_utee_sys as raw;
@@ -89,9 +89,7 @@ impl PropertyValue for String {
                         &mut out_size,
                     )
                 };
-                if res != raw::TEE_SUCCESS {
-                    return Err(Error::from_raw_error(res));
-                }
+                tee_check(res)?;
 
                 // Convert the char buffer with null terminator to a C string
                 let c_str = core::ffi::CStr::from_bytes_with_nul(&out_buffer)
@@ -111,9 +109,7 @@ impl PropertyValue for bool {
         let mut b: bool = false;
 
         let res = unsafe { raw::TEE_GetPropertyAsBool(set, key.as_ptr() as *const _, &mut b) };
-        if res != 0 {
-            return Err(Error::from_raw_error(res));
-        }
+        tee_check(res)?;
 
         Ok(b)
     }
@@ -124,9 +120,7 @@ impl PropertyValue for u32 {
         let mut value = 0;
 
         let res = unsafe { raw::TEE_GetPropertyAsU32(set, key.as_ptr() as *const _, &mut value) };
-        if res != 0 {
-            return Err(Error::from_raw_error(res));
-        }
+        tee_check(res)?;
 
         Ok(value)
     }
@@ -137,9 +131,7 @@ impl PropertyValue for u64 {
         let mut value = 0;
 
         let res = unsafe { raw::TEE_GetPropertyAsU64(set, key.as_ptr() as *const _, &mut value) };
-        if res != 0 {
-            return Err(Error::from_raw_error(res));
-        }
+        tee_check(res)?;
 
         Ok(value)
     }
@@ -180,11 +172,8 @@ impl PropertyValue for Vec<u8> {
                         &mut out_size,
                     )
                 };
-                if res != raw::TEE_SUCCESS {
-                    Err(Error::from_raw_error(res))
-                } else {
-                    Ok(buf)
-                }
+                tee_check(res)?;
+                Ok(buf)
             }
             _ => Err(Error::from_raw_error(res)),
         }
@@ -202,9 +191,7 @@ impl PropertyValue for Uuid {
 
         let res =
             unsafe { raw::TEE_GetPropertyAsUUID(set, key.as_ptr() as *const _, &mut raw_uuid) };
-        if res != 0 {
-            return Err(Error::from_raw_error(res));
-        }
+        tee_check(res)?;
 
         Ok(Uuid::from(raw_uuid))
     }
@@ -225,9 +212,7 @@ impl PropertyValue for Identity {
 
         let res =
             unsafe { raw::TEE_GetPropertyAsIdentity(set, key.as_ptr() as *const _, &mut raw_id) };
-        if res != 0 {
-            return Err(Error::from_raw_error(res));
-        }
+        tee_check(res)?;
 
         Ok(Identity::from(raw_id))
     }

@@ -74,8 +74,7 @@ pub struct ParamNone;
 
 impl Param for ParamNone {
     fn to_raw(&mut self) -> raw::TEEC_Parameter {
-        let raw: raw::TEEC_Parameter = unsafe { mem::zeroed() };
-        raw
+        unsafe { mem::zeroed() }
     }
 
     fn param_type(&self) -> ParamType {
