@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{Error, ErrorKind, Result, Uuid};
+use crate::{ErrorKind, Result, Uuid, tee_check};
 #[cfg(not(feature = "std"))]
 use alloc::{borrow::ToOwned, vec::Vec};
 use optee_utee_sys as raw;
@@ -135,7 +135,7 @@ impl<'a> LoadablePluginCommand<'a> {
         let mut outlen: usize = 0;
         let mut buffer = self.buffer;
         buffer.resize(buffer.capacity(), 0); // resize to capacity first
-        match unsafe {
+        tee_check(unsafe {
             raw::tee_invoke_supp_plugin(
                 self.plugin.uuid.as_raw_ptr(),
                 self.cmd_id,
@@ -145,16 +145,12 @@ impl<'a> LoadablePluginCommand<'a> {
                 buffer.len(),
                 &mut outlen as *mut usize,
             )
-        } {
-            raw::TEE_SUCCESS => {
-                if outlen > buffer.len() {
-                    return Err(ErrorKind::ShortBuffer.into());
-                }
-                buffer.resize(outlen, 0);
-                Ok(buffer)
-            }
-            code => Err(Error::from_raw_error(code)),
+        })?;
+        if outlen > buffer.len() {
+            return Err(ErrorKind::ShortBuffer.into());
         }
+        buffer.resize(outlen, 0);
+        Ok(buffer)
     }
 }
 

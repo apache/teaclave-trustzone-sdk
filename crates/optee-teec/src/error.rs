@@ -34,6 +34,24 @@ use std::fmt;
 /// ````
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Checks the result of a TEE client API call, converting a non-success code
+/// into [`Error`].
+pub(crate) fn teec_check(code: raw::TEEC_Result) -> Result<()> {
+    match code {
+        raw::TEEC_SUCCESS => Ok(()),
+        code => Err(Error::from_raw_error(code)),
+    }
+}
+
+/// Like [`teec_check`], but attaches the error origin returned by the TEE
+/// client API on failure.
+pub(crate) fn teec_check_with_origin(code: raw::TEEC_Result, origin: u32) -> Result<()> {
+    match code {
+        raw::TEEC_SUCCESS => Ok(()),
+        code => Err(Error::from_raw_error(code).with_origin(origin.into())),
+    }
+}
+
 /// The error type for TEE operations of [`Context`] and [`Session`].
 ///
 /// [`Context`]: struct.Context.html
@@ -127,7 +145,7 @@ impl ErrorKind {
 
 impl Error {
     pub fn new(kind: ErrorKind) -> Error {
-        Error { kind, origin: None }
+        kind.into()
     }
     /// Creates a new instance of an `Error` from a particular TEE error code.
     ///
@@ -140,10 +158,7 @@ impl Error {
     /// assert_eq!(error.kind(), ErrorKind::Security);
     /// ```
     pub fn from_raw_error(code: u32) -> Error {
-        Error {
-            kind: ErrorKind::from(code),
-            origin: None,
-        }
+        ErrorKind::from(code).into()
     }
 
     pub fn with_origin(mut self, origin: ErrorOrigin) -> Self {

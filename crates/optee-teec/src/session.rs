@@ -16,7 +16,7 @@
 // under the License.
 
 use super::context::InnerContext;
-use crate::{Context, Error, Operation, Param, Result, Uuid, raw};
+use crate::{Context, Operation, Param, Result, Uuid, raw, teec_check_with_origin};
 use std::{cell::RefCell, ptr, rc::Rc};
 
 /// Session login methods.
@@ -66,31 +66,29 @@ impl Session {
         // block to maximize Rust's safety checks and leverage the compiler's
         // validation.
         let mut err_origin: u32 = 0;
-        let raw_operation = match operation {
-            Some(o) => o.as_mut_raw_ptr(),
-            None => ptr::null_mut(),
-        };
+        let raw_operation = operation.map_or(ptr::null_mut(), |o| o.as_mut_raw_ptr());
         let inner_ctx = context.inner_context();
         let raw_ctx = &mut inner_ctx.borrow_mut().0;
         let raw_uuid = uuid.as_raw_ptr();
 
-        match unsafe {
-            raw::TEEC_OpenSession(
-                raw_ctx,
-                &mut raw_session,
-                raw_uuid,
-                login as u32,
-                ptr::null(),
-                raw_operation,
-                &mut err_origin,
-            )
-        } {
-            raw::TEEC_SUCCESS => Ok(Self {
-                raw: raw_session,
-                _ctx: context.inner_context(),
-            }),
-            code => Err(Error::from_raw_error(code).with_origin(err_origin.into())),
-        }
+        teec_check_with_origin(
+            unsafe {
+                raw::TEEC_OpenSession(
+                    raw_ctx,
+                    &mut raw_session,
+                    raw_uuid,
+                    login as u32,
+                    ptr::null(),
+                    raw_operation,
+                    &mut err_origin,
+                )
+            },
+            err_origin,
+        )?;
+        Ok(Self {
+            raw: raw_session,
+            _ctx: context.inner_context(),
+        })
     }
 
     /// Invokes a command with an operation with this session.
@@ -100,17 +98,17 @@ impl Session {
         operation: &mut Operation<A, B, C, D>,
     ) -> Result<()> {
         let mut err_origin: u32 = 0;
-        match unsafe {
-            raw::TEEC_InvokeCommand(
-                &mut self.raw,
-                command_id,
-                operation.as_mut_raw_ptr(),
-                &mut err_origin,
-            )
-        } {
-            raw::TEEC_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code).with_origin(err_origin.into())),
-        }
+        teec_check_with_origin(
+            unsafe {
+                raw::TEEC_InvokeCommand(
+                    &mut self.raw,
+                    command_id,
+                    operation.as_mut_raw_ptr(),
+                    &mut err_origin,
+                )
+            },
+            err_origin,
+        )
     }
 }
 

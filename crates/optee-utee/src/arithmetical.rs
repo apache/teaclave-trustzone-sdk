@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{Error, Result};
+use crate::{Result, tee_check};
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 use core::{cmp::max, fmt};
@@ -45,35 +45,28 @@ impl BigInt {
     }
 
     pub fn convert_from_octet_string(&mut self, buffer: &[u8], sign: i32) -> Result<()> {
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_BigIntConvertFromOctetString(
                 self.0.as_mut_ptr(),
                 buffer.as_ptr(),
                 buffer.len(),
                 sign,
             )
-        } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })
     }
 
     pub fn convert_to_octet_string(&self) -> Result<Vec<u8>> {
         let mut buffer_size: usize = (self.0.len() - 2) * 4;
         let mut tmp_vec = vec![0u8; buffer_size];
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_BigIntConvertToOctetString(
                 tmp_vec.as_mut_ptr(),
                 &mut buffer_size,
                 self.data_ptr(),
             )
-        } {
-            raw::TEE_SUCCESS => {
-                tmp_vec.truncate(buffer_size);
-                Ok(tmp_vec)
-            }
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        tmp_vec.truncate(buffer_size);
+        Ok(tmp_vec)
     }
 
     pub fn convert_from_s32(&mut self, short_val: i32) {
@@ -82,10 +75,8 @@ impl BigInt {
 
     pub fn convert_to_s32(&self) -> Result<i32> {
         let mut short_val: i32 = 0;
-        match unsafe { raw::TEE_BigIntConvertToS32(&mut short_val as _, self.data_ptr()) } {
-            raw::TEE_SUCCESS => Ok(short_val),
-            code => Err(Error::from_raw_error(code)),
-        }
+        tee_check(unsafe { raw::TEE_BigIntConvertToS32(&mut short_val as _, self.data_ptr()) })?;
+        Ok(short_val)
     }
 
     /* return negative number if self < target,
@@ -114,19 +105,14 @@ impl BigInt {
     }
 
     pub fn set_bit(&mut self, bit_index: u32, set: bool) -> Result<()> {
-        match unsafe { raw::TEE_BigIntSetBit(self.0.as_mut_ptr(), bit_index, set) } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        tee_check(unsafe { raw::TEE_BigIntSetBit(self.0.as_mut_ptr(), bit_index, set) })
     }
 
     pub fn abs(&self) -> Result<Self> {
         let bits = Self::get_bit_count(self);
         let mut res = Self::new(bits);
-        match unsafe { raw::TEE_BigIntAbs(res.0.as_mut_ptr(), self.data_ptr()) } {
-            raw::TEE_SUCCESS => Ok(res),
-            code => Err(Error::from_raw_error(code)),
-        }
+        tee_check(unsafe { raw::TEE_BigIntAbs(res.0.as_mut_ptr(), self.data_ptr()) })?;
+        Ok(res)
     }
 
     pub fn add(op1: &Self, op2: &Self) -> Self {
@@ -238,7 +224,7 @@ impl BigInt {
 
     pub fn exp_mod(op1: &Self, op2: &Self, n: &Self, context: &BigIntFMMContext) -> Result<Self> {
         let mut res = Self::new(Self::get_bit_count(n));
-        match unsafe {
+        tee_check(unsafe {
             raw::TEE_BigIntExpMod(
                 res.0.as_mut_ptr(),
                 op1.data_ptr(),
@@ -246,10 +232,8 @@ impl BigInt {
                 n.data_ptr(),
                 context.data_ptr(),
             )
-        } {
-            raw::TEE_SUCCESS => Ok(res),
-            code => Err(Error::from_raw_error(code)),
-        }
+        })?;
+        Ok(res)
     }
 
     pub fn relative_prime(op1: &Self, op2: &Self) -> bool {
@@ -257,10 +241,7 @@ impl BigInt {
     }
 
     pub fn assign(&mut self, op2: &Self) -> Result<()> {
-        match unsafe { raw::TEE_BigIntAssign(self.0.as_mut_ptr(), op2.data_ptr()) } {
-            raw::TEE_SUCCESS => Ok(()),
-            code => Err(Error::from_raw_error(code)),
-        }
+        tee_check(unsafe { raw::TEE_BigIntAssign(self.0.as_mut_ptr(), op2.data_ptr()) })
     }
 
     pub fn compute_extended_gcd(op1: &Self, op2: &Self) -> (Self, Self, Self) {
