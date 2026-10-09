@@ -16,7 +16,7 @@
 // under the License.
 
 use crate::{delete_from_secure_storage, load_from_secure_storage, save_in_secure_storage};
-use anyhow::{bail, ensure, Result};
+use anyhow::{anyhow, ensure, Result};
 use hashbrown::HashSet;
 use std::collections::HashMap;
 
@@ -32,62 +32,42 @@ pub struct SecureStorageDb {
 
 impl SecureStorageDb {
     pub fn open(name: String) -> Result<Self> {
-        match load_from_secure_storage(name.as_bytes())? {
-            Some(data) => {
-                let key_list = bincode::deserialize(&data)?;
-                Ok(Self { name, key_list })
-            }
+        let key_list = match load_from_secure_storage(name.as_bytes())? {
+            Some(data) => bincode::deserialize(&data)?,
             None => {
                 // create new db
-                Ok(Self {
-                    name,
-                    // Note: `std::collections::HashSet` was replaced with
-                    // `hashbrown::HashSet`, due to a write permission fault
-                    // observed during testing. The exact cause of the issue is
-                    // unclear, but using `hashbrown::HashSet` resolves it.
-                    key_list: HashSet::new(),
-                })
+                //
+                // Note: `std::collections::HashSet` was replaced with
+                // `hashbrown::HashSet`, due to a write permission fault
+                // observed during testing. The exact cause of the issue is
+                // unclear, but using `hashbrown::HashSet` resolves it.
+                HashSet::new()
             }
-        }
+        };
+        Ok(Self { name, key_list })
     }
 
     pub fn put(&mut self, key: String, value: Vec<u8>) -> Result<()> {
-        match save_in_secure_storage(key.as_bytes(), &value) {
-            Ok(_) => {
-                self.key_list.insert(key);
-                self.store_key_list()?;
-            }
-            Err(e) => {
-                bail!("[+] SecureStorage::insert(): save error: {}", e);
-            }
-        };
-        Ok(())
+        save_in_secure_storage(key.as_bytes(), &value)
+            .map_err(|e| anyhow!("[+] SecureStorage::insert(): save error: {}", e))?;
+        self.key_list.insert(key);
+        self.store_key_list()
     }
 
     pub fn get(&self, key: &str) -> Result<Vec<u8>> {
         ensure!(self.key_list.contains(key), "Key not found in key list");
-        match load_from_secure_storage(key.as_bytes()) {
-            Ok(Some(data)) => Ok(data),
-            Ok(None) => bail!("[+] SecureStorage::get(): object not found in db"),
-            Err(e) => {
-                bail!("[+] SecureStorage::get(): load error: {}", e);
-            }
-        }
+        load_from_secure_storage(key.as_bytes())
+            .map_err(|e| anyhow!("[+] SecureStorage::get(): load error: {}", e))?
+            .ok_or_else(|| anyhow!("[+] SecureStorage::get(): object not found in db"))
     }
 
     pub fn delete(&mut self, key: &str) -> Result<()> {
         // ensure key must exist
         ensure!(self.key_list.contains(key), "Key not found in key list");
-        match delete_from_secure_storage(key.as_bytes()) {
-            Ok(_) => {
-                self.key_list.remove(key);
-                self.store_key_list()?;
-            }
-            Err(e) => {
-                bail!("[+] SecureStorage::delete(): delete error: {}", e);
-            }
-        };
-        Ok(())
+        delete_from_secure_storage(key.as_bytes())
+            .map_err(|e| anyhow!("[+] SecureStorage::delete(): delete error: {}", e))?;
+        self.key_list.remove(key);
+        self.store_key_list()
     }
 
     pub fn clear(&mut self) -> Result<()> {
