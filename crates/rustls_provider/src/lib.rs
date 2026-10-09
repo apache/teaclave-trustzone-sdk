@@ -59,17 +59,11 @@ impl TimeProvider for ReeTimeProvider {
         let seconds = time.seconds as u64;
         let millis = time.millis as u64;
 
-        // Create UnixTime from seconds and milliseconds, check overflow
-        let total_millis = match seconds
+        // Create UnixTime from seconds and milliseconds, checking overflow
+        seconds
             .checked_mul(1000)
             .and_then(|ms| ms.checked_add(millis))
-        {
-            Some(total) => total,
-            None => return None, // Return None if overflow occurs
-        };
-        Some(UnixTime::since_unix_epoch(Duration::from_millis(
-            total_millis,
-        )))
+            .map(|total| UnixTime::since_unix_epoch(Duration::from_millis(total)))
     }
 }
 
