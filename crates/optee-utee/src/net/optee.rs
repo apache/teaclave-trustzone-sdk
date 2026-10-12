@@ -67,14 +67,25 @@ pub type TcpStream = Socket<TcpAdapter>;
 /// A UdpSocket that is compatible with OP-TEE.
 pub type UdpSocket = Socket<UdpAdapter>;
 
-fn handle_socket_operation_error(handle: raw::TEE_iSocketHandle, code: u32) -> SocketError {
+/// Maps a failed socket operation to a [`SocketError`], resolving the
+/// protocol-specific code that accompanies `TEE_ISOCKET_ERROR_PROTOCOL` and
+/// `TEE_ISOCKET_WARNING_PROTOCOL`.
+///
+/// `socket` must be the `TEE_iSocket` instance that created `handle`. The GP
+/// TEE Sockets API only allows a handle to be passed to methods of its own
+/// instance, and `error` reads the protocol state of that instance through it.
+fn handle_socket_operation_error(
+    socket: *const raw::TEE_iSocket,
+    handle: raw::TEE_iSocketHandle,
+    code: u32,
+) -> SocketError {
     match code {
         raw::TEE_ISOCKET_ERROR_PROTOCOL => {
-            let protocol_error = unsafe { ((*raw::TEE_tcpSocket).error)(handle) };
+            let protocol_error = unsafe { ((*socket).error)(handle) };
             SocketError::ErrorProtocol(protocol_error)
         }
         raw::TEE_ISOCKET_WARNING_PROTOCOL => {
-            let protocol_error = unsafe { ((*raw::TEE_tcpSocket).error)(handle) };
+            let protocol_error = unsafe { ((*socket).error)(handle) };
             SocketError::WarningProtocol(protocol_error)
         }
         _ => SocketError::from_raw_error(code, 0),
@@ -112,7 +123,11 @@ impl SocketAdapter for TcpAdapter {
         };
         match ret {
             raw::TEE_SUCCESS => Ok(length as usize),
-            _ => Err(handle_socket_operation_error(handle.0, ret)),
+            _ => Err(handle_socket_operation_error(
+                unsafe { raw::TEE_tcpSocket },
+                handle.0,
+                ret,
+            )),
         }
     }
     fn recv(handle: &mut Self::Handle, buf: &mut [u8], timeout: u32) -> Result<usize, SocketError> {
@@ -122,7 +137,11 @@ impl SocketAdapter for TcpAdapter {
         };
         match ret {
             raw::TEE_SUCCESS => Ok(length as usize),
-            _ => Err(handle_socket_operation_error(handle.0, ret)),
+            _ => Err(handle_socket_operation_error(
+                unsafe { raw::TEE_tcpSocket },
+                handle.0,
+                ret,
+            )),
         }
     }
 }
@@ -167,7 +186,11 @@ impl SocketAdapter for UdpAdapter {
         };
         match ret {
             raw::TEE_SUCCESS => Ok(length as usize),
-            _ => Err(handle_socket_operation_error(handle.0, ret)),
+            _ => Err(handle_socket_operation_error(
+                unsafe { raw::TEE_udpSocket },
+                handle.0,
+                ret,
+            )),
         }
     }
     fn recv(handle: &mut Self::Handle, buf: &mut [u8], timeout: u32) -> Result<usize, SocketError> {
@@ -177,7 +200,11 @@ impl SocketAdapter for UdpAdapter {
         };
         match ret {
             raw::TEE_SUCCESS => Ok(length as usize),
-            _ => Err(handle_socket_operation_error(handle.0, ret)),
+            _ => Err(handle_socket_operation_error(
+                unsafe { raw::TEE_udpSocket },
+                handle.0,
+                ret,
+            )),
         }
     }
 }
