@@ -17,26 +17,31 @@
 
 use super::context::InnerContext;
 use crate::{Context, Operation, Param, Result, Uuid, raw, teec_check_with_origin};
+use num_enum::{FromPrimitive, IntoPrimitive};
 use std::{
     ptr,
     sync::{Arc, Mutex},
 };
 
 /// Session login methods.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq, FromPrimitive, IntoPrimitive)]
+#[repr(u32)]
 pub enum ConnectionMethods {
     /// No login data is provided.
-    LoginPublic,
+    LoginPublic = raw::TEEC_LOGIN_PUBLIC,
     /// Login data about the user running the Client Application process is provided.
-    LoginUser,
+    LoginUser = raw::TEEC_LOGIN_USER,
     /// Login data about the group running the Client Application process is provided.
-    LoginGroup,
+    LoginGroup = raw::TEEC_LOGIN_GROUP,
     /// Login data about the running Client Application itself is provided.
-    LoginApplication,
+    LoginApplication = raw::TEEC_LOGIN_APPLICATION,
     /// Login data about the user and the running Client Application itself is provided.
-    LoginUserApplication,
+    LoginUserApplication = raw::TEEC_LOGIN_USER_APPLICATION,
     /// Login data about the group and the running Client Application itself is provided.
-    LoginGroupApplication,
+    LoginGroupApplication = raw::TEEC_LOGIN_GROUP_APPLICATION,
+    /// An unnamed or implementation-defined login type.
+    #[num_enum(catch_all)]
+    Unknown(u32),
 }
 
 /// An opaque, thread-movable OP-TEE session handle.
@@ -110,7 +115,7 @@ impl Session {
                     raw_ctx,
                     &mut raw_session,
                     raw_uuid,
-                    login as u32,
+                    u32::from(login),
                     ptr::null(),
                     raw_operation,
                     &mut err_origin,
@@ -149,6 +154,45 @@ impl Drop for Session {
     fn drop(&mut self) {
         unsafe {
             raw::TEEC_CloseSession(self.raw.get_mut());
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ConnectionMethods;
+    use super::raw;
+
+    /// Guarantee: every `ConnectionMethods` variant converts to the matching
+    /// `TEEC_LOGIN_*` constant and the conversion round-trips through the
+    /// primitive login code, so a wrong discriminant can never be sent to
+    /// `TEEC_OpenSession`.
+    #[test]
+    fn connection_methods_round_trip_to_tee_constants() {
+        let cases = [
+            (ConnectionMethods::LoginPublic, raw::TEEC_LOGIN_PUBLIC),
+            (ConnectionMethods::LoginUser, raw::TEEC_LOGIN_USER),
+            (ConnectionMethods::LoginGroup, raw::TEEC_LOGIN_GROUP),
+            (
+                ConnectionMethods::LoginApplication,
+                raw::TEEC_LOGIN_APPLICATION,
+            ),
+            (
+                ConnectionMethods::LoginUserApplication,
+                raw::TEEC_LOGIN_USER_APPLICATION,
+            ),
+            (
+                ConnectionMethods::LoginGroupApplication,
+                raw::TEEC_LOGIN_GROUP_APPLICATION,
+            ),
+        ];
+
+        for (method, expected) in cases {
+            let code = u32::from(method);
+            assert_eq!(code, expected, "variant {method:?} has wrong TEEC code");
+
+            let round_tripped = ConnectionMethods::from(code);
+            assert_eq!(round_tripped, method);
         }
     }
 }
