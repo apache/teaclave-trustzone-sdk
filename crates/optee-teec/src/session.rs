@@ -17,7 +17,10 @@
 
 use super::context::InnerContext;
 use crate::{Context, Operation, Param, Result, Uuid, raw, teec_check_with_origin};
-use std::{cell::RefCell, ptr, rc::Rc};
+use std::{
+    ptr,
+    sync::{Arc, Mutex},
+};
 
 /// Session login methods.
 #[derive(Copy, Clone)]
@@ -36,20 +39,43 @@ pub enum ConnectionMethods {
     LoginGroupApplication,
 }
 
+/// An opaque, thread-movable OP-TEE session handle.
+///
+/// `raw::TEEC_Session` mirrors a C struct containing a `*mut`, so Rust cannot
+/// infer `Send`. libteec treats the handle as plain data: `TEEC_InvokeCommand`
+/// and `TEEC_CloseSession` read `session->imp.session_id` / `session->imp.ctx`
+/// and perform an ioctl, with no thread affinity (see `tee_client_api.c` in
+/// optee_client). The handle is kept opaque here; the binding does not rely on
+/// its layout.
+struct RawTeecSession(raw::TEEC_Session);
+
+// SAFETY: `RawTeecSession` is the sole owner of the handle and only ever hands
+// it out as `&mut` (see `get_mut`), so callers cannot alias it. Moving it
+// between threads is allowed by the libteec API contract: the handle is not
+// thread-affine, and the owning `Context` (which owns the underlying fd) is
+// kept alive separately by `Session::_ctx`. This assertion covers ownership
+// transfer only; it does not imply `Sync`, and `Session` is deliberately not
+// `Sync`.
+unsafe impl Send for RawTeecSession {}
+
+impl RawTeecSession {
+    fn new(raw: raw::TEEC_Session) -> Self {
+        Self(raw)
+    }
+
+    fn get_mut(&mut self) -> &mut raw::TEEC_Session {
+        &mut self.0
+    }
+}
+
 /// Represents a connection between a client application and a trusted application.
 pub struct Session {
-    raw: raw::TEEC_Session,
+    raw: RawTeecSession,
 
     // Just a holder to ensure InnerContext is not dropped and to eliminate the
     // lifetime constraint, never use it.
-    _ctx: Rc<RefCell<InnerContext>>,
+    _ctx: Arc<Mutex<InnerContext>>,
 }
-
-// Since raw::TEEC_Session contains a raw pointer, Rust does not automatically
-// implement Send and Sync for it. We need to manually implement them and ensure
-// that raw::TEEC_Session is used safely.
-unsafe impl Send for Session {}
-unsafe impl Sync for Session {}
 
 impl Session {
     /// Initializes a TEE session object with specified context and uuid.
@@ -68,7 +94,14 @@ impl Session {
         let mut err_origin: u32 = 0;
         let raw_operation = operation.map_or(ptr::null_mut(), |o| o.as_mut_raw_ptr());
         let inner_ctx = context.inner_context();
-        let raw_ctx = &mut inner_ctx.borrow_mut().0;
+        let mut guard = match inner_ctx.lock() {
+            Ok(guard) => guard,
+            // A poisoned lock only records that another thread panicked while
+            // holding the context. The underlying `TEEC_Context` is still
+            // usable, so recover it rather than failing this unrelated call.
+            Err(poisoned) => poisoned.into_inner(),
+        };
+        let raw_ctx = &mut guard.0;
         let raw_uuid = uuid.as_raw_ptr();
 
         teec_check_with_origin(
@@ -86,7 +119,7 @@ impl Session {
             err_origin,
         )?;
         Ok(Self {
-            raw: raw_session,
+            raw: RawTeecSession::new(raw_session),
             _ctx: context.inner_context(),
         })
     }
@@ -101,7 +134,7 @@ impl Session {
         teec_check_with_origin(
             unsafe {
                 raw::TEEC_InvokeCommand(
-                    &mut self.raw,
+                    self.raw.get_mut(),
                     command_id,
                     operation.as_mut_raw_ptr(),
                     &mut err_origin,
@@ -115,7 +148,7 @@ impl Session {
 impl Drop for Session {
     fn drop(&mut self) {
         unsafe {
-            raw::TEEC_CloseSession(&mut self.raw);
+            raw::TEEC_CloseSession(self.raw.get_mut());
         }
     }
 }
