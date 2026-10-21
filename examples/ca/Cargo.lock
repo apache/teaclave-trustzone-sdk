@@ -1202,7 +1202,7 @@ checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
 name = "optee-teec"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "document-features",
  "hex",
@@ -1215,7 +1215,7 @@ dependencies = [
 
 [[package]]
 name = "optee-teec-build"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1225,7 +1225,7 @@ dependencies = [
 
 [[package]]
 name = "optee-teec-macros"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "optee-teec-build",
  "quote",
@@ -1234,7 +1234,7 @@ dependencies = [
 
 [[package]]
 name = "optee-teec-sys"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "document-features",
 ]

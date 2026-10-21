@@ -468,7 +468,7 @@ checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
 
 [[package]]
 name = "optee-utee"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "bitflags",
  "document-features",
@@ -483,7 +483,7 @@ dependencies = [
 
 [[package]]
 name = "optee-utee-build"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -494,7 +494,7 @@ dependencies = [
 
 [[package]]
 name = "optee-utee-macros"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "quote",
  "syn",
@@ -502,7 +502,7 @@ dependencies = [
 
 [[package]]
 name = "optee-utee-sys"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "document-features",
 ]
@@ -641,7 +641,7 @@ dependencies = [
 
 [[package]]
 name = "secure_db"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "bincode",
