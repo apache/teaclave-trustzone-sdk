@@ -23,7 +23,13 @@
 
 name: Build Test Qemu Image
 
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
+    inputs:
+      optee-version:
+        description: 'OP-TEE version to build (e.g. 4.11.0)'
+        required: true
+        type: string
 
 defaults:
   run:
@@ -35,21 +41,25 @@ jobs:
     with:
       runs-on: ubuntu-latest
       expand-memory: true
+      optee-version: ${{ inputs.optee-version }}
 
   amd64-ubuntu24:
     uses: ./.github/workflows/reuse_build_test_qemu_image.yml
     with:
       runs-on: ubuntu-latest
       expand-memory: false
+      optee-version: ${{ inputs.optee-version }}
 
   arm64-ubuntu24-expand-ta-memory:
     uses: ./.github/workflows/reuse_build_test_qemu_image.yml
     with:
       runs-on: ubuntu-24.04-arm
       expand-memory: true
+      optee-version: ${{ inputs.optee-version }}
 
   arm64-ubuntu24:
     uses: ./.github/workflows/reuse_build_test_qemu_image.yml
     with:
       runs-on: ubuntu-24.04-arm
       expand-memory: false
+      optee-version: ${{ inputs.optee-version }}
