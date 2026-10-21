@@ -1471,14 +1471,19 @@ impl OpHandle for Asymmetric {
 pub struct DeriveKey(OperationHandle);
 
 impl DeriveKey {
-    /// Take one of the Asymmetric Derivation Operation Algorithm that supports this operation as
+    /// Take one of the key derivation algorithms that supports this operation as
     /// defined in [AlgorithmId](AlgorithmId), and output a key object.
     ///
     /// # Parameters
     ///
     /// 1) `params`: For algorithm [DhDeriveSharedSecret][AlgorithmId::DhDeriveSharedSecret],
     ///    [DhPublicValue](../object/enum.AttributeId.html#variant.DhPublicValue) is required as
-    ///    the passed in attribute.
+    ///    the passed in attribute. For the PBKDF2-HMAC algorithms
+    ///    ([Pbkdf2HmacSha1][AlgorithmId::Pbkdf2HmacSha1] and similar), pass the
+    ///    salt, the iteration count and the derived key material length as
+    ///    attributes, and use a
+    ///    [Pbkdf2Password](crate::TransientObjectType::Pbkdf2Password) object
+    ///    as the operation key.
     /// 2) `object`: An uninitialized transient object to be filled with the derived key.
     ///
     /// # Example
@@ -1556,7 +1561,9 @@ impl DeriveKey {
     }
 
     /// Function usage is similar to [Digest::allocate](Digest::allocate).
-    /// Currently only supports [DhDeriveSharedSecret][AlgorithmId::DhDeriveSharedSecret] as
+    /// Currently supports [DhDeriveSharedSecret][AlgorithmId::DhDeriveSharedSecret],
+    /// [EcDhDeriveSharedSecret][AlgorithmId::EcDhDeriveSharedSecret],
+    /// [X25519][AlgorithmId::X25519] and the PBKDF2-HMAC algorithms as
     /// `algo`.
     pub fn allocate(algo: AlgorithmId, max_key_size: usize) -> Result<Self> {
         match OperationHandle::allocate(algo, OperationMode::Derive, max_key_size) {
@@ -1631,6 +1638,7 @@ impl Random {
 }
 
 /// Algorithms that can be allocated as an crypto operation.
+#[derive(Clone, Copy, strum::Display)]
 #[repr(u32)]
 pub enum AlgorithmId {
     /// [Cipher](Cipher) supported algorithm.
@@ -1748,6 +1756,18 @@ pub enum AlgorithmId {
     DhDeriveSharedSecret = 0x80000032,
     /// [DeriveKey](DeriveKey) supported algorithm.
     EcDhDeriveSharedSecret = 0x80000042,
+    /// [DeriveKey](DeriveKey) supported algorithm, PBKDF2 with HMAC-SHA1.
+    Pbkdf2HmacSha1 = 0x800020C2,
+    /// [DeriveKey](DeriveKey) supported algorithm, PBKDF2 with HMAC-SHA224.
+    Pbkdf2HmacSha224 = 0x800030C2,
+    /// [DeriveKey](DeriveKey) supported algorithm, PBKDF2 with HMAC-SHA256.
+    Pbkdf2HmacSha256 = 0x800040C2,
+    /// [DeriveKey](DeriveKey) supported algorithm, PBKDF2 with HMAC-SHA384.
+    Pbkdf2HmacSha384 = 0x800050C2,
+    /// [DeriveKey](DeriveKey) supported algorithm, PBKDF2 with HMAC-SHA512.
+    Pbkdf2HmacSha512 = 0x800060C2,
+    /// [DeriveKey](DeriveKey) supported algorithm, PBKDF2 with HMAC-SM3.
+    Pbkdf2HmacSm3 = 0x800070C2,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
     EcDsaSha1 = 0x70001042,
@@ -1816,4 +1836,76 @@ pub enum ElementId {
     EccCurveNistP521 = 0x00000005,
     /// Source: `IETF`, Generic: `N`, Size: 256 bits
     EccCurve25519 = 0x00000300,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{AttributeId, TransientObjectType};
+
+    #[test]
+    // Guarantee: every high-level PBKDF2 `AlgorithmId` variant maps 1:1
+    // to the OP-TEE raw constant from `tee_api_defines_extensions.h`,
+    // so `DeriveKey::allocate` passes the correct algorithm ID to
+    // `TEE_AllocateOperation`.
+    fn pbkdf2_algorithm_ids_match_raw_constants() {
+        let cases = [
+            (
+                AlgorithmId::Pbkdf2HmacSha1,
+                raw::TEE_ALG_PBKDF2_HMAC_SHA1_DERIVE_KEY,
+            ),
+            (
+                AlgorithmId::Pbkdf2HmacSha224,
+                raw::TEE_ALG_PBKDF2_HMAC_SHA224_DERIVE_KEY,
+            ),
+            (
+                AlgorithmId::Pbkdf2HmacSha256,
+                raw::TEE_ALG_PBKDF2_HMAC_SHA256_DERIVE_KEY,
+            ),
+            (
+                AlgorithmId::Pbkdf2HmacSha384,
+                raw::TEE_ALG_PBKDF2_HMAC_SHA384_DERIVE_KEY,
+            ),
+            (
+                AlgorithmId::Pbkdf2HmacSha512,
+                raw::TEE_ALG_PBKDF2_HMAC_SHA512_DERIVE_KEY,
+            ),
+            (
+                AlgorithmId::Pbkdf2HmacSm3,
+                raw::TEE_ALG_PBKDF2_HMAC_SM3_DERIVE_KEY,
+            ),
+        ];
+        for (algo, expected) in cases {
+            assert_eq!(algo as u32, expected, "algorithm ID mismatch for {algo}");
+        }
+    }
+
+    #[test]
+    // Guarantee: the high-level PBKDF2 object type and attribute IDs map
+    // 1:1 to the OP-TEE raw constants, so password objects and PBKDF2
+    // operation parameters are built with the correct IDs.
+    fn pbkdf2_object_and_attribute_ids_match_raw_constants() {
+        let object_cases = [(
+            TransientObjectType::Pbkdf2Password,
+            raw::TEE_TYPE_PBKDF2_PASSWORD,
+        )];
+        for (obj_type, expected) in object_cases {
+            assert_eq!(obj_type as u32, expected, "ID mismatch for {obj_type}");
+        }
+        let attr_cases = [
+            (AttributeId::Pbkdf2Password, raw::TEE_ATTR_PBKDF2_PASSWORD),
+            (AttributeId::Pbkdf2Salt, raw::TEE_ATTR_PBKDF2_SALT),
+            (
+                AttributeId::Pbkdf2IterationCount,
+                raw::TEE_ATTR_PBKDF2_ITERATION_COUNT,
+            ),
+            (
+                AttributeId::Pbkdf2DkmLength,
+                raw::TEE_ATTR_PBKDF2_DKM_LENGTH,
+            ),
+        ];
+        for (attr, expected) in attr_cases {
+            assert_eq!(attr as u32, expected, "ID mismatch for {attr}");
+        }
+    }
 }

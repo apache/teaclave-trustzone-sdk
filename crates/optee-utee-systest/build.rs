@@ -56,6 +56,7 @@ fn generate_cfg(ta_include_path: PathBuf) -> ctest::TestGenerator {
         .header("tee_udpsocket.h")
         .header("tee_internal_api.h")
         .header("tee_internal_api_extensions.h")
+        .header("tee_api_defines_extensions.h")
         .header("__tee_tcpsocket_defines_extensions.h")
         .include(ta_include_path.display().to_string())
         .rename_type(|s| match s {
