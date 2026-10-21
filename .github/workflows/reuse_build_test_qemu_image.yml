@@ -27,6 +27,10 @@ on:
         required: true
         type: boolean
         default: false
+      optee-version:
+        description: 'OP-TEE version tag to sync (e.g. 4.11.0)'
+        required: true
+        type: string
 
 defaults:
   run:
@@ -92,14 +96,13 @@ jobs:
         run: |
           mkdir -p ${{ env.QEMUV8_BUILD_FOLDER }} && 
           cd ${{ env.QEMUV8_BUILD_FOLDER }} &&
-          repo init -u https://github.com/OP-TEE/manifest.git -m qemu_v8.xml &&
+          repo init -u https://github.com/OP-TEE/manifest.git -m qemu_v8.xml -b ${{ inputs.optee-version }} &&
           repo sync -j4 --no-clone-bundle
 
       - name: Get Output Name
         id: output_name
         run: |
-          cd ${{ env.QEMUV8_BUILD_FOLDER }}/optee_os && \
-            OPTEE_TAG=optee-$(git tag -l | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+          OPTEE_TAG=optee-${{ inputs.optee-version }}
           OS_VERSION_TAG="ubuntu-24.04"
           ARCH_TAG=$(uname -m)
           SUFFIX_TAG=${{ inputs.expand-memory && '-expand-ta-memory' || '' }}
