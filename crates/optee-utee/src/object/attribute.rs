@@ -149,6 +149,7 @@ impl AttributeValue {
     }
 }
 
+#[derive(Clone, Copy, strum::Display)]
 #[repr(u32)]
 pub enum AttributeId {
     /// Used for all secret keys for symmetric ciphers, MACs, and HMACs
@@ -191,6 +192,14 @@ pub enum AttributeId {
     DhPublicValue = 0xD0000132,
     /// Diffie-Hellman public value: `x`
     DhPrivateValue = 0xC0000232,
+    /// PBKDF2 password, bytes of the password
+    Pbkdf2Password = 0xC00001C2,
+    /// PBKDF2 salt, bytes of the salt
+    Pbkdf2Salt = 0xD00002C2,
+    /// PBKDF2 iteration count
+    Pbkdf2IterationCount = 0xF00003C2,
+    /// PBKDF2 derived key material length in bytes
+    Pbkdf2DkmLength = 0xF00004C2,
     RsaOaepLabel = 0xD0000930,
     RsaOaepMgf1Hash = 0xD0000931,
     RsaPssSaltLength = 0xF0000A30,

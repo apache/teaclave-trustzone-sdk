@@ -24,6 +24,7 @@ use crate::{Result, tee_check};
 
 /// Define types of [TransientObject](crate::TransientObject) with
 /// predefined maximum sizes.
+#[derive(Clone, Copy, strum::Display)]
 #[repr(u32)]
 pub enum TransientObjectType {
     /// 128, 192, or 256 bits
@@ -65,6 +66,8 @@ pub enum TransientObjectType {
     DsaKeypair = 0xA1000031,
     /// From 256 to 2048 bits, multiple of 8 bits.
     DhKeypair = 0xA1000032,
+    /// Password for PBKDF2 key derivation. Size in bits, multiple of 8 bits.
+    Pbkdf2Password = 0xA10000C2,
     /// Between 160 and 521 bits. Conditional: Available only if at least
     /// one of the ECC the curves defined in Table 6-14 with "generic"
     /// equal to "Y" is supported.
