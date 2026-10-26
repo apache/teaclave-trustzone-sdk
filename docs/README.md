@@ -27,3 +27,4 @@ permalink: /trustzone-sdk-docs
 
 ## Maintenance
 * [Operation Guide for Integration with Each OP-TEE Release](operation-guide-for-integration-with-each-optee-release.md)
+* [crates.io Ownership Record](crates-io-ownership.md)
