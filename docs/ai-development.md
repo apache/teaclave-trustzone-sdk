@@ -292,16 +292,30 @@ When changing a tool, inspect its affected CLI paths and any build scripts or pr
 
 ### 10.1 Commit Messages
 
-Follow the repository's `subsystem: imperative summary` style. Use the affected subsystem or area as the prefix.
+Follow the Linux kernel style, adapted to this repository.
 
-Examples:
+- **Subject:** `subsystem: imperative summary`, for example
+  `optee-teec: fix session cleanup` or `docs: clarify build instructions`.
+  Use the affected crate, area, or `docs`/`ci`/`examples` as the prefix.
+  Target 50 characters, do not exceed 72, and do not end it with a period.
+- **Blank line:** separate the subject from the body with exactly one blank
+  line.
+- **Body:** wrap at 72 characters. Explain why the change is needed and any
+  constraints or prior behavior that are not obvious from the diff. The diff
+  already shows what changed, so do not repeat it line by line.
+- **Mood:** use the imperative in the subject and body (`add`, `fix`,
+  `remove`; not `added`/`fixes`).
+- **Length:** a subject alone is fine for trivial changes; add a body when
+  the motivation, tradeoffs, or references need recording.
+
+Example:
 
 ```text
 optee-teec: fix session cleanup
-docs: clarify build instructions
-```
 
-Keep the subject concise and describe the change directly.
+Close the session before dropping the context. Otherwise a failed
+invocation leaves the TA session open until process exit.
+```
 
 ### 10.2 Before Committing
 
