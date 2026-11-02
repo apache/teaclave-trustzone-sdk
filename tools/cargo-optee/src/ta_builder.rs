@@ -18,9 +18,9 @@
 use crate::common;
 use crate::common::{
     BuildArtifact, BuildMode, CargoArtifactKind, absolute_dir, apply_clippy_deny_lints,
-    cargo_command_in, manifest_path, print_cargo_command, print_output_and_bail, publish_tempfile,
-    resolve_target_and_cross_compile, set_ta_file_permissions, unique_cargo_artifact,
-    unique_tempfile_in,
+    cargo_command_in, check_command_available, manifest_path, print_cargo_command,
+    publish_tempfile, resolve_target_and_cross_compile, run_cargo_build, run_streaming_command,
+    set_ta_file_permissions, unique_cargo_artifact, unique_tempfile_in,
 };
 use crate::config::TaBuildConfig;
 use crate::elf_uuid;
@@ -104,25 +104,17 @@ pub fn clippy_ta(mut config: TaBuildConfig) -> Result<()> {
 fn run_clippy(config: &TaBuildConfig) -> Result<()> {
     println!("Running cargo fmt and clippy...");
 
-    let fmt_output = cargo_command_in(&config.path)
+    let mut fmt_cmd = cargo_command_in(&config.path);
+    fmt_cmd
         .arg("fmt")
         .arg("--manifest-path")
-        .arg(manifest_path(&config.path))
-        .output()?;
-
-    if !fmt_output.status.success() {
-        print_output_and_bail("cargo fmt", &fmt_output)?;
-    }
+        .arg(manifest_path(&config.path));
+    run_streaming_command(&mut fmt_cmd, "cargo fmt")?;
 
     // Setup clippy command with common environment
     let (mut clippy_cmd, _temp_dir) = setup_build_command(config, "clippy")?;
     apply_clippy_deny_lints(&mut clippy_cmd);
-
-    let clippy_output = clippy_cmd.output()?;
-
-    if !clippy_output.status.success() {
-        print_output_and_bail("clippy", &clippy_output)?;
-    }
+    run_streaming_command(&mut clippy_cmd, "cargo clippy")?;
 
     Ok(())
 }
@@ -151,22 +143,10 @@ fn build_binary(config: &TaBuildConfig) -> Result<PathBuf> {
     // Print the full cargo build command for debugging
     print_cargo_command(&build_cmd, "Building TA binary");
 
-    let build_output = build_cmd.output()?;
+    let manifest = manifest_path(&config.path);
+    let artifacts = run_cargo_build(&mut build_cmd, &manifest, CargoArtifactKind::Bin)?;
 
-    if !build_output.status.success() {
-        let _ = unique_cargo_artifact(
-            &build_output.stdout,
-            &manifest_path(&config.path),
-            CargoArtifactKind::Bin,
-        );
-        print_output_and_bail("build", &build_output)?;
-    }
-
-    unique_cargo_artifact(
-        &build_output.stdout,
-        &manifest_path(&config.path),
-        CargoArtifactKind::Bin,
-    )
+    unique_cargo_artifact(artifacts, &manifest, CargoArtifactKind::Bin)
 }
 
 fn strip_binary(config: &TaBuildConfig, binary_path: &Path) -> Result<tempfile::NamedTempFile> {
@@ -190,15 +170,12 @@ fn strip_binary(config: &TaBuildConfig, binary_path: &Path) -> Result<tempfile::
 
     let objcopy = format!("{}objcopy", cross_compile);
 
-    let strip_output = Command::new(&objcopy)
+    let mut strip_cmd = Command::new(&objcopy);
+    strip_cmd
         .arg("--strip-unneeded")
         .arg(binary_path)
-        .arg(stripped.path())
-        .output()?;
-
-    if !strip_output.status.success() {
-        print_output_and_bail(&objcopy, &strip_output)?;
-    }
+        .arg(stripped.path());
+    run_streaming_command(&mut strip_cmd, &objcopy)?;
 
     Ok(stripped)
 }
@@ -227,7 +204,8 @@ fn sign_ta(config: &TaBuildConfig, stripped_path: &Path) -> Result<BuildArtifact
     let output_path = parent.join(format!("{uuid_str}.ta"));
     let tmp = unique_tempfile_in(parent, &format!("{uuid_str}.ta."), ".partial")?;
 
-    let sign_output = Command::new("python3")
+    let mut sign_cmd = Command::new("python3");
+    sign_cmd
         .arg(&sign_script)
         .arg("--uuid")
         .arg(&uuid_str)
@@ -236,12 +214,8 @@ fn sign_ta(config: &TaBuildConfig, stripped_path: &Path) -> Result<BuildArtifact
         .arg("--in")
         .arg(stripped_path)
         .arg("--out")
-        .arg(tmp.path())
-        .output()?;
-
-    if !sign_output.status.success() {
-        print_output_and_bail("sign_encrypt.py", &sign_output)?;
-    }
+        .arg(tmp.path());
+    run_streaming_command(&mut sign_cmd, "sign_encrypt.py")?;
 
     publish_tempfile(tmp, &output_path)?;
     // NamedTempFile is 0600; sign_encrypt.py truncates without resetting mode.
@@ -264,32 +238,12 @@ fn check_toolchain_exists(cross_compile_prefix: &str) -> Result<()> {
     let gcc_command = format!("{}gcc", cross_compile_prefix);
     let objcopy_command = format!("{}objcopy", cross_compile_prefix);
 
-    // Check if gcc exists
-    let gcc_check = Command::new("which").arg(&gcc_command).output();
-
-    // Check if objcopy exists
-    let objcopy_check = Command::new("which").arg(&objcopy_command).output();
-
-    let gcc_exists = gcc_check.is_ok_and(|output| output.status.success());
-    let objcopy_exists = objcopy_check.is_ok_and(|output| output.status.success());
-
-    if !gcc_exists || !objcopy_exists {
-        let missing_tools: Vec<&str> = [
-            if !gcc_exists {
-                Some(gcc_command.as_str())
-            } else {
-                None
-            },
-            if !objcopy_exists {
-                Some(objcopy_command.as_str())
-            } else {
-                None
-            },
-        ]
-        .iter()
-        .filter_map(|&x| x)
+    let missing_tools: Vec<&str> = [gcc_command.as_str(), objcopy_command.as_str()]
+        .into_iter()
+        .filter(|tool| !check_command_available(tool))
         .collect();
 
+    if !missing_tools.is_empty() {
         eprintln!("Error: Required cross-compile toolchain not found!");
         eprintln!("Missing tools: {}", missing_tools.join(", "));
         eprintln!();
