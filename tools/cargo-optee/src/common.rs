@@ -20,10 +20,10 @@ use cargo_metadata::Message;
 use clap::ValueEnum;
 use std::env;
 use std::fs;
-use std::io::Cursor;
+use std::io::{BufRead, BufReader};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::{Command, Stdio};
 
 use uuid::Uuid;
 
@@ -165,23 +165,31 @@ fn resolve_target_and_cross_compile_with(
     Ok((target, cross_compile_override.unwrap_or(default_cc)))
 }
 
-/// Helper function to print command output and return error
-pub fn print_output_and_bail(cmd_name: &str, output: &Output) -> Result<()> {
-    eprintln!(
-        "{} stdout: {}",
-        cmd_name,
-        String::from_utf8_lossy(&output.stdout)
-    );
-    eprintln!(
-        "{} stderr: {}",
-        cmd_name,
-        String::from_utf8_lossy(&output.stderr)
-    );
-    bail!(
-        "{} failed with exit code: {:?}",
-        cmd_name,
-        output.status.code()
-    )
+/// Run a command with inherited stdout/stderr so its output streams as it is
+/// produced instead of being buffered in memory. Stdin stays closed, matching
+/// `Command::output()` and preventing accidental terminal reads.
+pub fn run_streaming_command(cmd: &mut Command, cmd_name: &str) -> Result<()> {
+    let status = cmd
+        .stdin(Stdio::null())
+        .status()
+        .with_context(|| format!("failed to run {cmd_name}"))?;
+    if !status.success() {
+        bail!("{cmd_name} failed with exit code: {:?}", status.code());
+    }
+    Ok(())
+}
+
+/// Check whether a command can be resolved and launched via the same PATH
+/// lookup used by later `Command::new` invocations. The exit status is ignored
+/// so tools without `--version` support are still reported as available.
+pub fn check_command_available(program: &str) -> bool {
+    Command::new(program)
+        .arg("--version")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok()
 }
 
 /// Print cargo command for debugging
@@ -242,9 +250,10 @@ pub enum CargoArtifactKind {
     Cdylib,
 }
 
-/// Collect the current package's compiler artifacts from `cargo --message-format=json`.
-pub fn collect_cargo_artifacts(
-    stdout: &[u8],
+/// Consume `cargo --message-format=json` line by line, printing diagnostics as
+/// they arrive and collecting the current package's compiler artifacts.
+pub fn collect_cargo_artifacts<R: BufRead>(
+    reader: R,
     manifest_path: &std::path::Path,
     kind: CargoArtifactKind,
 ) -> Result<Vec<PathBuf>> {
@@ -252,16 +261,16 @@ pub fn collect_cargo_artifacts(
         std::fs::canonicalize(manifest_path).unwrap_or_else(|_| manifest_path.to_path_buf());
     let mut artifacts = Vec::new();
 
-    for message in Message::parse_stream(Cursor::new(stdout)) {
-        let message = match message {
-            Ok(message) => message,
-            Err(_) => continue,
-        };
+    for message in Message::parse_stream(reader) {
+        let message = message?;
         match message {
             Message::CompilerMessage(msg) => {
                 if let Some(rendered) = &msg.message.rendered {
                     eprint!("{rendered}");
                 }
+            }
+            Message::TextLine(line) => {
+                eprintln!("{line}");
             }
             Message::CompilerArtifact(artifact) => {
                 let artifact_manifest = artifact.manifest_path.into_std_path_buf();
@@ -301,12 +310,45 @@ pub fn collect_cargo_artifacts(
     Ok(artifacts)
 }
 
+/// Run a cargo build that emits JSON messages to stdout. Diagnostics are
+/// streamed to stderr while the child runs; only the artifact paths needed for
+/// the post-build steps are retained.
+pub fn run_cargo_build(
+    cmd: &mut Command,
+    manifest_path: &std::path::Path,
+    kind: CargoArtifactKind,
+) -> Result<Vec<PathBuf>> {
+    cmd.stdin(Stdio::null());
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::inherit());
+
+    let mut child = cmd
+        .spawn()
+        .with_context(|| format!("failed to run {:?}", cmd.get_program()))?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| anyhow::anyhow!("cargo stdout was not piped"))?;
+
+    // Drain stdout to EOF before waiting so a full pipe cannot deadlock the
+    // child. The reader processes one JSON line at a time.
+    let artifacts = collect_cargo_artifacts(BufReader::new(stdout), manifest_path, kind);
+    let status = child.wait().context("failed to wait for cargo build")?;
+
+    // Prefer the build failure status over a stdout read error: the status is
+    // the actionable cause for the user.
+    if !status.success() {
+        bail!("build failed with exit code: {:?}", status.code());
+    }
+
+    artifacts
+}
+
 pub fn unique_cargo_artifact(
-    stdout: &[u8],
+    mut artifacts: Vec<PathBuf>,
     manifest_path: &std::path::Path,
     kind: CargoArtifactKind,
 ) -> Result<PathBuf> {
-    let mut artifacts = collect_cargo_artifacts(stdout, manifest_path, kind)?;
     artifacts.sort();
     artifacts.dedup();
     match artifacts.len() {
@@ -388,15 +430,11 @@ pub fn clean_project(project_path: &std::path::Path) -> Result<()> {
     let project_path = absolute_dir(project_path)?;
     println!("Cleaning build artifacts in: {:?}", project_path);
 
-    let output = cargo_command_in(&project_path)
-        .arg("clean")
+    let mut cmd = cargo_command_in(&project_path);
+    cmd.arg("clean")
         .arg("--manifest-path")
-        .arg(manifest_path(&project_path))
-        .output()?;
-
-    if !output.status.success() {
-        print_output_and_bail("cargo clean", &output)?;
-    }
+        .arg(manifest_path(&project_path));
+    run_streaming_command(&mut cmd, "cargo clean")?;
 
     // Also clean the intermediate cargo-optee directory if it exists
     let intermediate_dir = project_path.join("target").join("cargo-optee");
@@ -504,5 +542,71 @@ mod tests {
         let (_, cc) =
             resolve_target_and_cross_compile_with(Arch::Aarch64, BuildMode::TaNoStd, None).unwrap();
         assert_eq!(cc, "aarch64-linux-gnu-");
+    }
+
+    fn fake_artifact_line(manifest: &Path, executable: &Path) -> String {
+        serde_json::json!({
+            "reason": "compiler-artifact",
+            "package_id": "demo 0.1.0 (path+file:///demo)",
+            "manifest_path": manifest,
+            "target": {
+                "kind": ["bin"],
+                "crate_types": ["bin"],
+                "name": "demo",
+                "src_path": "/demo/src/main.rs",
+                "edition": "2021",
+                "doctest": false
+            },
+            "profile": {
+                "opt_level": "0",
+                "debuginfo": 2,
+                "debug_assertions": true,
+                "overflow_checks": true,
+                "test": false
+            },
+            "features": [],
+            "filenames": [executable],
+            "executable": executable,
+            "fresh": false
+        })
+        .to_string()
+    }
+
+    /// Guarantee: the streamed JSON reader still selects the current
+    /// package's executable, so streaming does not lose the build artifact.
+    #[test]
+    fn streamed_cargo_build_collects_current_package_artifact() {
+        let dir = tempfile::tempdir().unwrap();
+        let manifest = dir.path().join("Cargo.toml");
+        fs::write(&manifest, "").unwrap();
+        let executable = dir.path().join("demo");
+        let line = fake_artifact_line(&manifest, &executable);
+
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c")
+            .arg("printf '%s\\n' \"$1\"")
+            .arg("sh")
+            .arg(line);
+
+        let artifacts = run_cargo_build(&mut cmd, &manifest, CargoArtifactKind::Bin).unwrap();
+        assert_eq!(artifacts, vec![executable]);
+    }
+
+    /// Guarantee: a failing streamed build returns an error carrying the child
+    /// exit code, so a compiler failure cannot be mistaken for success.
+    #[test]
+    fn streamed_cargo_build_reports_child_failure() {
+        let dir = tempfile::tempdir().unwrap();
+        let manifest = dir.path().join("Cargo.toml");
+        fs::write(&manifest, "").unwrap();
+
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c").arg("exit 7");
+
+        let err = run_cargo_build(&mut cmd, &manifest, CargoArtifactKind::Bin).unwrap_err();
+        assert!(
+            err.to_string().contains("exit code: Some(7)"),
+            "unexpected error: {err}"
+        );
     }
 }

@@ -17,8 +17,8 @@
 
 use crate::common::{
     BuildMode, CargoArtifactKind, absolute_dir, apply_clippy_deny_lints, cargo_command_in,
-    manifest_path, print_cargo_command, print_output_and_bail, publish_tempfile,
-    resolve_target_and_cross_compile, unique_cargo_artifact, unique_tempfile_in,
+    manifest_path, print_cargo_command, publish_tempfile, resolve_target_and_cross_compile,
+    run_cargo_build, run_streaming_command, unique_cargo_artifact, unique_tempfile_in,
 };
 use crate::config::CaBuildConfig;
 use crate::elf_uuid;
@@ -91,24 +91,16 @@ pub fn clippy_ca(mut config: CaBuildConfig) -> Result<()> {
 fn run_clippy(config: &CaBuildConfig) -> Result<()> {
     println!("Running cargo fmt and clippy...");
 
-    let fmt_output = cargo_command_in(&config.path)
+    let mut fmt_cmd = cargo_command_in(&config.path);
+    fmt_cmd
         .arg("fmt")
         .arg("--manifest-path")
-        .arg(manifest_path(&config.path))
-        .output()?;
-
-    if !fmt_output.status.success() {
-        print_output_and_bail("cargo fmt", &fmt_output)?;
-    }
+        .arg(manifest_path(&config.path));
+    run_streaming_command(&mut fmt_cmd, "cargo fmt")?;
 
     let mut clippy_cmd = setup_ca_cargo_command(config, "clippy")?;
     apply_clippy_deny_lints(&mut clippy_cmd);
-
-    let clippy_output = clippy_cmd.output()?;
-
-    if !clippy_output.status.success() {
-        print_output_and_bail("clippy", &clippy_output)?;
-    }
+    run_streaming_command(&mut clippy_cmd, "cargo clippy")?;
 
     Ok(())
 }
@@ -150,20 +142,15 @@ fn build_binary(config: &CaBuildConfig) -> Result<PathBuf> {
 
     print_cargo_command(&build_cmd, "Building CA binary");
 
-    let build_output = build_cmd.output()?;
     let kind = if config.plugin {
         CargoArtifactKind::Cdylib
     } else {
         CargoArtifactKind::Bin
     };
     let manifest = manifest_path(&config.path);
+    let artifacts = run_cargo_build(&mut build_cmd, &manifest, kind)?;
 
-    if !build_output.status.success() {
-        let _ = unique_cargo_artifact(&build_output.stdout, &manifest, kind);
-        print_output_and_bail("build", &build_output)?;
-    }
-
-    unique_cargo_artifact(&build_output.stdout, &manifest, kind)
+    unique_cargo_artifact(artifacts, &manifest, kind)
 }
 
 fn post_build(config: &CaBuildConfig, built_path: &Path) -> Result<PathBuf> {
@@ -195,15 +182,12 @@ fn strip_binary(config: &CaBuildConfig, binary_path: &Path) -> Result<PathBuf> {
     let (_, cross_compile) = resolve_target_and_cross_compile(config.arch, BuildMode::Ca)?;
     let objcopy = format!("{}objcopy", cross_compile);
 
-    let strip_output = std::process::Command::new(&objcopy)
+    let mut strip_cmd = std::process::Command::new(&objcopy);
+    strip_cmd
         .arg("--strip-unneeded")
         .arg(binary_path)
-        .arg(binary_path) // Strip in place
-        .output()?;
-
-    if !strip_output.status.success() {
-        print_output_and_bail(&objcopy, &strip_output)?;
-    }
+        .arg(binary_path); // Strip in place
+    run_streaming_command(&mut strip_cmd, &objcopy)?;
 
     Ok(binary_path.to_path_buf())
 }
