@@ -29,4 +29,6 @@ publish = false
 optee-utee.workspace = true
 rustls = { workspace = true, default-features = false, features = ["std"] }
 rustls-rustcrypto = { workspace = true }
-getrandom = { workspace = true }
+# rustls-rustcrypto still uses rand_core 0.6/OsRng, which is backed by
+# getrandom 0.2.
+getrandom = { version = "0.2.17", default-features = false }
