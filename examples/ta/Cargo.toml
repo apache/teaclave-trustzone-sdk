@@ -62,18 +62,18 @@ optee-utee-build = { path = "../../crates/optee-utee-build" }
 rustls_provider = { path = "../../crates/rustls_provider" }
 secure_db = { path = "../../crates/secure_db" }
 common = { path = "mnist-rs/common" }
-bytemuck = { version = "1.25.1", features = ["min_const_generics"] }
+bytemuck = { version = "1.25.2", features = ["min_const_generics"] }
 burn = { version = "0.17", default-features = false, features = ["ndarray", "autodiff"] }
-spin = "0.9.8"
-serde = { version = "1.0.228", default-features = false }
-serde_json = { version = "1.0.150", default-features = false }
+spin = "0.12.3"
+serde = { version = "1.0.229", default-features = false }
+serde_json = { version = "1.0.154", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 cfg_block = "0.2.0"
-rustls = { version = "0.23.41", default-features = false }
-webpki-roots = "1.0.4"
-anyhow = "1.0.103"
+rustls = { version = "0.23.46", default-features = false }
+webpki-roots = "1.0.11"
+anyhow = "1.0.104"
 getrandom = { version = "0.2.17", default-features = false }
-lazy_static = "1.5.0"
+lazy_static = "1.5.1"
 num_enum = { version = "0.7.6", default-features = false }
 [profile.release]
 panic = "abort"
