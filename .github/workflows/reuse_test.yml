@@ -39,6 +39,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+      - name: Cache Cargo downloads
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/index
+          key: cargo-v1-build-utee-teec-${{ hashFiles('rust-toolchain.toml') }}
+          restore-keys: |
+            cargo-v1-build-utee-teec-
       - name: Building
         run: |
           # Setup Rust and toolchains

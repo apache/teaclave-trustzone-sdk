@@ -50,6 +50,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      - name: Cache Cargo downloads
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/index
+          key: cargo-v1-systest-${{ hashFiles('rust-toolchain.toml') }}
+          restore-keys: |
+            cargo-v1-systest-
+
       - name: Prepare Environment
         run: |
           # Setup Rust and toolchains
@@ -97,6 +107,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+      - name: Cache Cargo downloads
+        uses: actions/cache@v6
+        with:
+          path: |
+            /opt/teaclave/cargo/registry/cache
+            /opt/teaclave/cargo/registry/index
+          key: cargo-v1-dev-docker-${{ matrix.std }}-${{ hashFiles('rust-toolchain.toml') }}
+          restore-keys: |
+            cargo-v1-dev-docker-${{ matrix.std }}-
       - name: Setup environment
         run: /entrypoint.sh true
       - name: Build examples
