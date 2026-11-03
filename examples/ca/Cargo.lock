@@ -6,7 +6,6 @@ version = 4
 name = "acipher-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -21,7 +20,6 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 name = "aes-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -153,7 +151,6 @@ dependencies = [
 name = "authentication-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -217,7 +214,6 @@ checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 name = "big_int-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -359,7 +355,6 @@ dependencies = [
  "optee-teec",
  "proto",
  "r2d2",
- "strum",
  "tokio",
 ]
 
@@ -428,7 +423,6 @@ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 name = "diffie_hellman-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -437,7 +431,6 @@ dependencies = [
 name = "digest-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -492,7 +485,6 @@ dependencies = [
 name = "error_handling-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -680,7 +672,6 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 name = "hello_world-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -695,7 +686,6 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 name = "hotp-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -870,7 +860,6 @@ checksum = "6e44b0a4eaa4c82f441d50a963f2d5f05a787240aeee097597033e72accfd22f"
 name = "inter_ta-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -915,17 +904,6 @@ checksum = "1c00acbd29eabad4a2392fa0e921c874934dbbf4194312ad20f04a0ed67a3cb3"
 dependencies = [
  "getrandom 0.4.3",
  "libc",
-]
-
-[[package]]
-name = "js-sys"
-version = "0.3.107"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8dc09d2154098bbf4ef54eab6b117a3c24cbbffe94046b16ee6d6d4510584d3a"
-dependencies = [
- "cfg-if",
- "futures-util",
- "wasm-bindgen",
 ]
 
 [[package]]
@@ -1418,7 +1396,6 @@ dependencies = [
 name = "property-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -1557,7 +1534,6 @@ checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 name = "random-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -1771,7 +1747,6 @@ dependencies = [
 name = "secure_storage-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -1847,7 +1822,6 @@ checksum = "f8fadd59c855ef2080decdef8ff161eb6661b86933c9d82e5ba29dc602a55aba"
 name = "signature_verification-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -1892,27 +1866,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
-name = "strum"
-version = "0.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9628de9b8791db39ceda2b119bbe13134770b56c138ec1d3af810d045c04f9bd"
-dependencies = [
- "strum_macros",
-]
-
-[[package]]
-name = "strum_macros"
-version = "0.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab85eea0270ee17587ed4156089e10b9e6880ee688791d45a905f5b1ca36f664"
-dependencies = [
- "heck",
- "proc-macro2",
- "quote",
- "syn 2.0.119",
-]
-
-[[package]]
 name = "subtle"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1922,7 +1875,6 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 name = "supp_plugin-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -1965,18 +1917,15 @@ name = "syslog_plugin"
 version = "0.4.0"
 dependencies = [
  "anyhow",
- "libc",
  "optee-teec",
  "optee-teec-build",
  "proto",
- "uuid",
 ]
 
 [[package]]
 name = "tcp_client-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
  "tiny_http",
@@ -2049,7 +1998,6 @@ dependencies = [
 name = "time-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -2080,7 +2028,6 @@ dependencies = [
 name = "tls_client-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -2089,7 +2036,6 @@ dependencies = [
 name = "tls_server-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -2164,7 +2110,6 @@ dependencies = [
 name = "udp_socket-rs"
 version = "0.4.0"
 dependencies = [
- "libc",
  "optee-teec",
  "proto",
 ]
@@ -2254,10 +2199,6 @@ name = "uuid"
 version = "1.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a0e2d11620c50695fe12bbbfde96b3477fe606e7284c22d505c12ce51214514"
-dependencies = [
- "js-sys",
- "wasm-bindgen",
-]
 
 [[package]]
 name = "v_frame"

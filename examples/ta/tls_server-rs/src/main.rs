@@ -18,14 +18,13 @@
 #![no_main]
 
 use anyhow::Context;
-use lazy_static::lazy_static;
 use optee_utee::prelude::*;
 use optee_utee::{ErrorKind, Result};
 use proto::tls_server::Command;
 use rustls::pki_types::{pem::PemObject, CertificateDer, PrivateKeyDer};
 use std::collections::HashMap;
 use std::io::{Cursor, Read, Write};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, LazyLock, Mutex, RwLock};
 
 // Register the custom getrandom implementation.
 //
@@ -37,10 +36,8 @@ use std::sync::{Arc, Mutex, RwLock};
 // `rustls_provider` crate and registered here.
 getrandom::register_custom_getrandom!(rustls_provider::optee_getrandom);
 
-lazy_static! {
-    static ref TLS_SESSIONS: RwLock<HashMap<u32, Mutex<rustls::ServerConnection>>> =
-        RwLock::new(HashMap::new());
-}
+static TLS_SESSIONS: LazyLock<RwLock<HashMap<u32, Mutex<rustls::ServerConnection>>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
 
 #[ta_create]
 fn create() -> Result<()> {

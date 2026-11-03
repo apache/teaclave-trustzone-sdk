@@ -25,13 +25,11 @@ description = "An example of Rust OP-TEE TrustZone SDK."
 edition = "2018"
 
 [dependencies]
-libc = { workspace = true }
 proto = { workspace = true }
 optee-teec = { workspace = true, features = ["macros"] }
 
 [build-dependencies]
 optee-teec-build = { workspace = true }
-uuid = { workspace = true }
 proto = { workspace = true }
 anyhow = { workspace = true }
 

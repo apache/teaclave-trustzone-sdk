@@ -20,7 +20,6 @@ use num_enum::{FromPrimitive, IntoPrimitive};
 mod in_out;
 pub use in_out::*;
 
-
 #[derive(FromPrimitive, IntoPrimitive, Debug)]
 #[repr(u32)]
 pub enum Command {

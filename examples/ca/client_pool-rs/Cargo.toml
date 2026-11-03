@@ -33,4 +33,3 @@ anyhow = { workspace = true }
 hex = { workspace = true }
 mobc = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "sync"] }
-strum = { workspace = true, features = ["derive"] }

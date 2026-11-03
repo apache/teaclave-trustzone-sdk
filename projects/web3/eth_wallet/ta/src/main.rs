@@ -25,7 +25,7 @@ use optee_utee::{Error, ErrorKind};
 use proto::Command;
 use secure_db::SecureStorageClient;
 
-use anyhow::{Result, anyhow, bail};
+use anyhow::{anyhow, bail, Result};
 use wallet::Wallet;
 
 const DB_NAME: &str = "eth_wallet_db";

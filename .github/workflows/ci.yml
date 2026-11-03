@@ -115,6 +115,23 @@ jobs:
           fi
 
 
+  unused-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Install cargo-machete
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-machete@0.9.2
+      - name: Check for unused dependencies
+        run: |
+          for dir in crates examples/ta examples/ca tools projects/web3/eth_wallet; do
+            echo "::group::cargo machete ($dir)"
+            (cd "$dir" && cargo machete)
+            echo "::endgroup::"
+          done
+
   license:
     runs-on: ubuntu-latest
     steps:

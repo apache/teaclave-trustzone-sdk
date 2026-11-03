@@ -30,7 +30,6 @@ common = { workspace = true }
 proto = { workspace = true }
 optee-utee = { workspace = true }
 burn = { workspace = true }
-serde_json = { workspace = true }
 bytemuck = { workspace = true }
 spin = { workspace = true }
 

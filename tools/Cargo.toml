@@ -30,5 +30,4 @@ description = "TEE internal core API."
 edition = "2024"
 
 [workspace.dependencies]
-serde = { version = "1.0.228" }
 serde_json = { version = "1.0.149" }

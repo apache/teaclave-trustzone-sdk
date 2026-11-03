@@ -34,7 +34,6 @@ optee-utee = { workspace = true, features = ["std"] }
 
 rustls_provider = { workspace = true }
 rustls = { workspace = true, default-features = false, features = ["std"] }
-lazy_static = { workspace = true, features=["spin_no_std"] }
 anyhow = { workspace = true }
 
 # Add getrandom and enable its custom feature, see more details in main.rs
