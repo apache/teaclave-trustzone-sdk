@@ -29,15 +29,12 @@ default = []
 std = []
 
 [dependencies]
-libc = { path = "../../../../rust/libc" }
 proto = { path = "../proto" }
-optee-utee-sys = { path = "../../../../crates/optee-utee-sys", features = ["std"] }
 optee-utee = { path = "../../../../crates/optee-utee", features = ["std"] }
 secure_db = { path = "../../../../crates/secure_db" }
 
 anyhow = "1.0"
 bip32 = { version = "0.3.0", features = ["bip39"]}
-hex = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 sha3 = "0.10.6"
 secp256k1 = "0.27.0"

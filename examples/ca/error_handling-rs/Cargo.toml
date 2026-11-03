@@ -25,6 +25,5 @@ description = "A test of Teaclave SDK's error handling  capabilities"
 edition = "2018"
 
 [dependencies]
-libc = { workspace = true }
 proto = { workspace = true }
 optee-teec = { workspace = true }

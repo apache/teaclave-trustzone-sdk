@@ -133,7 +133,7 @@ version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59ed5838eebb26a2bb2e58f6d5b5316989ae9d08bab10e0e6d103e656d1b0280"
 dependencies = [
- "libc 0.2.186",
+ "libc",
 ]
 
 [[package]]
@@ -354,9 +354,6 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "hmac"
@@ -408,10 +405,6 @@ name = "libc"
 version = "0.2.186"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68ab91017fe16c622486840e4c83c9a37afeff978bd239b5293d61ece587de66"
-
-[[package]]
-name = "libc"
-version = "0.2.189"
 
 [[package]]
 name = "libc_alloc"
@@ -795,11 +788,8 @@ dependencies = [
  "bincode",
  "bip32",
  "ethereum-tx-sign",
- "hex",
- "libc 0.2.189",
  "optee-utee",
  "optee-utee-build",
- "optee-utee-sys",
  "proto",
  "secp256k1",
  "secure_db",

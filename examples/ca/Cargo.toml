@@ -23,14 +23,12 @@ members = ["*-rs", "*-rs-plugin"]
 proto = { path = "../ta/proto" }
 optee-teec = { path = "../../crates/optee-teec" }
 optee-teec-build = { path = "../../crates/optee-teec-build" }
-libc = "0.2.191"
 r2d2 = "0.8.10"
 clap = "4.6.7"
 anyhow = "1.0.104"
 hex = "0.4.3"
 mobc = "0.9.0"
 tokio = "1.54.1"
-strum = "0.28.0"
 url = "2.5.8"
 serde_json = "1.0.154"
 rand = "0.10.3"
@@ -40,7 +38,6 @@ image = "0.25.10"
 tiny_http = "0.12.0"
 ureq = "3.5.0"
 flate2 = "1.1.10"
-uuid = "1.29.0"
 
 [profile.release]
 lto = true
