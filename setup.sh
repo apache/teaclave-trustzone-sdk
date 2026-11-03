@@ -26,15 +26,16 @@ cd "$(dirname "$0")"
 ##########################################
 export CARGO_NET_GIT_FETCH_WITH_CLI=true
 
-# install rustup and stable Rust if needed
+# install rustup if needed
 if command -v rustup &>/dev/null ; then
-    # 1. rustup early than 1.28 fails with `rustup toolchain install` 
-    #    due to parameter mismatch. So self update first.
-    # 2. uninstall to avoid file corruption
-    rustup self update && rustup uninstall stable && rustup install stable
+    # rustup early than 1.28 fails with `rustup toolchain install`
+    # due to parameter mismatch. So self update first.
+    rustup self update
 else
-	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-	source "$HOME/.cargo/env"
+    # Do not install the default stable toolchain. The pinned toolchain
+    # is installed from rust-toolchain.toml below.
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+    source "$HOME/.cargo/env"
 fi
 
 # install the Rust toolchain set in rust-toolchain.toml
