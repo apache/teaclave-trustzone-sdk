@@ -91,7 +91,7 @@ fn generate_cfg(ta_include_path: PathBuf) -> ctest::TestGenerator {
             let s = s.ident();
             let field = field.ident();
             (s == "ta_head" && field == "entry") 
-                || (s == "TEE_OperationInfoMultiple" && field == "keyInformation") // va_list
+                || (s == "TEE_OperationInfoMultiple" && field == "keyInformation") // flexible array member
                 || (s == "TEE_Attribute" && field == "content") // anonymous union fields
         })
         .skip_fn(|s| {
