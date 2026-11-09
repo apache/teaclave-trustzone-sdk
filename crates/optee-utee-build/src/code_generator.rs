@@ -74,6 +74,10 @@ impl HeaderFileGenerator {
 
     fn write_trace(&mut self, conf: &TaConfig) {
         let trace_ext = string_to_binary_codes(&conf.trace_ext_prefix);
+        // C declares this symbol as `extern const char trace_ext_prefix[]`, so
+        // the generated static must be an array. Its length includes the
+        // terminating NUL that `string_to_binary_codes` appends.
+        let trace_ext_len = conf.trace_ext_prefix.len() + 1;
         let trace_level = conf.trace_level;
         let no_mangle_attribute = no_mangle_attribute_codes();
         self.code.extend(quote! {
@@ -81,7 +85,10 @@ impl HeaderFileGenerator {
         pub static mut trace_level: c_int = #trace_level;
 
         #no_mangle_attribute
-        pub static trace_ext_prefix: &[u8] = #trace_ext;
+        // Dereference the byte string to copy its bytes into an array.
+        // Exporting a `&[u8]` static would make `#[unsafe(no_mangle)]` export
+        // a fat pointer (data pointer plus length) instead of the C string.
+        pub static trace_ext_prefix: [u8; #trace_ext_len] = *#trace_ext;
 
         /// # Safety
         /// This function is called by the OP-TEE framework to get the trace level.

@@ -26,7 +26,7 @@ const TA_DESCRIPTION: &[u8] = b"test\0";
 #[unsafe(no_mangle)]
 pub static mut trace_level: c_int = 4i32;
 #[unsafe(no_mangle)]
-pub static trace_ext_prefix: &[u8] = b"TA\0";
+pub static trace_ext_prefix: [u8; 3usize] = *b"TA\0";
 /// # Safety
 /// This function is called by the OP-TEE framework to get the trace level.
 /// It's safe to call as it only reads a static variable.

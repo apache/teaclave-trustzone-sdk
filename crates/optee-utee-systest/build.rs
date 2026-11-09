@@ -125,7 +125,7 @@ fn build_and_link_undefined(ta_include_path: PathBuf) {
         void* ta_props = 0;
         void* ta_num_props = 0;
         void* trace_level = 0;
-        void* trace_ext_prefix = 0;
+        const char trace_ext_prefix[] = \"TA\";
         void* ta_head = 0;
         void* ta_heap = 0;
         size_t ta_heap_size = 0;
