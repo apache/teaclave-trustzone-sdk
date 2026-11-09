@@ -127,7 +127,7 @@ fn build_and_link_undefined(ta_include_path: PathBuf) {
         void* trace_level = 0;
         const char trace_ext_prefix[] = \"TA\";
         void* ta_head = 0;
-        void* ta_heap = 0;
+        uint8_t ta_heap[1] = {{ 0 }};
         size_t ta_heap_size = 0;
         void TA_DestroyEntryPoint(void) {{}};
         TEE_Result tee_uuid_from_str(TEE_UUID __unused *uuid, const char __unused *s) {{

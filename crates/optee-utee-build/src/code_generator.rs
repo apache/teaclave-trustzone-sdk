@@ -230,7 +230,10 @@ impl HeaderFileGenerator {
         self.code.extend(quote! {
         #no_mangle_attribute
         #bss_session_attribute
-        pub static ta_heap: [u8; TA_DATA_SIZE as usize] = [0; TA_DATA_SIZE as usize];
+        // OP-TEE hands this buffer to its allocator, which writes to it. The
+        // generated TA code never touches it directly, but `static mut`
+        // records that the memory is mutated outside Rust.
+        pub static mut ta_heap: [u8; TA_DATA_SIZE as usize] = [0; TA_DATA_SIZE as usize];
 
         #no_mangle_attribute
         pub static ta_heap_size: usize = mem::size_of::<u8>() * TA_DATA_SIZE as usize;
