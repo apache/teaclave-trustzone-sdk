@@ -160,11 +160,17 @@ pub struct TEE_OperationInfo {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TEE_OperationInfoKey {
     pub keySize: u32,
     pub requiredKeyUsage: u32,
 }
 
+/// Fixed header of a C flexible-array object.
+///
+/// This type is deliberately not `Copy` or `Clone`: a copy would duplicate
+/// only this header, not the `numberOfKeys` key entries that follow it in
+/// the same allocation.
 #[repr(C)]
 pub struct TEE_OperationInfoMultiple {
     pub algorithm: u32,
@@ -175,7 +181,11 @@ pub struct TEE_OperationInfoMultiple {
     pub handleState: u32,
     pub operationState: u32,
     pub numberOfKeys: u32,
-    pub keyInformation: *mut TEE_OperationInfoKey,
+    /// C flexible array member: the fixed part ends here and
+    /// `numberOfKeys` entries of [`TEE_OperationInfoKey`] follow the
+    /// struct in the same allocation. A zero-length array gives the
+    /// field the right offset without adding to `size_of`.
+    pub keyInformation: [TEE_OperationInfoKey; 0],
 }
 
 // Time & Date API
