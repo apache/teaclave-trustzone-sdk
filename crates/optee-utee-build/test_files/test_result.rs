@@ -114,6 +114,6 @@ pub static ta_head: optee_utee::raw::ta_head = optee_utee::raw::ta_head {
 };
 #[unsafe(no_mangle)]
 #[unsafe(link_section = ".bss")]
-pub static ta_heap: [u8; TA_DATA_SIZE as usize] = [0; TA_DATA_SIZE as usize];
+pub static mut ta_heap: [u8; TA_DATA_SIZE as usize] = [0; TA_DATA_SIZE as usize];
 #[unsafe(no_mangle)]
 pub static ta_heap_size: usize = mem::size_of::<u8>() * TA_DATA_SIZE as usize;
