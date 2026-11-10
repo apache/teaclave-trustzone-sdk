@@ -27,6 +27,7 @@ edition.workspace = true
 [dependencies]
 optee-utee-sys.workspace = true
 optee-utee-macros.workspace = true
+aligned-vec.workspace = true
 bitflags.workspace = true
 uuid.workspace = true
 hex.workspace = true

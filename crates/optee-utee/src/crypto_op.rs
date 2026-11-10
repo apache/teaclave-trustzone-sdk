@@ -15,12 +15,13 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use aligned_vec::{AVec, ConstAlign};
 use alloc::{boxed::Box, vec::Vec};
 use core::{mem, ptr};
 
 use optee_utee_sys as raw;
 
-use crate::{Attribute, GenericObject, Result, TransientObject, tee_check};
+use crate::{Attribute, ErrorKind, GenericObject, Result, TransientObject, tee_check};
 
 /// Specify one of the available cryptographic operations.
 #[repr(u32)]
@@ -115,47 +116,100 @@ pub enum OperationConstant {
     KeyDerivation = 8,
 }
 
-/// Represent the information about a crypto information which uses multiple keys.
+const HEADER_SIZE: usize = mem::size_of::<raw::TEE_OperationInfoMultiple>();
+const KEY_SIZE: usize = mem::size_of::<raw::TEE_OperationInfoKey>();
+const HEADER_ALIGN: usize = mem::align_of::<raw::TEE_OperationInfoMultiple>();
+
+/// The characteristics of a cryptographic operation that may use multiple keys.
+///
+/// This type owns its C-layout buffer.
+///
+/// # Migration
+///
+/// - `info_multiple(&mut [u8])` keeps its signature and now returns an owned
+///   value.
+/// - `from_raw(ptr, size)` is now [`from_buffer`](Self::from_buffer); convert
+///   the C pointer to a byte slice first.
+/// - `raw()` now returns a header reference.
+/// - `size()` can be derived from `raw().numberOfKeys` and the C layout sizes.
 pub struct OperationInfoMultiple {
-    raw: *mut raw::TEE_OperationInfoMultiple,
-    size: usize,
+    storage: AVec<u8, ConstAlign<HEADER_ALIGN>>,
 }
 
 impl OperationInfoMultiple {
-    /// Return the `OperationInfoMultiple` struct based on the raw struct `TEE_OperationInfo`.
+    /// Copy the operation information out of an already filled buffer.
     ///
-    /// The raw structure contains following fields:
+    /// The first bytes are interpreted as a `TEE_OperationInfoMultiple`
+    /// header and the bytes after it as `numberOfKeys` key entries. The buffer
+    /// must be at least `size_of::<TEE_OperationInfoMultiple>()` bytes and
+    /// aligned to `align_of::<TEE_OperationInfoMultiple>()` (currently 32 and
+    /// 4 bytes).
     ///
-    /// 1) `algorithm`: One of the algorithm of [AlgorithmId](AlgorithmId).
-    /// 2) `mode`: One of the mode of [OperationMode](OperationMode).
-    /// 3) `maxKeySize`: The maximum key sizes of different algorithms as defined in
-    ///    [TransientObjectType](../object/enum.TransientObjectType.html).
-    /// 4) `operationClass`: One of the constants from [OperationConstant](OperationConstant).
-    /// 5) `digestLength`: For a [Mac](Mac), [AE](AE), or [Digest](Digest), describes the number of bytes in the digest or tag.
-    /// 6) `handleState`: A bit vector describing the current state of the operation. Contains one or more of the
-    ///    [HandleFlag](../object/struct.HandleFlag.html).
-    /// 7) `operationState`: Every operation has two states which are defined as
-    ///    [OperationStates](OperationStates).
-    /// 8) `numberOfKeys`: This is set to the number of keys required by this operation. May be 0 for an operation which requires no keys.
-    /// 9) `keyInformation`: This array contains numberOfKeys entries, each of which defines the details for one key used by the operation,
-    ///    in the order they are defined.
-    ///    If the buffer is larger than required to support `numberOfKeys` entries, the additional space is not initialized or modified.
-    ///    For each element:
-    ///    9.1) `keySize`: If a key is programmed in the operation, the actual size of this key, otherwise 0.
-    ///    9.2) `requiredKeyUsage`: A bit vector that describes the necessary bits in the object usage for `set_key` or `set_key_2` to succeed without panicking.
-    pub fn from_raw(raw: *mut raw::TEE_OperationInfoMultiple, size: usize) -> Self {
-        Self { raw, size }
+    /// # Errors
+    ///
+    /// 1) `BadParameters`: If the buffer is too small, misaligned, or reports
+    ///    a `numberOfKeys` that does not fit in the buffer.
+    /// 2) `OutOfMemory`: If the owned buffer cannot be allocated.
+    pub fn from_buffer(info_buf: &[u8]) -> Result<Self> {
+        check_info_multiple_buffer(info_buf)?;
+
+        // SAFETY: the buffer is aligned and large enough for the header.
+        let header = unsafe { &*info_buf.as_ptr().cast::<raw::TEE_OperationInfoMultiple>() };
+        let size = checked_encoded_size(header.numberOfKeys as usize)
+            .filter(|&size| size <= info_buf.len())
+            .ok_or(ErrorKind::BadParameters)?;
+
+        let mut storage = allocate_storage(size)?;
+        storage.as_mut_slice().copy_from_slice(&info_buf[..size]);
+        Ok(Self { storage })
     }
 
-    /// Return the raw struct `TEE_OperationInfoMultiple`.
-    pub fn raw(&self) -> *mut raw::TEE_OperationInfoMultiple {
-        self.raw
+    /// Return the raw header.
+    ///
+    /// The C flexible array member is not part of this reference; use
+    /// [`keys`](Self::keys) to access it.
+    pub fn raw(&self) -> &raw::TEE_OperationInfoMultiple {
+        // SAFETY: storage is aligned and contains a valid header.
+        unsafe { &*self.storage.as_ptr().cast() }
     }
 
-    /// Return the `size` field of the raw structure `TEE_OperationInfoMultiple`.
-    pub fn size(&self) -> usize {
-        self.size
+    /// Return the key information.
+    pub fn keys(&self) -> &[raw::TEE_OperationInfoKey] {
+        let number_of_keys = self.raw().numberOfKeys as usize;
+
+        // SAFETY: constructors validate `numberOfKeys` against capacity.
+        // The pointer is derived from the whole buffer, so its provenance
+        // covers the trailing keys.
+        unsafe {
+            core::slice::from_raw_parts(
+                self.storage
+                    .as_ptr()
+                    .add(HEADER_SIZE)
+                    .cast::<raw::TEE_OperationInfoKey>(),
+                number_of_keys,
+            )
+        }
     }
+}
+
+fn checked_encoded_size(number_of_keys: usize) -> Option<usize> {
+    HEADER_SIZE.checked_add(number_of_keys.checked_mul(KEY_SIZE)?)
+}
+
+fn allocate_storage(size: usize) -> Result<AVec<u8, ConstAlign<HEADER_ALIGN>>> {
+    let mut storage = AVec::<u8, ConstAlign<HEADER_ALIGN>>::new(HEADER_ALIGN);
+    storage
+        .try_reserve_exact(size)
+        .map_err(|_| ErrorKind::OutOfMemory)?;
+    storage.resize(size, 0);
+    Ok(storage)
+}
+
+fn check_info_multiple_buffer(info_buf: &[u8]) -> Result<()> {
+    if info_buf.len() < HEADER_SIZE || !(info_buf.as_ptr() as usize).is_multiple_of(HEADER_ALIGN) {
+        return Err(ErrorKind::BadParameters.into());
+    }
+    Ok(())
 }
 
 /// An opaque reference that identifies a particular cryptographic operation.
@@ -196,14 +250,18 @@ impl OperationHandle {
     }
 
     fn info_multiple(&self, info_buf: &mut [u8]) -> Result<OperationInfoMultiple> {
-        let mut tmp_size: usize = 0;
+        check_info_multiple_buffer(info_buf)?;
+
+        let mut size = info_buf.len();
         tee_check(unsafe {
-            raw::TEE_GetOperationInfoMultiple(self.handle(), info_buf.as_ptr() as _, &mut tmp_size)
+            raw::TEE_GetOperationInfoMultiple(
+                self.handle(),
+                info_buf.as_mut_ptr().cast(),
+                &mut size,
+            )
         })?;
-        Ok(OperationInfoMultiple::from_raw(
-            info_buf.as_ptr() as _,
-            tmp_size,
-        ))
+
+        OperationInfoMultiple::from_buffer(info_buf)
     }
 
     fn reset(&mut self) {
@@ -413,47 +471,39 @@ impl Digest {
         self.0.info()
     }
 
-    /// Return the characteristics of a Digest operation with multiple keys.
+    /// Return the characteristics of an operation which may use multiple keys.
     ///
-    /// # Parameters
-    ///
-    /// 1) `info_buf`: The buffer is supposed to save multiple keys, and its size should be large enough before passed in.
-    ///    The number of keys about this operation can be calculated as: OperationInfoMultiple::size -
-    ///    size_of([OperationInfoMultiple](OperationInfoMultiple)) / size_of ( raw::TEE_OperationInfoKey)+1.
+    /// `info_buf` must be at least `size_of::<TEE_OperationInfoMultiple>()`
+    /// bytes and aligned to `align_of::<TEE_OperationInfoMultiple>()`. OP-TEE
+    /// currently reports at most two keys, so a 48-byte buffer is sufficient;
+    /// the result is copied into an owned value.
     ///
     /// # Example
     ///
     /// ``` rust,no_run
     /// # use optee_utee::{Digest, AlgorithmId};
     /// # fn main() -> optee_utee::Result<()> {
-    /// match Digest::allocate(AlgorithmId::Md5) {
-    ///     Ok(operation) =>
-    ///     {
-    ///         let mut buffer = [0u8, 12];
-    ///         match operation.info_multiple(&mut buffer) {
-    ///             Ok(info_multiple) => {
-    ///                 // ...
-    ///                 Ok(())
-    ///             }
-    ///             Err(e) => Err(e),
-    ///         }
-    ///     }
-    ///     Err(e) => Err(e),
-    /// }
+    /// #[repr(align(4))]
+    /// struct AlignedBuffer([u8; 48]);
+    ///
+    /// let operation = Digest::allocate(AlgorithmId::Md5)?;
+    /// let mut buffer = AlignedBuffer([0; 48]);
+    /// let info = operation.info_multiple(&mut buffer.0)?;
+    /// # let _ = info;
+    /// # Ok(())
     /// # }
     /// ```
     ///
-    /// # Errors:
+    /// # Errors
     ///
-    /// 1) `ShortBuffer`: If the `info_buf` is not large enough to hold an
-    ///    [OperationInfoMultiple](OperationInfoMultiple) and the corresponding keys.
+    /// 1) `BadParameters`: If `info_buf` is too small or not 4-byte aligned.
+    /// 2) `ShortBuffer`: If `info_buf` cannot hold the reported keys.
+    /// 3) `OutOfMemory`: If the owned copy cannot be allocated.
     ///
-    /// # Panics:
+    /// # Panics
     ///
     /// 1) If operation is not a valid opened object.
     /// 2) If the Implementation detects any other error.
-    // Here the multiple info total size is not sure
-    // Passed in array is supposed to provide enough size for this struct
     pub fn info_multiple(&self, info_buf: &mut [u8]) -> Result<OperationInfoMultiple> {
         self.0.info_multiple(info_buf)
     }
@@ -1840,8 +1890,11 @@ pub enum ElementId {
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
+
     use super::*;
     use crate::{AttributeId, TransientObjectType};
+    use optee_utee_sys::{mock_api, mock_utils::SERIAL_TEST_LOCK};
 
     #[test]
     // Guarantee: every high-level PBKDF2 `AlgorithmId` variant maps 1:1
@@ -1907,5 +1960,142 @@ mod tests {
         for (attr, expected) in attr_cases {
             assert_eq!(attr as u32, expected, "ID mismatch for {attr}");
         }
+    }
+
+    const TEST_BUFFER_SIZE: usize = HEADER_SIZE + 2 * KEY_SIZE;
+
+    #[repr(align(4))]
+    struct AlignedBuffer([u8; TEST_BUFFER_SIZE]);
+
+    impl AlignedBuffer {
+        fn with_keys(number_of_keys: u32) -> Self {
+            let mut buffer = Self([0; TEST_BUFFER_SIZE]);
+            let base = buffer.0.as_mut_ptr();
+
+            // SAFETY: the buffer is 4-byte aligned and large enough for the
+            // header plus two keys.
+            unsafe {
+                let header = base.cast::<raw::TEE_OperationInfoMultiple>();
+                (*header).numberOfKeys = number_of_keys;
+
+                let keys = base
+                    .add(mem::size_of::<raw::TEE_OperationInfoMultiple>())
+                    .cast::<raw::TEE_OperationInfoKey>();
+                for index in 0..number_of_keys as usize {
+                    (*keys.add(index)).keySize = index as u32 + 1;
+                }
+            }
+            buffer
+        }
+    }
+
+    #[test]
+    // Guarantee: from_buffer exposes exactly `numberOfKeys` entries and the
+    // buffer-size helper matches the C layout.
+    fn operation_info_multiple_from_buffer() {
+        for number_of_keys in 0..=2_u32 {
+            let storage = AlignedBuffer::with_keys(number_of_keys);
+            let info = OperationInfoMultiple::from_buffer(&storage.0).unwrap();
+
+            assert_eq!(info.raw().numberOfKeys, number_of_keys);
+            assert_eq!(info.keys().len(), number_of_keys as usize);
+            for (index, key) in info.keys().iter().enumerate() {
+                assert_eq!(key.keySize, index as u32 + 1);
+            }
+        }
+    }
+
+    #[test]
+    // Guarantee: a buffer that is short, misaligned, or too small for the
+    // reported keys is rejected.
+    fn operation_info_multiple_rejects_bad_input() {
+        let storage = AlignedBuffer::with_keys(0);
+
+        let Err(short) = OperationInfoMultiple::from_buffer(&storage.0[..HEADER_SIZE - 1]) else {
+            panic!("a buffer shorter than the header must be rejected");
+        };
+        assert_eq!(short.kind(), ErrorKind::BadParameters);
+
+        let Err(unaligned) = OperationInfoMultiple::from_buffer(&storage.0[1..]) else {
+            panic!("an unaligned buffer must be rejected");
+        };
+        assert_eq!(unaligned.kind(), ErrorKind::BadParameters);
+
+        let storage = AlignedBuffer::with_keys(2);
+        let Err(too_small) =
+            OperationInfoMultiple::from_buffer(&storage.0[..HEADER_SIZE + KEY_SIZE])
+        else {
+            panic!("keys beyond the buffer capacity must be rejected");
+        };
+        assert_eq!(too_small.kind(), ErrorKind::BadParameters);
+    }
+
+    fn fake_operation() -> OperationHandle {
+        let handle = core::ptr::NonNull::<raw::__TEE_OperationHandle>::dangling().as_ptr();
+        OperationHandle::from_raw(Box::into_raw(Box::new(handle)))
+    }
+
+    fn expect_free_operation() -> impl Sized {
+        let free = mock_api::TEE_FreeOperation_context();
+        free.expect().times(1).returning(|_| {});
+        free
+    }
+
+    unsafe fn write_header(info: *mut raw::TEE_OperationInfoMultiple, number_of_keys: u32) {
+        unsafe { (*info).numberOfKeys = number_of_keys };
+    }
+
+    unsafe fn write_keys(info: *mut raw::TEE_OperationInfoMultiple, number_of_keys: u32) {
+        let keys = unsafe {
+            info.cast::<u8>()
+                .add(HEADER_SIZE)
+                .cast::<raw::TEE_OperationInfoKey>()
+        };
+        for index in 0..number_of_keys as usize {
+            unsafe { (*keys.add(index)).keySize = index as u32 + 1 };
+        }
+    }
+
+    #[test]
+    // Guarantee: info_multiple propagates SHORT_BUFFER without retrying.
+    fn info_multiple_propagates_short_buffer() {
+        let _lock = SERIAL_TEST_LOCK.lock().expect("should get the lock");
+        let _free = expect_free_operation();
+
+        let get = mock_api::TEE_GetOperationInfoMultiple_context();
+        get.expect()
+            .times(1)
+            .return_const(raw::TEE_ERROR_SHORT_BUFFER);
+
+        let operation = fake_operation();
+        let mut buffer = AlignedBuffer::with_keys(0);
+        let Err(error) = operation.info_multiple(&mut buffer.0) else {
+            panic!("SHORT_BUFFER must be propagated");
+        };
+        assert_eq!(error.kind(), ErrorKind::ShortBuffer);
+    }
+
+    #[test]
+    // Guarantee: info_multiple returns the header and keys reported by OP-TEE.
+    fn info_multiple_success() {
+        let _lock = SERIAL_TEST_LOCK.lock().expect("should get the lock");
+        let _free = expect_free_operation();
+
+        let get = mock_api::TEE_GetOperationInfoMultiple_context();
+        get.expect().times(1).returning(|_op, info, size| {
+            unsafe {
+                write_header(info, 2);
+                write_keys(info, 2);
+                *size = HEADER_SIZE + 2 * KEY_SIZE;
+            }
+            raw::TEE_SUCCESS
+        });
+
+        let operation = fake_operation();
+        let mut buffer = AlignedBuffer::with_keys(0);
+        let info = operation.info_multiple(&mut buffer.0).unwrap();
+
+        assert_eq!(info.raw().numberOfKeys, 2);
+        assert_eq!(info.keys()[1].keySize, 2);
     }
 }
