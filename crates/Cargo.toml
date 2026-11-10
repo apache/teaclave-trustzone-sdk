@@ -49,6 +49,7 @@ optee-utee = { version = "0.10.0", path = "optee-utee" }
 optee-utee-macros = { version = "0.10.0", path = "optee-utee-macros" }
 optee-utee-sys = { version = "0.10.0", path = "optee-utee-sys" }
 
+aligned-vec = { version = "0.6.4", default-features = false }
 bitflags = "2.13.2"
 num_enum = { version = "0.7.6", default-features = false }
 uuid = { version = "1.29.0", default-features = false }
