@@ -172,8 +172,8 @@ pub fn plugin_invoke(_args: TokenStream, input: TokenStream) -> TokenStream {
             cmd: u32,
             sub_cmd: u32,
             data: *mut core::ffi::c_void,
-            in_len: optee_teec::raw::size_t,
-            out_len: *mut optee_teec::raw::size_t,
+            in_len: usize,
+            out_len: *mut usize,
         ) -> optee_teec::raw::TEEC_Result {
             let mut parameter = match unsafe {
                 optee_teec::PluginParameters::from_raw(

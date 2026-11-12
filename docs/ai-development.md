@@ -46,7 +46,7 @@ Use the repository-pinned toolchain unless a task explicitly requires investigat
 - Do not assume a dependency is always enabled or a feature is enabled only for the crate being edited. Inspect feature definitions and the build paths that activate them.
 - If a feature-specific implementation replaces or excludes a dependency, consider both enabled and disabled configurations relevant to the change.
 - Keep host-side and TEE-side dependencies distinct. A crate that builds on the host may require a different target, toolchain, or environment when built for the TEE.
-- `STD=y` affects environment setup. Set it before sourcing `environment` when configuring standard-library examples; see §8.3.
+- `STD=y` affects environment setup. Set it before sourcing `environment` when configuring standard-library examples; see §8.2.
 - Avoid changing lockfiles or broad dependency constraints unless required by the task.
 - Keep `*-sys` crates as thin mappings of the underlying OP-TEE C interfaces; do not add unrelated high-level abstractions to them.
 
@@ -210,19 +210,7 @@ To run the CI helper script, execute it from the `ci/` directory because it uses
 (cd ci && ./ci.sh)
 ```
 
-### 8.2 System Tests
-
-The `optee-teec-systest` system test is run as a CI job on an ARM64 host using the ARM64 OP-TEE client libraries:
-
-```bash
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$OPTEE_DIR/optee_client/export_arm64/usr/lib"
-cd crates
-cargo run -p optee-teec-systest
-```
-
-The TEEC system test runs on the host.
-
-### 8.3 Examples and QEMU
+### 8.2 Examples and QEMU
 
 Build no-std examples from the repository root:
 
@@ -263,7 +251,7 @@ The repository's QEMU test scripts include `tests/test_*.sh`. Follow their curre
 
 If reproducing the `test-build-on-dev-docker` CI job, inspect its steps in `ci.yml`, including configuration switching and the `$RUST_STD_DIR` symlink setup.
 
-### 8.4 Tools
+### 8.3 Tools
 
 Run the `cargo-optee` tests from `tools/`:
 

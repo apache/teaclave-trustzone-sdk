@@ -22,7 +22,7 @@ when checking or changing crate ownership.
 > folded into the `mock` feature of [`optee-utee-sys`], which [`optee-utee`]
 > enables for host-side unit tests.
 
-`optee-teec-systest`, `rustls_provider`, and `secure_db` are not published
+`rustls_provider` and `secure_db` are not published
 (`publish = false`); the `cargo-optee` tool is not published either.
 
 ## Maintainers & crates.io owners
