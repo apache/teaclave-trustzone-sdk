@@ -82,7 +82,7 @@ impl Parameters {
 /// [`super::value::ParameterValueWrite`] (for `set_a/set_b`) on the typed
 /// wrappers ([`super::value::ParameterValueInput`], etc.) instead.
 pub struct ParamValue<'parameter> {
-    raw: *mut raw::Value,
+    raw: *mut raw::TEE_Param__bindgen_ty_2,
     param_type: ParamType,
     _marker: marker::PhantomData<&'parameter mut u32>,
 }
@@ -121,7 +121,7 @@ impl<'parameter> ParamValue<'parameter> {
 /// and [`super::memref::ParameterMemrefWrite`] (for `set_updated_size`,
 /// `set_output`, `write_at`) on the typed wrappers instead.
 pub struct ParamMemref<'parameter> {
-    raw: *mut raw::Memref,
+    raw: *mut raw::TEE_Param__bindgen_ty_1,
     param_type: ParamType,
     _marker: marker::PhantomData<&'parameter mut [u8]>,
 }
@@ -135,7 +135,7 @@ impl<'parameter> ParamMemref<'parameter> {
         self.param_type
     }
 
-    pub fn raw(&mut self) -> *mut raw::Memref {
+    pub fn raw(&mut self) -> *mut raw::TEE_Param__bindgen_ty_1 {
         self.raw
     }
 

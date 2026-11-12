@@ -43,7 +43,8 @@ impl SocketError {
             raw::TEE_ERROR_CANCEL
             | raw::TEE_ERROR_COMMUNICATION
             | raw::TEE_ERROR_OUT_OF_MEMORY
-            | raw::TEE_ERROR_BAD_PARAMETERS => Self::Tee(crate::Error::from_raw_error(code).kind()),
+            | raw::TEE_ERROR_BAD_PARAMETERS
+            | raw::TEE_ERROR_NOT_SUPPORTED => Self::Tee(crate::Error::from_raw_error(code).kind()),
             _ => Self::Unknown(code),
         }
     }

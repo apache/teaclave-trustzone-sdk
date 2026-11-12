@@ -115,37 +115,37 @@ impl<'a> Param<'a> {
     fn as_raw(&mut self) -> raw::TEE_Param {
         match &mut self.content {
             ParamContent::None => raw::TEE_Param {
-                memref: raw::Memref {
+                memref: raw::TEE_Param__bindgen_ty_1 {
                     buffer: core::ptr::null_mut(),
                     size: 0,
                 },
             },
             ParamContent::MemrefInput { buffer } => raw::TEE_Param {
-                memref: raw::Memref {
+                memref: raw::TEE_Param__bindgen_ty_1 {
                     buffer: (*buffer).as_ptr() as *mut core::ffi::c_void,
                     size: buffer.len(),
                 },
             },
             ParamContent::MemrefOutput { buffer, written: _ } => raw::TEE_Param {
-                memref: raw::Memref {
+                memref: raw::TEE_Param__bindgen_ty_1 {
                     buffer: (*buffer).as_mut_ptr() as *mut core::ffi::c_void,
                     size: buffer.len(),
                 },
             },
             ParamContent::MemrefInout { buffer, written: _ } => raw::TEE_Param {
-                memref: raw::Memref {
+                memref: raw::TEE_Param__bindgen_ty_1 {
                     buffer: (*buffer).as_mut_ptr() as *mut core::ffi::c_void,
                     size: buffer.len(),
                 },
             },
             ParamContent::ValueInput { a, b } => raw::TEE_Param {
-                value: raw::Value { a: *a, b: *b },
+                value: raw::TEE_Param__bindgen_ty_2 { a: *a, b: *b },
             },
             ParamContent::ValueInout { a, b } => raw::TEE_Param {
-                value: raw::Value { a: *a, b: *b },
+                value: raw::TEE_Param__bindgen_ty_2 { a: *a, b: *b },
             },
             ParamContent::ValueOutput { a, b } => raw::TEE_Param {
-                value: raw::Value { a: *a, b: *b },
+                value: raw::TEE_Param__bindgen_ty_2 { a: *a, b: *b },
             },
         }
     }

@@ -300,7 +300,7 @@ mod tests {
 
     fn memref(buffer: *mut u8, size: usize) -> TEE_Param {
         TEE_Param {
-            memref: raw::Memref {
+            memref: raw::TEE_Param__bindgen_ty_1 {
                 buffer: buffer.cast(),
                 size,
             },

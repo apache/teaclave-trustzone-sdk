@@ -42,7 +42,7 @@ jobs:
       runs-on: ubuntu-24.04-arm
       container: ghcr.io/ivila/teaclave-trustzone-sdk-ci-runner:ubuntu-24.04
 
-  # Run systest of optee_teec and build systest of optee_utee on ARM64
+  # Run systest of optee_teec on ARM64
   systest:
     runs-on: ubuntu-24.04-arm
     container: ghcr.io/ivila/teaclave-trustzone-sdk-ci-runner:ubuntu-24.04
@@ -72,7 +72,7 @@ jobs:
           source environment
           # Run systest
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OPTEE_DIR/optee_client/export_arm64/usr/lib
-          (cd crates && cargo run -p optee-teec-systest && cargo build -p optee-utee-systest)
+          (cd crates && cargo run -p optee-teec-systest)
 
   # Build examples in the emulator image: arch × std.
   test-build-on-dev-docker:

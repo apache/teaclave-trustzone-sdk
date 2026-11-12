@@ -129,8 +129,8 @@ impl HeaderFileGenerator {
             let utee_value_conv_codes = property_value_as_utee_value_codes(&var_name, &prop.value);
             ext_property_codes.push(quote! {
                 optee_utee::raw::user_ta_property {
-                    name: #prop_name_codes.as_ptr(),
-                    prop_type: #utee_type_name_codes,
+                    name: #prop_name_codes.as_ptr().cast(),
+                    type_: #utee_type_name_codes,
                     value: #utee_value_conv_codes,
                 }
             });
@@ -140,6 +140,19 @@ impl HeaderFileGenerator {
         let property_len = ORIGIN_PROPERTY_LEN + conf.ext_properties.len();
         let no_mangle_attribute = no_mangle_attribute_codes();
         self.code.extend(quote! {
+        /// The TA property table exported as `ta_props`.
+        ///
+        /// `libutee` reads it through an `extern const struct user_ta_property
+        /// ta_props[]`, so it must be a `static` with exactly this layout.
+        /// `user_ta_property` holds raw pointers and is therefore not `Sync` on
+        /// its own; every pointer in the table points to immutable data in the
+        /// TA image (`&'static` property names and values) and nothing ever
+        /// writes through it, so sharing the table is sound.
+        #[repr(transparent)]
+        pub struct TaProperties<const N: usize>([optee_utee::raw::user_ta_property; N]);
+
+        unsafe impl<const N: usize> Sync for TaProperties<N> {}
+
         const IS_SINGLE_INSTANCE: bool = (TA_FLAGS & optee_utee::raw::TA_FLAG_SINGLE_INSTANCE) != 0;
         const IS_MULTI_SESSION: bool = (TA_FLAGS & optee_utee::raw::TA_FLAG_MULTI_SESSION) != 0;
         const IS_KEEP_ALIVE: bool = (TA_FLAGS & optee_utee::raw::TA_FLAG_INSTANCE_KEEP_ALIVE) != 0;
@@ -149,59 +162,59 @@ impl HeaderFileGenerator {
         #no_mangle_attribute
         pub static ta_num_props: usize = #property_len;
         #no_mangle_attribute
-        pub static ta_props: [optee_utee::raw::user_ta_property; #property_len] = [
+        pub static ta_props: TaProperties<#property_len> = TaProperties([
             optee_utee::raw::user_ta_property {
-                name: optee_utee::raw::TA_PROP_STR_SINGLE_INSTANCE,
-                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
+                name: optee_utee::raw::TA_PROP_STR_SINGLE_INSTANCE.as_ptr().cast(),
+                type_: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
                 value: &IS_SINGLE_INSTANCE as *const bool as _,
             },
             optee_utee::raw::user_ta_property {
-                name: optee_utee::raw::TA_PROP_STR_MULTI_SESSION,
-                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
+                name: optee_utee::raw::TA_PROP_STR_MULTI_SESSION.as_ptr().cast(),
+                type_: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
                 value: &IS_MULTI_SESSION as *const bool as _,
             },
             optee_utee::raw::user_ta_property {
-                name: optee_utee::raw::TA_PROP_STR_KEEP_ALIVE,
-                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
+                name: optee_utee::raw::TA_PROP_STR_KEEP_ALIVE.as_ptr().cast(),
+                type_: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
                 value: &IS_KEEP_ALIVE as *const bool as _,
             },
             optee_utee::raw::user_ta_property {
-                name: optee_utee::raw::TA_PROP_STR_KEEP_CRASHED,
-                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
+                name: optee_utee::raw::TA_PROP_STR_KEEP_CRASHED.as_ptr().cast(),
+                type_: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
                 value: &IS_KEEP_CRASHED as *const bool as _,
             },
             optee_utee::raw::user_ta_property {
-                name: optee_utee::raw::TA_PROP_STR_DATA_SIZE,
-                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
+                name: optee_utee::raw::TA_PROP_STR_DATA_SIZE.as_ptr().cast(),
+                type_: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
                 value: &TA_DATA_SIZE as *const u32 as _,
             },
             optee_utee::raw::user_ta_property {
-                name: optee_utee::raw::TA_PROP_STR_STACK_SIZE,
-                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
+                name: optee_utee::raw::TA_PROP_STR_STACK_SIZE.as_ptr().cast(),
+                type_: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
                 value: &TA_STACK_SIZE as *const u32 as _,
             },
             optee_utee::raw::user_ta_property {
-                name: optee_utee::raw::TA_PROP_STR_VERSION,
-                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_STRING,
+                name: optee_utee::raw::TA_PROP_STR_VERSION.as_ptr().cast(),
+                type_: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_STRING,
                 value: TA_VERSION as *const [u8] as _,
             },
             optee_utee::raw::user_ta_property {
-                name: optee_utee::raw::TA_PROP_STR_DESCRIPTION,
-                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_STRING,
+                name: optee_utee::raw::TA_PROP_STR_DESCRIPTION.as_ptr().cast(),
+                type_: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_STRING,
                 value: TA_DESCRIPTION as *const [u8] as _,
             },
             optee_utee::raw::user_ta_property {
-                name: optee_utee::raw::TA_PROP_STR_ENDIAN,
-                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
+                name: optee_utee::raw::TA_PROP_STR_ENDIAN.as_ptr().cast(),
+                type_: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_U32,
                 value: &TA_ENDIAN as *const u32 as _,
             },
             optee_utee::raw::user_ta_property {
-                name: optee_utee::raw::TA_PROP_STR_DOES_NOT_CLOSE_HANDLE_ON_CORRUPT_OBJECT,
-                prop_type: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
+                name: optee_utee::raw::TA_PROP_STR_DOES_NOT_CLOSE_HANDLE_ON_CORRUPT_OBJECT.as_ptr().cast(),
+                type_: optee_utee::raw::user_ta_prop_type::USER_TA_PROP_TYPE_BOOL,
                 value: &DONT_CLOSE_HANDLE_ON_CORRUPT_OBJECT as *const bool as _,
             },
             #(#ext_property_codes),*
-        ];
+        ]);
                 });
 
         Ok(())
@@ -433,5 +446,27 @@ mod tests {
             syn::parse_file(&codes)
                 .unwrap_or_else(|e| panic!("header must parse for {payload:?}: {e}"));
         }
+    }
+
+    /// Guarantees: a configured extra property is appended to `ta_props` and its
+    /// name is coerced to `*const c_char` like the built-in entries, so the
+    /// generated table keeps compiling on targets where `c_char` is signed.
+    #[test]
+    fn ext_property_is_appended_to_ta_props() {
+        let uuid = "26509cec-4a2b-4935-87ab-762d89fbf0b0";
+        let conf = TaConfig::new_default(uuid, "0.1.0", "test")
+            .unwrap()
+            .add_ext_property("my.prop", PropertyValue::U32(1));
+        let codes = HeaderFileGenerator::new().generate(&conf).unwrap();
+
+        syn::parse_file(&codes).expect("generated header must parse");
+        assert!(
+            codes.contains("TaProperties<11usize>"),
+            "the extra property did not grow ta_props:\n{codes}"
+        );
+        assert!(
+            codes.contains(r#"name: b"my.prop\0".as_ptr().cast()"#),
+            "the extra property name is not coerced to `*const c_char`:\n{codes}"
+        );
     }
 }

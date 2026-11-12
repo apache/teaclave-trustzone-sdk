@@ -64,10 +64,10 @@ impl<'attrref> AttributeMemref<'attrref> {
     fn new_ref() -> Self {
         let raw = raw::TEE_Attribute {
             attributeID: 0,
-            content: raw::content {
-                memref: raw::Memref {
+            content: raw::TEE_Attribute__bindgen_ty_1 {
+                ref_: raw::TEE_Attribute__bindgen_ty_1__bindgen_ty_1 {
                     buffer: core::ptr::null_mut(),
-                    size: 0,
+                    length: 0,
                 },
             },
         };
@@ -119,8 +119,8 @@ impl AttributeValue {
     fn new_value() -> Self {
         let raw = raw::TEE_Attribute {
             attributeID: 0,
-            content: raw::content {
-                value: raw::Value { a: 0, b: 0 },
+            content: raw::TEE_Attribute__bindgen_ty_1 {
+                value: raw::TEE_Attribute__bindgen_ty_1__bindgen_ty_2 { a: 0, b: 0 },
             },
         };
         Self { raw }
