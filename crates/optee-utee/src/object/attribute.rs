@@ -153,72 +153,72 @@ impl AttributeValue {
 #[repr(u32)]
 pub enum AttributeId {
     /// Used for all secret keys for symmetric ciphers, MACs, and HMACs
-    SecretValue = 0xC0000000,
+    SecretValue = raw::TEE_ATTR_SECRET_VALUE,
     /// RSA modulus: `n`
-    RsaModulus = 0xD0000130,
+    RsaModulus = raw::TEE_ATTR_RSA_MODULUS,
     /// RSA public key exponent: `e`
-    RsaPublicExponent = 0xD0000230,
+    RsaPublicExponent = raw::TEE_ATTR_RSA_PUBLIC_EXPONENT,
     /// RSA private key exponent: `d`
-    RsaPrivateExponent = 0xC0000330,
+    RsaPrivateExponent = raw::TEE_ATTR_RSA_PRIVATE_EXPONENT,
     /// RSA prime number: `p`
-    RsaPrime1 = 0xC0000430,
+    RsaPrime1 = raw::TEE_ATTR_RSA_PRIME1,
     /// RSA prime number: `q`
-    RsaPrime2 = 0xC0000530,
+    RsaPrime2 = raw::TEE_ATTR_RSA_PRIME2,
     /// RSA exponent: `dp`
-    RsaExponent1 = 0xC0000630,
+    RsaExponent1 = raw::TEE_ATTR_RSA_EXPONENT1,
     /// RSA exponent: `dq`
-    RsaExponent2 = 0xC0000730,
+    RsaExponent2 = raw::TEE_ATTR_RSA_EXPONENT2,
     /// RSA coefficient: `iq`
-    RsaCoefficient = 0xC0000830,
+    RsaCoefficient = raw::TEE_ATTR_RSA_COEFFICIENT,
     /// DSA prime number: `p`
-    DsaPrime = 0xD0001031,
+    DsaPrime = raw::TEE_ATTR_DSA_PRIME,
     /// DSA sub prime number: `q`
-    DsaSubprime = 0xD0001131,
+    DsaSubprime = raw::TEE_ATTR_DSA_SUBPRIME,
     /// DSA base: `g`
-    DsaBase = 0xD0001231,
+    DsaBase = raw::TEE_ATTR_DSA_BASE,
     /// DSA public value: `y`
-    DsaPublicValue = 0xD0000131,
+    DsaPublicValue = raw::TEE_ATTR_DSA_PUBLIC_VALUE,
     /// DSA private value: `x`
-    DsaPrivateValue = 0xC0000231,
+    DsaPrivateValue = raw::TEE_ATTR_DSA_PRIVATE_VALUE,
     /// Diffie-Hellman prime number: `p`
-    DhPrime = 0xD0001032,
+    DhPrime = raw::TEE_ATTR_DH_PRIME,
     /// Diffie-Hellman subprime number: `q`
-    DhSubprime = 0xD0001132,
+    DhSubprime = raw::TEE_ATTR_DH_SUBPRIME,
     /// Diffie-Hellman base: `g`
-    DhBase = 0xD0001232,
+    DhBase = raw::TEE_ATTR_DH_BASE,
     /// Diffie-Hellman x bits: `l`
-    DhXBits = 0xF0001332,
+    DhXBits = raw::TEE_ATTR_DH_X_BITS,
     /// Diffie-Hellman public value: `y`
-    DhPublicValue = 0xD0000132,
+    DhPublicValue = raw::TEE_ATTR_DH_PUBLIC_VALUE,
     /// Diffie-Hellman public value: `x`
-    DhPrivateValue = 0xC0000232,
+    DhPrivateValue = raw::TEE_ATTR_DH_PRIVATE_VALUE,
     /// PBKDF2 password, bytes of the password
-    Pbkdf2Password = 0xC00001C2,
+    Pbkdf2Password = raw::TEE_ATTR_PBKDF2_PASSWORD,
     /// PBKDF2 salt, bytes of the salt
-    Pbkdf2Salt = 0xD00002C2,
+    Pbkdf2Salt = raw::TEE_ATTR_PBKDF2_SALT,
     /// PBKDF2 iteration count
-    Pbkdf2IterationCount = 0xF00003C2,
+    Pbkdf2IterationCount = raw::TEE_ATTR_PBKDF2_ITERATION_COUNT,
     /// PBKDF2 derived key material length in bytes
-    Pbkdf2DkmLength = 0xF00004C2,
-    RsaOaepLabel = 0xD0000930,
-    RsaOaepMgf1Hash = 0xD0000931,
-    RsaPssSaltLength = 0xF0000A30,
+    Pbkdf2DkmLength = raw::TEE_ATTR_PBKDF2_DKM_LENGTH,
+    RsaOaepLabel = raw::TEE_ATTR_RSA_OAEP_LABEL,
+    RsaOaepMgf1Hash = raw::TEE_ATTR_RSA_OAEP_MGF_HASH,
+    RsaPssSaltLength = raw::TEE_ATTR_RSA_PSS_SALT_LENGTH,
     /// ECC public value: `x`
-    EccPublicValueX = 0xD0000141,
+    EccPublicValueX = raw::TEE_ATTR_ECC_PUBLIC_VALUE_X,
     /// ECC public value: `y`
-    EccPublicValueY = 0xD0000241,
+    EccPublicValueY = raw::TEE_ATTR_ECC_PUBLIC_VALUE_Y,
     /// ECC private value: `d`
-    EccPrivateValue = 0xC0000341,
+    EccPrivateValue = raw::TEE_ATTR_ECC_PRIVATE_VALUE,
     /// Ed25519 public value
-    Ed25519PublicValue = 0xD0000743,
+    Ed25519PublicValue = raw::TEE_ATTR_ED25519_PUBLIC_VALUE,
     /// Ed25519 private value
-    Ed25519PrivateValue = 0xC0000843,
+    Ed25519PrivateValue = raw::TEE_ATTR_ED25519_PRIVATE_VALUE,
     /// X25519 public value
-    X25519PublicValue = 0xD0000944,
+    X25519PublicValue = raw::TEE_ATTR_X25519_PUBLIC_VALUE,
     /// X25519 private value
-    X25519PrivateValue = 0xC0000A44,
+    X25519PrivateValue = raw::TEE_ATTR_X25519_PRIVATE_VALUE,
     /// ECC Curve algorithm
-    EccCurve = 0xF0000441,
-    BitProtected = (1 << 28),
-    BitValue = (1 << 29),
+    EccCurve = raw::TEE_ATTR_ECC_CURVE,
+    BitProtected = raw::TEE_ATTR_BIT_PROTECTED,
+    BitValue = raw::TEE_ATTR_BIT_VALUE,
 }
