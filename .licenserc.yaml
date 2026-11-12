@@ -33,3 +33,4 @@ header:
     - 'examples/ta/tls_server-rs/test-ca/**'
     - 'optee-version.txt'
     - '**/*.stderr'
+    - '**/*.in'

@@ -53,7 +53,7 @@ impl HeaderFileGenerator {
         self.write_ta_head(conf)?;
         self.write_ta_heap();
 
-        const LICENSE_STR: &str = include_str!("./license_str.txt");
+        const LICENSE_STR: &str = include_str!("./license_header.txt");
         let f = syn::parse2(self.code).unwrap();
         // prettyplease will remove all of the comments in it, and the
         // maintainer will not support keeping comments,

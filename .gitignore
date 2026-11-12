@@ -29,6 +29,10 @@ rust/
 !examples/ca/Cargo.lock
 !projects/web3/eth_wallet/ta/Cargo.lock
 
+# Pin the exact bindgen (and its dependencies) used to regenerate the committed
+# `*-sys` bindings.
+!xtask/Cargo.lock
+
 # Allow tracking Cargo.lock for cargo-optee tool
 !cargo-optee/Cargo.lock
 
