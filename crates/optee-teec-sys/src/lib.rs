@@ -21,11 +21,16 @@
     "## Feature flags\n",
     document_features::document_features!(),
 ))]
-#![allow(non_camel_case_types, non_snake_case)]
+#![allow(non_camel_case_types, non_snake_case, non_upper_case_globals)]
 
-pub use plugin_method::*;
-pub use tee_client_api::*;
-pub type size_t = usize;
+// The bindings live in their own module so `handwritten` can refer to them as
+// `generated::*`. `include!` keeps the file out of `cargo fmt`: bindgen formats
+// the C doc comments its own way and rewriting them here would make every
+// regeneration a formatting diff.
+mod generated {
+    include!("generated.rs");
+}
+mod handwritten;
 
-mod plugin_method;
-mod tee_client_api;
+pub use generated::*;
+pub use handwritten::*;

@@ -169,7 +169,7 @@ applies to a file. This is the key reference for an automated reviewer.
 | `crates/optee-teec/` | CA library (Normal World) | **Untrusted side** | This runs in the adversary's world. "Missing input validation" here is generally **not** a TA-security finding — the TA cannot trust this code regardless. Focus instead on memory safety and not mishandling secrets returned to the CA. |
 | `crates/optee-teec-sys/` | Raw FFI for the CA | Untrusted side / FFI | FFI correctness only. |
 | `crates/secure_db/`, `crates/rustls_provider/` | Run inside the TA | **Trusted, but process untrusted data** | Logic runs in the TEE, but inputs (DB contents persisted via Normal World storage, bytes from a TLS peer) originate outside the TCB. Apply the boundary invariants to those inputs. |
-| `crates/*-build`, `*-macros`, `*-systest` | Build-time / test tooling | Build-time | Not in the runtime TCB. Review as ordinary tooling, not as boundary code. |
+| `crates/*-build`, `*-macros` | Build-time / test tooling | Build-time | Not in the runtime TCB. Review as ordinary tooling, not as boundary code. |
 | `examples/` | Illustrative TA+CA pairs | **Illustrative, not hardened** | Demonstrate API usage. They are teaching material and may intentionally omit production hardening; do not report them as if they were production code, but *do* note where they model an unsafe pattern a developer might copy. |
 | `projects/` | Reference applications (e.g. `web3/eth_wallet`) | **Reference, with stated assumptions** | Read the project's own "Security Assumptions" section first; review against *that* stated threat model. |
 | `tests/`, `.patches/`, `tools/` | Test harness / tooling | Build/test-time | Not runtime TCB. |

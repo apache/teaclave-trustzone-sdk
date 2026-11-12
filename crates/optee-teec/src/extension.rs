@@ -15,10 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use crate::{
-    raw::size_t,
-    {ErrorKind, Result},
-};
+use crate::{ErrorKind, Result};
 use core::ffi::c_void;
 
 /// Parameters for a plugin invocation, carrying the command, sub-command,
@@ -49,7 +46,7 @@ pub struct PluginParameters<'a, 'b> {
     /// (meaning the caller does not expect output). When present,
     /// every output-writing method automatically updates this value,
     /// ensuring `out_len` is never left unset.
-    out_len: Option<&'b mut size_t>,
+    out_len: Option<&'b mut usize>,
 }
 
 impl<'a, 'b> PluginParameters<'a, 'b> {
@@ -68,8 +65,8 @@ impl<'a, 'b> PluginParameters<'a, 'b> {
         cmd: u32,
         sub_cmd: u32,
         buf: *mut c_void,
-        in_len: size_t,
-        out_len: *mut size_t,
+        in_len: usize,
+        out_len: *mut usize,
     ) -> Result<Self> {
         // Reject obviously invalid parameter combinations:
         // a non-zero in_len or a present out_len implies the caller expects

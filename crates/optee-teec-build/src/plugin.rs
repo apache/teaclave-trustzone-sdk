@@ -134,8 +134,8 @@ fn generate_binding(
                     timeHiAndVersion: #uuid_f3,
                     clockSeqAndNode: [#(#uuid_f4),*],
                 },
-                init: #init_fn_name,
-                invoke: #invoke_fn_name,
+                init: Some(#init_fn_name),
+                invoke: Some(#invoke_fn_name),
             };
         };
     }

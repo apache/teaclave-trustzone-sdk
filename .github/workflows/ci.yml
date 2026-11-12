@@ -42,38 +42,6 @@ jobs:
       runs-on: ubuntu-24.04-arm
       container: ghcr.io/ivila/teaclave-trustzone-sdk-ci-runner:ubuntu-24.04
 
-  # Run systest of optee_teec on ARM64
-  systest:
-    runs-on: ubuntu-24.04-arm
-    container: ghcr.io/ivila/teaclave-trustzone-sdk-ci-runner:ubuntu-24.04
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Cache Cargo downloads
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/registry/cache
-            ~/.cargo/registry/index
-          key: cargo-v1-systest-${{ hashFiles('rust-toolchain.toml') }}
-          restore-keys: |
-            cargo-v1-systest-
-
-      - name: Prepare Environment
-        run: |
-          # Setup Rust and toolchains
-          ./setup.sh
-          source "$HOME/.cargo/env"
-          # Build optee_os and optee_client for qemu_v8
-          ./build_optee_libraries.sh $HOME
-          # Setup environment
-          export OPTEE_DIR=$HOME
-          source environment
-          # Run systest
-          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$OPTEE_DIR/optee_client/export_arm64/usr/lib
-          (cd crates && cargo run -p optee-teec-systest)
-
   # Build examples in the emulator image: arch × std.
   test-build-on-dev-docker:
     strategy:
