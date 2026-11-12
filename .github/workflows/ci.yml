@@ -42,6 +42,57 @@ jobs:
       runs-on: ubuntu-24.04-arm
       container: ghcr.io/ivila/teaclave-trustzone-sdk-ci-runner:ubuntu-24.04
 
+  # Regenerate the committed `*-sys` bindings from the OP-TEE release pinned in
+  # optee-version.txt and fail if the committed files are stale.
+  check-generated-bindings:
+    runs-on: ubuntu-24.04-arm
+    container: ghcr.io/ivila/teaclave-trustzone-sdk-ci-runner:ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Cache Cargo downloads
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/index
+          key: cargo-v1-bindings-${{ hashFiles('rust-toolchain.toml') }}
+          restore-keys: |
+            cargo-v1-bindings-
+
+      - name: Install libclang
+        run: |
+          # bindgen dlopens libclang at run time and the runner image does not
+          # ship it.
+          apt-get update
+          apt-get install -y --no-install-recommends libclang-dev
+          echo "LIBCLANG_PATH=$(dirname "$(find /usr/lib -name libclang.so -print -quit)")" >> "$GITHUB_ENV"
+
+      - name: Regenerate the bindings
+        run: |
+          # Setup Rust and toolchains
+          ./setup.sh
+          source "$HOME/.cargo/env"
+
+          # Build the dev kit and client export of the pinned OP-TEE release
+          ./build_optee_libraries.sh "$HOME"
+          export OPTEE_DIR="$HOME"
+          source environment
+
+          cargo run --manifest-path xtask/Cargo.toml -- generate-bindings all
+
+      - name: Fail if the committed bindings are stale
+        run: |
+          # The step runs as root inside the container while the workspace
+          # belongs to the runner user, so git has to be told that the
+          # repository is safe before it will read the index.
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+          git diff --exit-code -- \
+            crates/optee-utee-sys/src/generated.rs \
+            crates/optee-teec-sys/src/generated.rs
+
   # Build examples in the emulator image: arch × std.
   test-build-on-dev-docker:
     strategy:

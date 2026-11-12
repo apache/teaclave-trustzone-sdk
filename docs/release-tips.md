@@ -43,6 +43,38 @@ The timeline is flexible and can be adjusted based on the actual circumstances.
 
 ## Specific for TrustZone SDK
 
+### Check the bindings before bumping the release version
+
+The release candidate is what gets voted on, so the generated bindings and the
+property list must be final before the version bump and the RC is cut; anything
+found afterwards needs a new vote. When moving to a new OP-TEE release:
+
+1. Set `optee-version.txt` to the new release in the working tree and point
+   `TA_DEV_KIT_DIR` / `OPTEE_CLIENT_EXPORT` at exports built from it.
+2. Regenerate both crates:
+
+   ```bash
+   cargo run --manifest-path xtask/Cargo.toml -- generate-bindings all \
+     --ta-dev-kit-dir /path/to/ta_dev_kit \
+     --optee-client-dir /path/to/optee_client/export
+   ```
+
+3. Review the result with `git diff`. Look for renamed or removed constants,
+   changed struct layouts, and new or removed functions, then adapt the
+   consumers in `optee-utee` / `optee-teec` and the items left in the
+   `handwritten.rs` files. The `utee` generator rejects a TA dev kit whose
+   version disagrees with `optee-version.txt`.
+
+The property keys in `crates/optee-utee/src/property.rs` need a manual pass as
+well. They are not generated and intentionally cover only the properties OP-TEE
+implements, so compare the list with the property tables in `core/tee/tee_svc.c`
+and `lib/libutee/tee_api_property.c` of the new release: add new properties,
+drop removed ones, and make sure the names still match. The `TA_PROP_STR_*`
+macros in `user_ta_header.h` are already taken from `optee-utee-sys`.
+
+Once the bindings and the property list are settled, commit them together with
+the version bump and cut the release candidate.
+
 ### Publish on `crates.io`
 
 We maintain the optee-\* Rust crates at <https://crates.io/search?q=optee>,
