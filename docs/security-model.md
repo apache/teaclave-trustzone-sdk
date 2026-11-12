@@ -110,7 +110,8 @@ type-erased `ParametersAny<'_>` — before your TA logic runs.
   Normal-World memory. Validate the values; there is no pointer/length to
   worry about.
 - **`ParameterMemrefInput` / `ParameterMemrefInout` / `ParameterMemrefOutput`**
-  — a **shared-memory reference**: a `{buffer, size}` pair (`raw::Memref`).
+  — a **shared-memory reference**: a `{buffer, size}` pair (the `memref`
+  member of `TEE_Param`).
   This is the high-risk case. The typed API is copy-based: reads go through
   `ParameterMemrefRead::read_to_vec` (whole buffer) / `read_at` (partial
   range) and writes through `ParameterMemrefWrite::set_output` / `write_at`,

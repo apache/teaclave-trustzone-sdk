@@ -205,7 +205,7 @@ pub mod test_loadable_plugin {
     }
 
     fn expect_success_request(
-        ctx: &mock_api::extension::__tee_invoke_supp_plugin::Context,
+        ctx: &mock_api::__tee_invoke_supp_plugin::Context,
         exp_uuid: &Uuid,
         exp_cmd: u32,
         exp_sub_cmd: u32,
@@ -244,7 +244,7 @@ pub mod test_loadable_plugin {
         let run_test = |request_size: usize, response_size: usize| {
             let (cmd, sub_cmd, request, exp_response) =
                 generate_test_pairs(request_size, response_size);
-            let fn1 = mock_api::extension::tee_invoke_supp_plugin_context();
+            let fn1 = mock_api::tee_invoke_supp_plugin_context();
             expect_success_request(&fn1, &uuid, cmd, sub_cmd, &request, &exp_response);
             let response = plugin.invoke(cmd, sub_cmd, &request).expect("should be ok");
             std::println!("*TA*: response is {:?}", response);
@@ -261,7 +261,7 @@ pub mod test_loadable_plugin {
         {
             let (cmd, sub_cmd, request, exp_response) =
                 generate_test_pairs(REQUEST_LEN, 2 * REQUEST_LEN);
-            let fn1 = mock_api::extension::tee_invoke_supp_plugin_context();
+            let fn1 = mock_api::tee_invoke_supp_plugin_context();
             fn1.expect().return_once_st(move |_, _, _, _, _, outlen| {
                 unsafe { *outlen = exp_response.len() };
                 raw::TEE_SUCCESS
@@ -285,7 +285,7 @@ pub mod test_loadable_plugin {
         let run_test = |request_size: usize, response_size: usize| {
             let (cmd, sub_cmd, request, exp_response) =
                 generate_test_pairs(request_size, response_size);
-            let fn1 = mock_api::extension::tee_invoke_supp_plugin_context();
+            let fn1 = mock_api::tee_invoke_supp_plugin_context();
             expect_success_request(&fn1, &uuid, cmd, sub_cmd, &request, &exp_response);
 
             let response = plugin
@@ -310,7 +310,7 @@ pub mod test_loadable_plugin {
         let _lock = SERIAL_TEST_LOCK.lock().expect("should get the lock");
         let uuid: Uuid = random_uuid();
         let plugin = LoadablePlugin::new(&uuid);
-        let fn1 = mock_api::extension::tee_invoke_supp_plugin_context();
+        let fn1 = mock_api::tee_invoke_supp_plugin_context();
         // impl a writer for Command
         struct Wrapper<'a, 'b>(&'b mut LoadablePluginCommand<'a>);
         impl<'a, 'b> std::io::Write for Wrapper<'a, 'b> {
@@ -346,7 +346,7 @@ pub mod test_loadable_plugin {
 
         let uuid: Uuid = random_uuid();
         let plugin = LoadablePlugin::new(&uuid);
-        let fn1 = mock_api::extension::tee_invoke_supp_plugin_context();
+        let fn1 = mock_api::tee_invoke_supp_plugin_context();
         const OUTPUT_LEN: usize = 50;
         let (cmd, sub_cmd, request, exp_response) = generate_test_pairs(0, OUTPUT_LEN);
         expect_success_request(&fn1, &uuid, cmd, sub_cmd, &request, &exp_response);

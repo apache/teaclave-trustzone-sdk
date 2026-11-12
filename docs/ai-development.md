@@ -220,14 +220,7 @@ cd crates
 cargo run -p optee-teec-systest
 ```
 
-The UTEE system-test build can be checked with:
-
-```bash
-cd crates
-cargo build -p optee-utee-systest
-```
-
-The TEEC system test runs on the host, while the UTEE command builds the trusted-side test crate.
+The TEEC system test runs on the host.
 
 ### 8.3 Examples and QEMU
 
