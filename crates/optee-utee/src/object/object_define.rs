@@ -41,9 +41,10 @@ impl From<Whence> for raw::TEE_Whence {
 
 #[repr(u32)]
 pub enum ObjectStorageConstants {
-    Private = 0x00000001,
-    PrivateRee = 0x80000000,
-    PrivateRpmb = 0x80000100,
+    Private = raw::TEE_STORAGE_PRIVATE,
+    PrivateRee = raw::TEE_STORAGE_PRIVATE_REE,
+    PrivateRpmb = raw::TEE_STORAGE_PRIVATE_RPMB,
+    /// OP-TEE has no macro for this value, so it stays a literal.
     IllegalValue = 0x7FFFFFFF,
 }
 
@@ -53,28 +54,28 @@ bitflags! {
     pub struct DataFlag: u32 {
         /// The object is opened with the read access right. This allows the
         /// Trusted Application to call the function `TEE_ReadObjectData`.
-        const ACCESS_READ = 0x00000001;
+        const ACCESS_READ = raw::TEE_DATA_FLAG_ACCESS_READ;
         /// The object is opened with the write access right. This allows the
         /// Trusted Application to call the functions `TEE_WriteObjectData` and
         /// `TEE_TruncateObjectData`.
-        const ACCESS_WRITE = 0x00000002;
+        const ACCESS_WRITE = raw::TEE_DATA_FLAG_ACCESS_WRITE;
         /// The object is opened with the write-meta access right. This allows
         /// the Trusted Application to call the functions
         /// `TEE_CloseAndDeletePersistentObject1` and
         /// `TEE_RenamePersistentObject`.
-        const ACCESS_WRITE_META = 0x00000004;
+        const ACCESS_WRITE_META = raw::TEE_DATA_FLAG_ACCESS_WRITE_META;
         /// The caller allows another handle on the object to be created with
         /// read access.
-        const SHARE_READ = 0x00000010;
+        const SHARE_READ = raw::TEE_DATA_FLAG_SHARE_READ;
         /// The caller allows another handle on the object to be created with
         /// write access.
-        const SHARE_WRITE = 0x00000020;
+        const SHARE_WRITE = raw::TEE_DATA_FLAG_SHARE_WRITE;
         /// * If this flag is present and the object exists, then the object is
         ///   deleted and re-created as an atomic operation: that is, the TA
         ///   sees either the old object or the new one.
         /// * If the flag is absent and the object exists, then the function
         ///   SHALL return `TEE_ERROR_ACCESS_CONFLICT`.
-        const OVERWRITE = 0x00000400;
+        const OVERWRITE = raw::TEE_DATA_FLAG_OVERWRITE;
     }
 }
 
@@ -82,19 +83,19 @@ bitflags! {
     /// A set of flags that defines usages of data in TEE secure storage.
     pub struct UsageFlag: u32 {
         /// The object [Attribute](Attribute) can be extracted.
-        const EXTRACTABLE = 0x00000001;
+        const EXTRACTABLE = raw::TEE_USAGE_EXTRACTABLE;
         /// The object can be used for encryption.
-        const ENCRYPT = 0x00000002;
+        const ENCRYPT = raw::TEE_USAGE_ENCRYPT;
         /// The object can be used for decryption.
-        const DECRYPT = 0x00000004;
+        const DECRYPT = raw::TEE_USAGE_DECRYPT;
         /// The object can be used for mac operation.
-        const MAC = 0x00000008;
+        const MAC = raw::TEE_USAGE_MAC;
         /// The object can be used for signature.
-        const SIGN = 0x00000010;
+        const SIGN = raw::TEE_USAGE_SIGN;
         /// The object can be used for verification of a signature.
-        const VERIFY = 0x00000020;
+        const VERIFY = raw::TEE_USAGE_VERIFY;
         /// The object can be used for deriving a key.
-        const DERIVE = 0x00000040;
+        const DERIVE = raw::TEE_USAGE_DERIVE;
     }
 }
 
@@ -102,29 +103,29 @@ bitflags! {
 #[repr(u32)]
 pub enum MiscellaneousConstants {
     /// Maximum offset of a data object.
-    TeeDataMaxPosition = 0xFFFFFFFF,
+    TeeDataMaxPosition = raw::TEE_DATA_MAX_POSITION,
     /// Maximum length of an object id.
-    TeeObjectIdMaxLen = 64,
+    TeeObjectIdMaxLen = raw::TEE_OBJECT_ID_MAX_LEN,
 }
 
 bitflags! {
     /// A set of flags that defines Handle features.
     pub struct HandleFlag: u32{
         /// Set for a [PersistentObject](crate::PersistentObject).
-        const PERSISTENT = 0x00010000;
+        const PERSISTENT = raw::TEE_HANDLE_FLAG_PERSISTENT;
         /// 1) For a [PersistentObject](crate::PersistentObject), always set.
         /// 2) For a [TransientObject](crate::TransientObject), initially
         ///    cleared, then set when the object becomes initialized.
-        const INITIALIZED = 0x00020000;
+        const INITIALIZED = raw::TEE_HANDLE_FLAG_INITIALIZED;
         /// Following two flags are for crypto operation handles:
         /// 1) Set if the required operation key has been set.
         /// 2) Always set for digest operations.
-        const KEY_SET = 0x00040000;
+        const KEY_SET = raw::TEE_HANDLE_FLAG_KEY_SET;
         /// Set if the algorithm expects two keys to be set, using
         /// `TEE_SetOperationKey2`.
         /// This happens only if algorithm is set to
         /// [AesXts](crate::AlgorithmId::AesXts)
         /// or `TEE_ALG_SM2_KEP`(not supported now).
-        const EXPECT_TWO_KEYS = 0x00080000;
+        const EXPECT_TWO_KEYS = raw::TEE_HANDLE_FLAG_EXPECT_TWO_KEYS;
     }
 }
