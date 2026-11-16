@@ -40,12 +40,13 @@ pub struct PluginConfig {
 impl PluginConfig {
     /// Creates a new `PluginConfig` with the given UUID.
     ///
-    /// The plugin name defaults to `CARGO_PKG_NAME`, and the init/invoke
-    /// function names default to [`DEFAULT_INIT_FN_NAME`] and
-    /// [`DEFAULT_INVOKE_FN_NAME`] respectively.
+    /// The plugin name defaults to the `CARGO_PKG_NAME` of the crate whose
+    /// build script is running, and the init/invoke function names default to
+    /// [`DEFAULT_INIT_FN_NAME`] and [`DEFAULT_INVOKE_FN_NAME`] respectively.
     pub fn new(uuid: uuid::Uuid) -> Self {
         Self {
-            name: env!("CARGO_PKG_NAME").to_string(),
+            name: std::env::var("CARGO_PKG_NAME")
+                .expect("CARGO_PKG_NAME is set by Cargo for build scripts"),
             uuid,
             init_fn_name: DEFAULT_INIT_FN_NAME.to_owned(),
             invoke_fn_name: DEFAULT_INVOKE_FN_NAME.to_owned(),
