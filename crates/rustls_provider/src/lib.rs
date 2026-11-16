@@ -50,20 +50,14 @@ impl TimeProvider for ReeTimeProvider {
         // In normal operation, the value returned should correspond to the real time,
         // but it should not be considered as trusted, as it may be tampered by the user or the REE software.
         // reference: GPD_TEE_Internal_API_Specification
-        let mut time = Time::new();
-        time.ree_time();
+        let time = Time::ree_now();
 
         // Convert OP-TEE time to Unix timestamp
         // OP-TEE time seconds field represents seconds since some epoch
         // We need to treat it as Unix timestamp (seconds since Jan 1, 1970)
-        let seconds = time.seconds as u64;
-        let millis = time.millis as u64;
-
-        // Create UnixTime from seconds and milliseconds, checking overflow
-        seconds
-            .checked_mul(1000)
-            .and_then(|ms| ms.checked_add(millis))
-            .map(|total| UnixTime::since_unix_epoch(Duration::from_millis(total)))
+        Some(UnixTime::since_unix_epoch(Duration::from_millis(
+            time.total_millis(),
+        )))
     }
 }
 

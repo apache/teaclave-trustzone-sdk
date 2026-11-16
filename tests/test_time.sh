@@ -32,8 +32,8 @@ OUTPUT=$(run_in_qemu "time-rs") || print_detail_and_exit
 # Script specific checks
 {
     grep -q "Success" <<< "$OUTPUT" &&
-    grep -q "\[+] Get REE time (second: [0-9]*, millisecond: [0-9]*)" /tmp/serial.log &&
+    grep -q "\[+] Get REE time [0-9]*s [0-9]*ms\." /tmp/serial.log &&
     grep -q "\[+] Now wait 1 second in TEE" /tmp/serial.log &&
-    grep -q "\[+] Get system time (second: [0-9]*, millisecond: [0-9]*)" /tmp/serial.log &&
-    grep -q "\[+] After set the TA time 5 seconds ahead of system time, new TA time (second: [0-9]*, millisecond: [0-9]*)" /tmp/serial.log
+    grep -q "\[+] Get system time [0-9]*s [0-9]*ms\." /tmp/serial.log &&
+    grep -q "\[+] After set the TA time 5 seconds ahead of system time, new TA time [0-9]*s [0-9]*ms\." /tmp/serial.log
 } || print_detail_and_exit

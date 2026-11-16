@@ -65,16 +65,15 @@ fn invoke_command(
             let values = p0.as_value_input()?;
 
             let milliseconds = values.get_a();
-            let mut now = optee_utee::Time::new();
-            now.system_time();
+            let now = optee_utee::Time::now();
             // this would cause messy output in the console when running concurrently.
             trace_println!(
                 "[+] TA {} wait for {} milliseconds at {}",
                 ctx,
                 milliseconds,
-                now.seconds * 1000 + now.millis
+                now.total_millis()
             );
-            optee_utee::Time::wait(milliseconds)
+            optee_utee::Time::wait_millis(milliseconds)
         }
         Command::Unknown => Err(ErrorKind::BadParameters.into()),
     }
