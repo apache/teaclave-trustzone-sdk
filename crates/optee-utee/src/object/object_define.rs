@@ -44,8 +44,6 @@ pub enum ObjectStorageConstants {
     Private = raw::TEE_STORAGE_PRIVATE,
     PrivateRee = raw::TEE_STORAGE_PRIVATE_REE,
     PrivateRpmb = raw::TEE_STORAGE_PRIVATE_RPMB,
-    /// OP-TEE has no macro for this value, so it stays a literal.
-    IllegalValue = 0x7FFFFFFF,
 }
 
 bitflags! {

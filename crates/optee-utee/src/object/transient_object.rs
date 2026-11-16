@@ -28,81 +28,81 @@ use crate::{Result, tee_check};
 #[repr(u32)]
 pub enum TransientObjectType {
     /// 128, 192, or 256 bits
-    Aes = 0xA0000010,
+    Aes = raw::TEE_TYPE_AES,
     /// Always 64 bits including the parity bits. This gives an effective key
     /// size of 56 bits
-    Des = 0xA0000011,
+    Des = raw::TEE_TYPE_DES,
     /// 128 or 192 bits including the parity bits. This gives effective key
     /// sizes of 112 or 168 bits
-    Des3 = 0xA0000013,
+    Des3 = raw::TEE_TYPE_DES3,
     /// Between 64 and 512 bits, multiple of 8 bits
-    HmacMd5 = 0xA0000001,
+    HmacMd5 = raw::TEE_TYPE_HMAC_MD5,
     /// Between 80 and 512 bits, multiple of 8 bits
-    HmacSha1 = 0xA0000002,
+    HmacSha1 = raw::TEE_TYPE_HMAC_SHA1,
     /// Between 112 and 512 bits, multiple of 8 bits
-    HmacSha224 = 0xA0000003,
+    HmacSha224 = raw::TEE_TYPE_HMAC_SHA224,
     /// Between 192 and 1024 bits, multiple of 8 bits
-    HmacSha256 = 0xA0000004,
+    HmacSha256 = raw::TEE_TYPE_HMAC_SHA256,
     /// Between 256 and 1024 bits, multiple of 8 bits
-    HmacSha384 = 0xA0000005,
+    HmacSha384 = raw::TEE_TYPE_HMAC_SHA384,
     /// Between 256 and 1024 bits, multiple of 8 bits
-    HmacSha512 = 0xA0000006,
+    HmacSha512 = raw::TEE_TYPE_HMAC_SHA512,
     /// The number of bits in the modulus. 256, 512, 768, 1024, 1536 and
     /// 2048-bit keys SHALL be supported.
     /// Support for other key sizes including bigger key sizes is
     /// implementation-dependent. Minimum key size is 256 bits
-    RsaPublicKey = 0xA0000030,
+    RsaPublicKey = raw::TEE_TYPE_RSA_PUBLIC_KEY,
     /// Same as [RsaPublicKey](crate::TransientObjectType::RsaPublicKey) key
     /// size.
-    RsaKeypair = 0xA1000030,
+    RsaKeypair = raw::TEE_TYPE_RSA_KEYPAIR,
     /// Depends on Algorithm:
     /// 1) [DsaSha1](crate::AlgorithmId::DsaSha1):
     ///    Between 512 and 1024 bits, multiple of 64 bits
     /// 2) [DsaSha224](crate::AlgorithmId::DsaSha224): 2048 bits
     /// 3) [DsaSha256](crate::AlgorithmId::DsaSha256): 2048 or 3072 bits
-    DsaPublicKey = 0xA0000031,
+    DsaPublicKey = raw::TEE_TYPE_DSA_PUBLIC_KEY,
     /// Same as [DsaPublicKey](crate::TransientObjectType::DsaPublicKey) key
     /// size.
-    DsaKeypair = 0xA1000031,
+    DsaKeypair = raw::TEE_TYPE_DSA_KEYPAIR,
     /// From 256 to 2048 bits, multiple of 8 bits.
-    DhKeypair = 0xA1000032,
+    DhKeypair = raw::TEE_TYPE_DH_KEYPAIR,
     /// Password for PBKDF2 key derivation. Size in bits, multiple of 8 bits.
-    Pbkdf2Password = 0xA10000C2,
+    Pbkdf2Password = raw::TEE_TYPE_PBKDF2_PASSWORD,
     /// Between 160 and 521 bits. Conditional: Available only if at least
     /// one of the ECC the curves defined in Table 6-14 with "generic"
     /// equal to "Y" is supported.
-    EcdsaPublicKey = 0xA0000041,
+    EcdsaPublicKey = raw::TEE_TYPE_ECDSA_PUBLIC_KEY,
     /// Between 160 and 521 bits. Conditional: Available only if at least
     /// one of the ECC curves defined in Table 6-14 with "generic" equal to
     /// "Y" is supported. SHALL be same value as for ECDSA public key size.
-    EcdsaKeypair = 0xA1000041,
+    EcdsaKeypair = raw::TEE_TYPE_ECDSA_KEYPAIR,
     /// Between 160 and 521 bits. Conditional: Available only if at least
     /// one of the ECC curves defined in Table 6-14 with "generic" equal to
     /// "Y" is supported.
-    EcdhPublicKey = 0xA0000042,
+    EcdhPublicKey = raw::TEE_TYPE_ECDH_PUBLIC_KEY,
     /// Between 160 and 521 bits. Conditional: Available only if at least
     /// one of the ECC curves defined in Table 6-14 with "generic" equal to
     /// "Y" is supported. SHALL be same value as for ECDH public key size
-    EcdhKeypair = 0xA1000042,
+    EcdhKeypair = raw::TEE_TYPE_ECDH_KEYPAIR,
     /// 256 bits. Conditional: Available only if TEE_ECC_CURVE_25519
     /// defined in Table 6-14 is supported.
-    Ed25519PublicKey = 0xA0000043,
+    Ed25519PublicKey = raw::TEE_TYPE_ED25519_PUBLIC_KEY,
     /// 256 bits. Conditional: Available only if TEE_ECC_CURVE_25519
     /// defined in Table 6-14 is supported.
-    Ed25519Keypair = 0xA1000043,
+    Ed25519Keypair = raw::TEE_TYPE_ED25519_KEYPAIR,
     /// 256 bits. Conditional: Available only if TEE_ECC_CURVE_25519
     /// defined in Table 6-14 is supported.
-    X25519PublicKey = 0xA0000044,
+    X25519PublicKey = raw::TEE_TYPE_X25519_PUBLIC_KEY,
     /// 256 bits. Conditional: Available only if TEE_ECC_CURVE_25519
     /// defined in Table 6-14 is supported.
-    X25519Keypair = 0xA1000044,
+    X25519Keypair = raw::TEE_TYPE_X25519_KEYPAIR,
     /// Multiple of 8 bits, up to 4096 bits. This type is intended for secret
     /// data that has been derived from a key derivation scheme.
-    GenericSecret = 0xA0000000,
+    GenericSecret = raw::TEE_TYPE_GENERIC_SECRET,
     /// Object is corrupted.
-    CorruptedObject = 0xA00000BE,
+    CorruptedObject = raw::TEE_TYPE_CORRUPTED_OBJECT,
     /// 0 – All data is in the associated data stream.
-    Data = 0xA00000BF,
+    Data = raw::TEE_TYPE_DATA,
 }
 
 /// An object containing attributes but no data stream, which is reclaimed
