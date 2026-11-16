@@ -18,6 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![no_main]
 
+use core::time::Duration;
 use optee_utee::prelude::*;
 use optee_utee::Time;
 use optee_utee::{ErrorKind, Result};
@@ -58,20 +59,23 @@ fn invoke_command(cmd_id: u32, _params: &mut ParametersNone) -> Result<()> {
 }
 
 fn time() -> Result<()> {
-    let mut time = Time::new();
-    time.ree_time();
-    trace_println!("[+] Get REE time {}.", time);
+    let ree_time = Time::ree_now();
+    trace_println!("[+] Get REE time {}.", ree_time);
     trace_println!("[+] Now wait 1 second in TEE ...");
-    Time::wait(1000)?;
-    time.system_time();
-    trace_println!("[+] Get system time {}.", time);
-    time.seconds += 5;
-    time.set_ta_time()?;
-    let mut time2 = Time::new();
-    time2.ta_time()?;
+    Time::wait(Some(Duration::from_secs(1)))?;
+
+    let system_time = Time::now();
+    trace_println!("[+] Get system time {}.", system_time);
+
+    let ta_time = system_time
+        .checked_add(Duration::from_secs(5))
+        .ok_or(ErrorKind::Overflow)?;
+    ta_time.set_ta_time()?;
+
+    let new_ta_time = Time::ta_now()?;
     trace_println!(
         "[+] After set the TA time 5 seconds ahead of system time, new TA time {}.",
-        time2
+        new_ta_time
     );
     Ok(())
 }
