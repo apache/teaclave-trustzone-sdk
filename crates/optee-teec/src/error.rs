@@ -69,6 +69,8 @@ pub struct Error {
 )]
 #[repr(u32)]
 pub enum ErrorKind {
+    /// Object storage is not available.
+    StorageNotAvailable = raw::TEEC_ERROR_STORAGE_NOT_AVAILABLE,
     /// Non-specific cause.
     Generic = raw::TEEC_ERROR_GENERIC,
     /// Access privileges are not sufficient.
@@ -105,8 +107,21 @@ pub enum ErrorKind {
     ShortBuffer = raw::TEEC_ERROR_SHORT_BUFFER,
     /// Implementation defined error code.
     ExternalCancel = raw::TEEC_ERROR_EXTERNAL_CANCEL,
+    /// Data overflow.
+    Overflow = raw::TEE_ERROR_OVERFLOW,
     /// Implementation defined error code: trusted Application has panicked during the operation.
     TargetDead = raw::TEEC_ERROR_TARGET_DEAD,
+    /// Insufficient space is available.
+    StorageNoSpace = raw::TEEC_ERROR_STORAGE_NO_SPACE,
+    /// MAC is invalid.
+    MacInvalid = raw::TEE_ERROR_MAC_INVALID,
+    /// Signature is invalid.
+    SignatureInvalid = raw::TEE_ERROR_SIGNATURE_INVALID,
+    /// The persistent time has not been set.
+    TimeNotSet = raw::TEE_ERROR_TIME_NOT_SET,
+    /// The persistent time has been set but may have been corrupted and SHALL
+    /// no longer be trusted.
+    TimeNeedsReset = raw::TEE_ERROR_TIME_NEEDS_RESET,
     /// Unknown error, holding the original raw code.
     #[num_enum(catch_all)]
     Unknown(u32),
@@ -115,6 +130,7 @@ pub enum ErrorKind {
 impl ErrorKind {
     pub(crate) fn as_str(&self) -> &'static str {
         match self {
+            ErrorKind::StorageNotAvailable => "Object storage is not available.",
             ErrorKind::Generic => "Non-specific cause.",
             ErrorKind::AccessDenied => "Access privileges are not sufficient.",
             ErrorKind::Cancel => "The operation was canceled.",
@@ -137,7 +153,15 @@ impl ErrorKind {
             ErrorKind::Security => "A security fault was detected.",
             ErrorKind::ShortBuffer => "The supplied buffer is too short for the generated output.",
             ErrorKind::ExternalCancel => "Undocumented.",
+            ErrorKind::Overflow => "Data overflow.",
             ErrorKind::TargetDead => "Trusted Application has panicked during the operation.",
+            ErrorKind::StorageNoSpace => "Insufficient space is available.",
+            ErrorKind::MacInvalid => "MAC is invalid.",
+            ErrorKind::SignatureInvalid => "Signature is invalid.",
+            ErrorKind::TimeNotSet => "The persistent time has not been set.",
+            ErrorKind::TimeNeedsReset => {
+                "The persistent time has been set but may have been corrupted and SHALL no longer be trusted."
+            }
             ErrorKind::Unknown(_) => "Unknown error.",
         }
     }
@@ -253,5 +277,33 @@ mod tests {
         let err = Error::from_raw_error(code);
         assert_eq!(err.kind(), ErrorKind::Unknown(code));
         assert_eq!(err.raw_code(), code);
+    }
+
+    /// Guarantees: TEE error codes that a client can receive from a TA or from
+    /// storage are classified instead of falling into `Unknown`, and each code
+    /// round-trips to its raw value.
+    #[test]
+    fn tee_side_codes_are_classified() {
+        let cases = [
+            (
+                raw::TEEC_ERROR_STORAGE_NOT_AVAILABLE,
+                ErrorKind::StorageNotAvailable,
+            ),
+            (raw::TEE_ERROR_OVERFLOW, ErrorKind::Overflow),
+            (raw::TEEC_ERROR_STORAGE_NO_SPACE, ErrorKind::StorageNoSpace),
+            (raw::TEE_ERROR_MAC_INVALID, ErrorKind::MacInvalid),
+            (
+                raw::TEE_ERROR_SIGNATURE_INVALID,
+                ErrorKind::SignatureInvalid,
+            ),
+            (raw::TEE_ERROR_TIME_NOT_SET, ErrorKind::TimeNotSet),
+            (raw::TEE_ERROR_TIME_NEEDS_RESET, ErrorKind::TimeNeedsReset),
+        ];
+
+        for (code, expected) in cases {
+            let error = Error::from_raw_error(code);
+            assert_eq!(error.kind(), expected, "0x{code:08x} is misclassified");
+            assert_eq!(error.raw_code(), code);
+        }
     }
 }
