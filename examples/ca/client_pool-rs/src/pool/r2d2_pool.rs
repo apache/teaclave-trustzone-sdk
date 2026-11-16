@@ -19,15 +19,15 @@ use super::{
     connection::{tee_wait, Connection},
     Args,
 };
-use optee_teec::{Context, ErrorKind, Uuid};
+use optee_teec::{Context, Uuid};
 use std::{
-    sync::{atomic, Arc, Mutex},
+    sync::{atomic, Arc},
     thread,
     time::Duration,
 };
 
 struct Manager {
-    ctx: Mutex<Context>,
+    ctx: Context,
     uuid: Uuid,
 }
 
@@ -36,11 +36,7 @@ impl r2d2::ManageConnection for Manager {
     type Connection = Connection;
 
     fn connect(&self) -> Result<Self::Connection, Self::Error> {
-        let mut guard = self.ctx.lock().map_err(|err| {
-            eprintln!("r2d2: cannot acquire lock due to {:#?}", err);
-            ErrorKind::BadState
-        })?;
-        Connection::new(&mut guard, self.uuid.clone())
+        Connection::new(&self.ctx, self.uuid.clone())
     }
 
     fn is_valid(&self, conn: &mut Self::Connection) -> Result<(), Self::Error> {
@@ -54,7 +50,7 @@ impl r2d2::ManageConnection for Manager {
 
 fn new_pool(args: &Args) -> Result<r2d2::Pool<Manager>, anyhow::Error> {
     let manager = Manager {
-        ctx: Mutex::new(Context::new()?),
+        ctx: Context::new()?,
         uuid: Uuid::parse_str(proto::client_pool::UUID)?,
     };
 

@@ -50,7 +50,7 @@ fn main() -> optee_teec::Result<()> {
         return Err(ErrorKind::BadParameters.into());
     }
 
-    let mut ctx = Context::new()?;
+    let ctx = Context::new()?;
     let uuid = Uuid::parse_str(UUID)?;
 
     let mut hash: [u8; 32] = [0u8; 32];

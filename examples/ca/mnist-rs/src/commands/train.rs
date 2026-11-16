@@ -47,8 +47,8 @@ fn convert_datasets(images: &Vec<Image>, labels: &[u8]) -> Vec<(Image, u8)> {
 
 pub fn execute(args: &Args) -> anyhow::Result<()> {
     // Initialize trainer
-    let mut ctx = Context::new()?;
-    let mut trainer = TrainerTaConnector::new(&mut ctx, args.learning_rate)?;
+    let ctx = Context::new()?;
+    let mut trainer = TrainerTaConnector::new(&ctx, args.learning_rate)?;
     // Download mnist data
     let data = check_download_mnist_data()?;
     // Prepare datasets

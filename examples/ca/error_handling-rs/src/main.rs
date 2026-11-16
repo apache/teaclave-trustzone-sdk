@@ -27,7 +27,7 @@ fn main() -> Result<()> {
 // here and the reorganization is planned for this kind of test cases.
 #[allow(clippy::expect_used)]
 fn test_error_handling() -> Result<()> {
-    let mut ctx = Context::new()?;
+    let ctx = Context::new()?;
     let uuid = Uuid::parse_str(UUID)?;
     let mut session = ctx.open_session(uuid)?;
     let mut operation = Operation::new(0, ParamNone, ParamNone, ParamNone, ParamNone);

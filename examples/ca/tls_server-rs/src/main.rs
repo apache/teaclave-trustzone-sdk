@@ -27,7 +27,7 @@ const HEADER_SIZE: u16 = 1 + 2 + 2;
 pub const MAX_WIRE_SIZE: usize = (MAX_PAYLOAD + HEADER_SIZE) as usize;
 
 fn main() -> optee_teec::Result<()> {
-    let mut ctx = Context::new()?;
+    let ctx = Context::new()?;
     let uuid = Uuid::parse_str(UUID)?;
     let mut ta_session = ctx.open_session(uuid)?;
 

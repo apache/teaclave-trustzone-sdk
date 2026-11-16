@@ -93,7 +93,7 @@ fn main() -> optee_teec::Result<()> {
         key_size = 256;
     }
 
-    let mut ctx = Context::new()?;
+    let ctx = Context::new()?;
     let uuid = Uuid::parse_str(UUID)?;
     let mut session = ctx.open_session(uuid)?;
 

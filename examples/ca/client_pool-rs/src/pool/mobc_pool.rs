@@ -19,14 +19,14 @@ use super::{
     connection::{tee_wait, Connection},
     Args,
 };
-use optee_teec::{Context, ErrorKind, Uuid};
+use optee_teec::{Context, Uuid};
 use std::{
-    sync::{atomic, Arc, Mutex},
+    sync::{atomic, Arc},
     time::Duration,
 };
 
 struct Manager {
-    ctx: Arc<Mutex<Context>>,
+    ctx: Context,
     uuid: Uuid,
 }
 
@@ -36,11 +36,7 @@ impl mobc::Manager for Manager {
     type Connection = Connection;
 
     async fn connect(&self) -> Result<Self::Connection, Self::Error> {
-        let mut guard = self.ctx.lock().map_err(|err| {
-            eprintln!("mobc: cannot acquire lock due to {:#?}", err);
-            ErrorKind::BadState
-        })?;
-        Connection::new(&mut guard, self.uuid.clone())
+        Connection::new(&self.ctx, self.uuid.clone())
     }
 
     async fn check(&self, conn: Self::Connection) -> Result<Self::Connection, Self::Error> {
@@ -50,7 +46,7 @@ impl mobc::Manager for Manager {
 
 fn new_pool(args: &Args) -> anyhow::Result<mobc::Pool<Manager>> {
     let manager = Manager {
-        ctx: Arc::new(Mutex::new(Context::new()?)),
+        ctx: Context::new()?,
         uuid: Uuid::parse_str(proto::client_pool::UUID)?,
     };
     Ok(mobc::Builder::new()

@@ -65,7 +65,7 @@ fn derive_key(key0_pub: &Vec<u8>, session: &mut Session) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    let mut ctx = Context::new()?;
+    let ctx = Context::new()?;
     let uuid = Uuid::parse_str(UUID)?;
     let mut session = ctx.open_session(uuid)?;
 

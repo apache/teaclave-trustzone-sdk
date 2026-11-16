@@ -27,7 +27,7 @@ use structopt::StructOpt;
 const OUTPUT_MAX_SIZE: usize = 1024;
 
 fn invoke_command(command: proto::Command, input: &[u8]) -> optee_teec::Result<Vec<u8>> {
-    let mut ctx = Context::new()?;
+    let ctx = Context::new()?;
     let uuid = Uuid::parse_str(proto::UUID)
         .map_err(|_| optee_teec::Error::new(optee_teec::ErrorKind::ItemNotFound))?;
     let mut session = ctx.open_session(uuid)?;
