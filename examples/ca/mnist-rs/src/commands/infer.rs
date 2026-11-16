@@ -37,8 +37,8 @@ pub fn execute(args: &Args) -> anyhow::Result<()> {
     let model_path = std::path::absolute(&args.model)?;
     println!("Load model from \"{}\"", model_path.display());
     let record = std::fs::read(&model_path)?;
-    let mut ctx = Context::new()?;
-    let mut caller = crate::tee::InferenceTaConnector::new(&mut ctx, &record)?;
+    let ctx = Context::new()?;
+    let mut caller = crate::tee::InferenceTaConnector::new(&ctx, &record)?;
 
     let mut binaries: Vec<Image> = args
         .binary

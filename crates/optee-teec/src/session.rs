@@ -83,9 +83,14 @@ pub struct Session {
 }
 
 impl Session {
-    /// Initializes a TEE session object with specified context and uuid.
-    pub fn new<A: Param, B: Param, C: Param, D: Param>(
-        context: &mut Context,
+    /// Opens a session with a context, UUID, login method and optional
+    /// operation.
+    ///
+    /// This is the single low-level entry point used by the
+    /// [`Context::open_session`] family; callers should use those methods
+    /// instead of constructing a session directly.
+    pub(crate) fn new<A: Param, B: Param, C: Param, D: Param>(
+        context: &Context,
         uuid: Uuid,
         login: ConnectionMethods,
         operation: Option<&mut Operation<A, B, C, D>>,

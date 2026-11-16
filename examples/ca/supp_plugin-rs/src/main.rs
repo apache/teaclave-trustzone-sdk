@@ -32,7 +32,7 @@ fn ping_ta(session: &mut Session) -> optee_teec::Result<()> {
 }
 
 fn main() -> optee_teec::Result<()> {
-    let mut ctx = Context::new()?;
+    let ctx = Context::new()?;
     let uuid = Uuid::parse_str(TA_UUID).map_err(|err| {
         println!("Invalid TA_UUID: {:?}", err);
         ErrorKind::BadParameters

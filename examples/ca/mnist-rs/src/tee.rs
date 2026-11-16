@@ -26,7 +26,7 @@ pub struct TrainerTaConnector {
 }
 
 impl TrainerTaConnector {
-    pub fn new(ctx: &mut Context, learning_rate: f64) -> optee_teec::Result<Self> {
+    pub fn new(ctx: &Context, learning_rate: f64) -> optee_teec::Result<Self> {
         let bytes = learning_rate.to_le_bytes();
         let uuid = Uuid::parse_str(train::UUID).map_err(|err| {
             println!("parse uuid \"{}\" failed due to: {:?}", train::UUID, err);
@@ -111,7 +111,7 @@ pub struct InferenceTaConnector {
 }
 
 impl InferenceTaConnector {
-    pub fn new(ctx: &mut Context, record: &[u8]) -> optee_teec::Result<Self> {
+    pub fn new(ctx: &Context, record: &[u8]) -> optee_teec::Result<Self> {
         let uuid = Uuid::parse_str(inference::UUID).map_err(|err| {
             println!(
                 "parse uuid \"{}\" failed due to: {:?}",

@@ -28,7 +28,7 @@ use std::fmt;
 /// use optee_teec::Context;
 ///
 /// fn main() -> optee_teec::Result<()> {
-///     let mut ctx = Context::new()?;
+///     let _ctx = Context::new()?;
 ///     Ok(())
 /// }
 /// ````

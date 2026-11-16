@@ -26,7 +26,7 @@ pub struct Connection {
 }
 
 impl Connection {
-    pub fn new(ctx: &mut Context, uuid: Uuid) -> optee_teec::Result<Self> {
+    pub fn new(ctx: &Context, uuid: Uuid) -> optee_teec::Result<Self> {
         let mut identity = [0_u8; proto::client_pool::IDENTITY_SIZE];
         let session = {
             let mut operation = Operation::new(

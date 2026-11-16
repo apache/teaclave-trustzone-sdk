@@ -62,7 +62,7 @@ fn delete_secure_object(session: &mut Session, obj_id: &[u8]) -> optee_teec::Res
 }
 
 fn main() -> optee_teec::Result<()> {
-    let mut ctx = Context::new()?;
+    let ctx = Context::new()?;
     let uuid = Uuid::parse_str(UUID)?;
     let mut session = ctx.open_session(uuid)?;
 

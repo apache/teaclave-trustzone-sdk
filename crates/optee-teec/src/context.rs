@@ -51,7 +51,7 @@ impl Context {
     /// ``` no_run
     /// # use optee_teec::Context;
     /// # fn main() -> optee_teec::Result<()> {
-    /// let mut ctx = Context::new()?;
+    /// let _ctx = Context::new()?;
     /// # Ok(())
     /// # }
     /// ```
@@ -75,7 +75,7 @@ impl Context {
     /// use optee_teec::{Context, ErrorKind, Uuid};
     ///
     /// fn main() -> optee_teec::Result<()> {
-    ///     let mut ctx = Context::new()?;
+    ///     let ctx = Context::new()?;
     ///     let uuid = Uuid::parse_str("8abcf200-2450-11e4-abe2-0002a5d5c51b").map_err(|err| {
     ///         println!("bad uuid: {:?}", err);
     ///         ErrorKind::BadParameters
@@ -84,15 +84,11 @@ impl Context {
     ///     Ok(())
     /// }
     /// ```
-    pub fn open_session(&mut self, uuid: Uuid) -> Result<Session> {
+    pub fn open_session(&self, uuid: Uuid) -> Result<Session> {
         self.open_session_with_login(uuid, ConnectionMethods::LoginPublic)
     }
 
-    pub fn open_session_with_login(
-        &mut self,
-        uuid: Uuid,
-        login: ConnectionMethods,
-    ) -> Result<Session> {
+    pub fn open_session_with_login(&self, uuid: Uuid, login: ConnectionMethods) -> Result<Session> {
         Session::new(
             self,
             uuid,
@@ -112,7 +108,7 @@ impl Context {
     /// use optee_teec::{Context, ErrorKind, Operation, ParamNone, ParamType, ParamValue, Uuid};
     ///
     /// fn main() -> optee_teec::Result<()> {
-    ///     let mut ctx = Context::new()?;
+    ///     let ctx = Context::new()?;
     ///     let uuid = Uuid::parse_str("8abcf200-2450-11e4-abe2-0002a5d5c51b").map_err(|err| {
     ///         println!("bad uuid: {:?}", err);
     ///         ErrorKind::BadParameters
@@ -124,7 +120,7 @@ impl Context {
     /// }
     /// ```
     pub fn open_session_with_operation<A: Param, B: Param, C: Param, D: Param>(
-        &mut self,
+        &self,
         uuid: Uuid,
         operation: &mut Operation<A, B, C, D>,
     ) -> Result<Session> {
@@ -134,8 +130,9 @@ impl Context {
 
 // Internal usage only
 impl Context {
-    // anyone who wants to access the inner_context must take this as mut.
-    pub(crate) fn inner_context(&mut self) -> Arc<Mutex<InnerContext>> {
+    // Sessions clone the shared handle; the mutex inside serializes access, so
+    // sharing a `&Context` is enough.
+    pub(crate) fn inner_context(&self) -> Arc<Mutex<InnerContext>> {
         self.raw.clone()
     }
 }

@@ -36,8 +36,8 @@ pub fn execute(args: &Args) -> anyhow::Result<()> {
     let model_path = std::path::absolute(&args.model)?;
     println!("Load model from \"{}\"", model_path.display());
     let record = std::fs::read(&model_path)?;
-    let mut ctx = optee_teec::Context::new()?;
-    let mut caller = crate::tee::InferenceTaConnector::new(&mut ctx, &record)?;
+    let ctx = optee_teec::Context::new()?;
+    let mut caller = crate::tee::InferenceTaConnector::new(&ctx, &record)?;
 
     let addr = format!("0.0.0.0:{}", args.port);
     println!("Server runs on: {addr}");

@@ -19,7 +19,7 @@ use optee_teec::{Context, ErrorKind, Operation, ParamNone, Uuid};
 use proto::property::{Command, UUID};
 
 fn main() -> optee_teec::Result<()> {
-    let mut ctx = Context::new()?;
+    let ctx = Context::new()?;
     let uuid =
         Uuid::parse_str(UUID).map_err(|_| optee_teec::Error::from(ErrorKind::BadParameters))?;
     let mut session = ctx.open_session(uuid)?;
