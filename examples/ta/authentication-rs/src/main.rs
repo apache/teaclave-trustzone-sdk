@@ -90,7 +90,7 @@ pub fn prepare(ae: &mut AEOp, (p0, p1, p2, p3): &mut ParametersAny<'_>) -> Resul
     let mode = match Mode::from(p0.as_value_input()?.get_a()) {
         Mode::Encrypt => OperationMode::Encrypt,
         Mode::Decrypt => OperationMode::Decrypt,
-        _ => OperationMode::IllegalValue,
+        _ => return Err(ErrorKind::BadParameters.into()),
     };
     let nonce = p1.as_memref_input()?.read_to_vec();
     let key = p2.as_memref_input()?.read_to_vec();

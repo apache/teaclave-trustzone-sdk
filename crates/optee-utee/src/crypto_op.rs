@@ -27,21 +27,19 @@ use crate::{Attribute, ErrorKind, GenericObject, Result, TransientObject, tee_ch
 #[repr(u32)]
 pub enum OperationMode {
     /// Encryption mode
-    Encrypt = 0,
+    Encrypt = raw::TEE_MODE_ENCRYPT,
     /// Decryption mode
-    Decrypt = 1,
+    Decrypt = raw::TEE_MODE_DECRYPT,
     /// Signature generation mode
-    Sign = 2,
+    Sign = raw::TEE_MODE_SIGN,
     /// Signature verfication mode
-    Verify = 3,
+    Verify = raw::TEE_MODE_VERIFY,
     /// MAC mode
-    Mac = 4,
+    Mac = raw::TEE_MODE_MAC,
     /// Digest mode
-    Digest = 5,
+    Digest = raw::TEE_MODE_DIGEST,
     /// Key derivation mode
-    Derive = 6,
-    /// Reserve for testing and validation
-    IllegalValue = 0x7fffffff,
+    Derive = raw::TEE_MODE_DERIVE,
 }
 
 /// Represent the information about a crypto information.
@@ -93,27 +91,28 @@ impl OperationInfo {
 #[repr(u32)]
 pub enum OperationStates {
     /// Nothing is going on.
-    Initial = 0x00000000,
+    Initial = raw::TEE_OPERATION_STATE_INITIAL,
     /// An operation is in progress.
-    Active = 0x00000001,
+    Active = raw::TEE_OPERATION_STATE_ACTIVE,
 }
 
 /// Define the supported crypto operation.
+#[repr(u32)]
 pub enum OperationConstant {
     /// [Cipher](Cipher)
-    Cipher = 1,
+    Cipher = raw::TEE_OPERATION_CIPHER,
     /// [Mac](Mac)
-    Mac = 3,
+    Mac = raw::TEE_OPERATION_MAC,
     /// [AE](AE)
-    Ae = 4,
+    Ae = raw::TEE_OPERATION_AE,
     /// [Digest](Digest)
-    Digest = 5,
+    Digest = raw::TEE_OPERATION_DIGEST,
     /// [Asymmetric](Asymmetric)
-    AsymmetricCipher = 6,
+    AsymmetricCipher = raw::TEE_OPERATION_ASYMMETRIC_CIPHER,
     /// [Asymmetric](Asymmetric)
-    AsymmetricSignature = 7,
+    AsymmetricSignature = raw::TEE_OPERATION_ASYMMETRIC_SIGNATURE,
     /// [DeriveKey](DeriveKey)
-    KeyDerivation = 8,
+    KeyDerivation = raw::TEE_OPERATION_KEY_DERIVATION,
 }
 
 const HEADER_SIZE: usize = mem::size_of::<raw::TEE_OperationInfoMultiple>();
@@ -1692,180 +1691,178 @@ impl Random {
 #[repr(u32)]
 pub enum AlgorithmId {
     /// [Cipher](Cipher) supported algorithm.
-    AesEcbNopad = 0x10000010,
+    AesEcbNopad = raw::TEE_ALG_AES_ECB_NOPAD,
     /// [Cipher](Cipher) supported algorithm.
-    AesCbcNopad = 0x10000110,
+    AesCbcNopad = raw::TEE_ALG_AES_CBC_NOPAD,
     /// [Cipher](Cipher) supported algorithm.
-    AesCtr = 0x10000210,
+    AesCtr = raw::TEE_ALG_AES_CTR,
     /// [Cipher](Cipher) supported algorithm.
-    AesCts = 0x10000310,
+    AesCts = raw::TEE_ALG_AES_CTS,
     /// [Cipher](Cipher) supported algorithm.
-    AesXts = 0x10000410,
+    AesXts = raw::TEE_ALG_AES_XTS,
     /// [Mac](Mac) supported algorithm.
-    AesCbcMacNopad = 0x30000110,
+    AesCbcMacNopad = raw::TEE_ALG_AES_CBC_MAC_NOPAD,
     /// [Mac](Mac) supported algorithm.
-    AesCbcMacPkcs5 = 0x30000510,
+    AesCbcMacPkcs5 = raw::TEE_ALG_AES_CBC_MAC_PKCS5,
     /// [Mac](Mac) supported algorithm.
-    AesCmac = 0x30000610,
+    AesCmac = raw::TEE_ALG_AES_CMAC,
     /// [AE](AE) supported algorithm.
-    AesCcm = 0x40000710,
+    AesCcm = raw::TEE_ALG_AES_CCM,
     /// [AE](AE) supported algorithm.
-    AesGcm = 0x40000810,
+    AesGcm = raw::TEE_ALG_AES_GCM,
     /// [Cipher](Cipher) supported algorithm.
-    DesEcbNopad = 0x10000011,
+    DesEcbNopad = raw::TEE_ALG_DES_ECB_NOPAD,
     /// [Cipher](Cipher) supported algorithm.
-    DesCbcNopad = 0x10000111,
+    DesCbcNopad = raw::TEE_ALG_DES_CBC_NOPAD,
     /// [Mac](Mac) supported algorithm.
-    DesCbcMacNopad = 0x30000111,
+    DesCbcMacNopad = raw::TEE_ALG_DES_CBC_MAC_NOPAD,
     /// [Mac](Mac) supported algorithm.
-    DesCbcMacPkcs5 = 0x30000511,
+    DesCbcMacPkcs5 = raw::TEE_ALG_DES_CBC_MAC_PKCS5,
     /// [Cipher](Cipher) supported algorithm.
-    Des3EcbNopad = 0x10000013,
+    Des3EcbNopad = raw::TEE_ALG_DES3_ECB_NOPAD,
     /// [Cipher](Cipher) supported algorithm.
-    Des3CbcNopad = 0x10000113,
+    Des3CbcNopad = raw::TEE_ALG_DES3_CBC_NOPAD,
     /// [Mac](Mac) supported algorithm.
-    Des3CbcMacNopad = 0x30000113,
+    Des3CbcMacNopad = raw::TEE_ALG_DES3_CBC_MAC_NOPAD,
     /// [Mac](Mac) supported algorithm.
-    Des3CbcMacPkcs5 = 0x30000513,
+    Des3CbcMacPkcs5 = raw::TEE_ALG_DES3_CBC_MAC_PKCS5,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    RsassaPkcs1V15 = 0xF0000830,
+    RsassaPkcs1V15 = raw::TEE_ALG_RSASSA_PKCS1_V1_5,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    RsassaPkcs1V15MD5 = 0x70001830,
+    RsassaPkcs1V15MD5 = raw::TEE_ALG_RSASSA_PKCS1_V1_5_MD5,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    RsassaPkcs1V15Sha1 = 0x70002830,
+    RsassaPkcs1V15Sha1 = raw::TEE_ALG_RSASSA_PKCS1_V1_5_SHA1,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    RsassaPkcs1V15Sha224 = 0x70003830,
+    RsassaPkcs1V15Sha224 = raw::TEE_ALG_RSASSA_PKCS1_V1_5_SHA224,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    RsassaPkcs1V15Sha256 = 0x70004830,
+    RsassaPkcs1V15Sha256 = raw::TEE_ALG_RSASSA_PKCS1_V1_5_SHA256,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    RsassaPkcs1V15Sha384 = 0x70005830,
+    RsassaPkcs1V15Sha384 = raw::TEE_ALG_RSASSA_PKCS1_V1_5_SHA384,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    RsassaPkcs1V15Sha512 = 0x70006830,
+    RsassaPkcs1V15Sha512 = raw::TEE_ALG_RSASSA_PKCS1_V1_5_SHA512,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    RsassaPkcs1V15MD5Sha1 = 0x7000F830,
+    RsassaPkcs1V15MD5Sha1 = raw::TEE_ALG_RSASSA_PKCS1_V1_5_MD5SHA1,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    RsassaPkcs1PssMgf1MD5 = 0xF0111930,
+    RsassaPkcs1PssMgf1MD5 = raw::TEE_ALG_RSASSA_PKCS1_PSS_MGF1_MD5,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    RsassaPkcs1PssMgf1Sha1 = 0x70212930,
+    RsassaPkcs1PssMgf1Sha1 = raw::TEE_ALG_RSASSA_PKCS1_PSS_MGF1_SHA1,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    RsassaPkcs1PssMgf1Sha224 = 0x70313930,
+    RsassaPkcs1PssMgf1Sha224 = raw::TEE_ALG_RSASSA_PKCS1_PSS_MGF1_SHA224,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    RsassaPkcs1PssMgf1Sha256 = 0x70414930,
+    RsassaPkcs1PssMgf1Sha256 = raw::TEE_ALG_RSASSA_PKCS1_PSS_MGF1_SHA256,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    RsassaPkcs1PssMgf1Sha384 = 0x70515930,
+    RsassaPkcs1PssMgf1Sha384 = raw::TEE_ALG_RSASSA_PKCS1_PSS_MGF1_SHA384,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    RsassaPkcs1PssMgf1Sha512 = 0x70616930,
+    RsassaPkcs1PssMgf1Sha512 = raw::TEE_ALG_RSASSA_PKCS1_PSS_MGF1_SHA512,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Encrypt](OperationMode::Encrypt) or [Decrypt](OperationMode::Decrypt) mode.
-    RsaesPkcs1V15 = 0x60000130,
+    RsaesPkcs1V15 = raw::TEE_ALG_RSAES_PKCS1_V1_5,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Encrypt](OperationMode::Encrypt) or [Decrypt](OperationMode::Decrypt) mode.
-    RsaesPkcs1OAepMgf1MD5 = 0xF0110230,
+    RsaesPkcs1OAepMgf1MD5 = raw::TEE_ALG_RSAES_PKCS1_OAEP_MGF1_MD5,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Encrypt](OperationMode::Encrypt) or [Decrypt](OperationMode::Decrypt) mode.
-    RsaesPkcs1OAepMgf1Sha1 = 0x60210230,
+    RsaesPkcs1OAepMgf1Sha1 = raw::TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA1,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Encrypt](OperationMode::Encrypt) or [Decrypt](OperationMode::Decrypt) mode.
-    RsaesPkcs1OAepMgf1Sha224 = 0x60310230,
+    RsaesPkcs1OAepMgf1Sha224 = raw::TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA224,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Encrypt](OperationMode::Encrypt) or [Decrypt](OperationMode::Decrypt) mode.
-    RsaesPkcs1OAepMgf1Sha256 = 0x60410230,
+    RsaesPkcs1OAepMgf1Sha256 = raw::TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA256,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Encrypt](OperationMode::Encrypt) or [Decrypt](OperationMode::Decrypt) mode.
-    RsaesPkcs1OAepMgf1Sha384 = 0x60510230,
+    RsaesPkcs1OAepMgf1Sha384 = raw::TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA384,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Encrypt](OperationMode::Encrypt) or [Decrypt](OperationMode::Decrypt) mode.
-    RsaesPkcs1OAepMgf1Sha512 = 0x60610230,
+    RsaesPkcs1OAepMgf1Sha512 = raw::TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA512,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Encrypt](OperationMode::Encrypt) or [Decrypt](OperationMode::Decrypt) mode.
-    RsaNopad = 0x60000030,
+    RsaNopad = raw::TEE_ALG_RSA_NOPAD,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    DSASha1 = 0x70002131,
+    DSASha1 = raw::TEE_ALG_DSA_SHA1,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    DSASha224 = 0x70003131,
+    DSASha224 = raw::TEE_ALG_DSA_SHA224,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    DSASha256 = 0x70004131,
+    DSASha256 = raw::TEE_ALG_DSA_SHA256,
     /// [DeriveKey](DeriveKey) supported algorithm.
-    DhDeriveSharedSecret = 0x80000032,
+    DhDeriveSharedSecret = raw::TEE_ALG_DH_DERIVE_SHARED_SECRET,
     /// [DeriveKey](DeriveKey) supported algorithm.
-    EcDhDeriveSharedSecret = 0x80000042,
+    EcDhDeriveSharedSecret = raw::TEE_ALG_ECDH_DERIVE_SHARED_SECRET,
     /// [DeriveKey](DeriveKey) supported algorithm, PBKDF2 with HMAC-SHA1.
-    Pbkdf2HmacSha1 = 0x800020C2,
+    Pbkdf2HmacSha1 = raw::TEE_ALG_PBKDF2_HMAC_SHA1_DERIVE_KEY,
     /// [DeriveKey](DeriveKey) supported algorithm, PBKDF2 with HMAC-SHA224.
-    Pbkdf2HmacSha224 = 0x800030C2,
+    Pbkdf2HmacSha224 = raw::TEE_ALG_PBKDF2_HMAC_SHA224_DERIVE_KEY,
     /// [DeriveKey](DeriveKey) supported algorithm, PBKDF2 with HMAC-SHA256.
-    Pbkdf2HmacSha256 = 0x800040C2,
+    Pbkdf2HmacSha256 = raw::TEE_ALG_PBKDF2_HMAC_SHA256_DERIVE_KEY,
     /// [DeriveKey](DeriveKey) supported algorithm, PBKDF2 with HMAC-SHA384.
-    Pbkdf2HmacSha384 = 0x800050C2,
+    Pbkdf2HmacSha384 = raw::TEE_ALG_PBKDF2_HMAC_SHA384_DERIVE_KEY,
     /// [DeriveKey](DeriveKey) supported algorithm, PBKDF2 with HMAC-SHA512.
-    Pbkdf2HmacSha512 = 0x800060C2,
+    Pbkdf2HmacSha512 = raw::TEE_ALG_PBKDF2_HMAC_SHA512_DERIVE_KEY,
     /// [DeriveKey](DeriveKey) supported algorithm, PBKDF2 with HMAC-SM3.
-    Pbkdf2HmacSm3 = 0x800070C2,
+    Pbkdf2HmacSm3 = raw::TEE_ALG_PBKDF2_HMAC_SM3_DERIVE_KEY,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    EcDsaSha1 = 0x70001042,
+    EcDsaSha1 = raw::TEE_ALG_ECDSA_SHA1,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    EcDsaSha224 = 0x70002042,
+    EcDsaSha224 = raw::TEE_ALG_ECDSA_SHA224,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    EcDsaSha256 = 0x70003042,
+    EcDsaSha256 = raw::TEE_ALG_ECDSA_SHA256,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    EcDsaSha384 = 0x70004042,
+    EcDsaSha384 = raw::TEE_ALG_ECDSA_SHA384,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    EcDsaSha512 = 0x70005042,
+    EcDsaSha512 = raw::TEE_ALG_ECDSA_SHA512,
     /// [Asymmetric](Asymmetric) supported algorithm, can be applied with
     /// [Sign](OperationMode::Sign) or [Verify](OperationMode::Verify) mode.
-    Ed25519 = 0x70006043,
+    Ed25519 = raw::TEE_ALG_ED25519,
     /// [DeriveKey](DeriveKey) supported algorithm.
-    X25519 = 0x80000044,
+    X25519 = raw::TEE_ALG_X25519,
     /// [Digest](Digest) supported algorithm.
-    Md5 = 0x50000001,
+    Md5 = raw::TEE_ALG_MD5,
     /// [Digest](Digest) supported algorithm.
-    Sha1 = 0x50000002,
+    Sha1 = raw::TEE_ALG_SHA1,
     /// [Digest](Digest) supported algorithm.
-    Sha224 = 0x50000003,
+    Sha224 = raw::TEE_ALG_SHA224,
     /// [Digest](Digest) supported algorithm.
-    Sha256 = 0x50000004,
+    Sha256 = raw::TEE_ALG_SHA256,
     /// [Digest](Digest) supported algorithm.
-    Sha384 = 0x50000005,
+    Sha384 = raw::TEE_ALG_SHA384,
     /// [Digest](Digest) supported algorithm.
-    Sha512 = 0x50000006,
+    Sha512 = raw::TEE_ALG_SHA512,
     /// [Mac](Mac) supported algorithm.
-    Md5Sha1 = 0x5000000F,
+    Md5Sha1 = raw::TEE_ALG_MD5SHA1,
     /// [Mac](Mac) supported algorithm.
-    HmacMd5 = 0x30000001,
+    HmacMd5 = raw::TEE_ALG_HMAC_MD5,
     /// [Mac](Mac) supported algorithm.
-    HmacSha1 = 0x30000002,
+    HmacSha1 = raw::TEE_ALG_HMAC_SHA1,
     /// [Mac](Mac) supported algorithm.
-    HmacSha224 = 0x30000003,
+    HmacSha224 = raw::TEE_ALG_HMAC_SHA224,
     /// [Mac](Mac) supported algorithm.
-    HmacSha256 = 0x30000004,
+    HmacSha256 = raw::TEE_ALG_HMAC_SHA256,
     /// [Mac](Mac) supported algorithm.
-    HmacSha384 = 0x30000005,
+    HmacSha384 = raw::TEE_ALG_HMAC_SHA384,
     /// [Mac](Mac) supported algorithm.
-    HmacSha512 = 0x30000006,
-    /// Reserved for GlobalPlatform compliance test applications.
-    IllegalValue = 0xefffffff,
+    HmacSha512 = raw::TEE_ALG_HMAC_SHA512,
 }
 
 /// This specification defines support for optional cryptographic elements.
@@ -1873,19 +1870,19 @@ pub enum AlgorithmId {
 pub enum ElementId {
     /// Where algId fully defines the required support,
     /// the special value TEE_CRYPTO_ELEMENT_NONE should be used
-    ElementNone = 0x00000000,
+    ElementNone = raw::TEE_CRYPTO_ELEMENT_NONE,
     /// Source: `NIST`, Generic: `Y`, Size: 192 bits
-    EccCurveNistP192 = 0x00000001,
+    EccCurveNistP192 = raw::TEE_ECC_CURVE_NIST_P192,
     /// Source: `NIST`, Generic: `Y`, Size: 224 bits
-    EccCurveNistP224 = 0x00000002,
+    EccCurveNistP224 = raw::TEE_ECC_CURVE_NIST_P224,
     /// Source: `NIST`, Generic: `Y`, Size: 256 bits
-    EccCurveNistP256 = 0x00000003,
+    EccCurveNistP256 = raw::TEE_ECC_CURVE_NIST_P256,
     /// Source: `NIST`, Generic: `Y`, Size: 384 bits
-    EccCurveNistP384 = 0x00000004,
+    EccCurveNistP384 = raw::TEE_ECC_CURVE_NIST_P384,
     /// Source: `NIST`, Generic: `Y`, Size: 521 bits
-    EccCurveNistP521 = 0x00000005,
+    EccCurveNistP521 = raw::TEE_ECC_CURVE_NIST_P521,
     /// Source: `IETF`, Generic: `N`, Size: 256 bits
-    EccCurve25519 = 0x00000300,
+    EccCurve25519 = raw::TEE_ECC_CURVE_25519,
 }
 
 #[cfg(test)]
@@ -1897,12 +1894,148 @@ mod tests {
     use optee_utee_sys::{mock_api, mock_utils::SERIAL_TEST_LOCK};
 
     #[test]
-    // Guarantee: every high-level PBKDF2 `AlgorithmId` variant maps 1:1
-    // to the OP-TEE raw constant from `tee_api_defines_extensions.h`,
-    // so `DeriveKey::allocate` passes the correct algorithm ID to
-    // `TEE_AllocateOperation`.
-    fn pbkdf2_algorithm_ids_match_raw_constants() {
-        let cases = [
+    // Guarantee: the high-level PBKDF2 attribute IDs map 1:1 to the OP-TEE
+    // raw constants, so PBKDF2 operation parameters are built with the
+    // correct IDs.
+    fn pbkdf2_attribute_ids_match_raw_constants() {
+        let attr_cases = [
+            (AttributeId::Pbkdf2Password, raw::TEE_ATTR_PBKDF2_PASSWORD),
+            (AttributeId::Pbkdf2Salt, raw::TEE_ATTR_PBKDF2_SALT),
+            (
+                AttributeId::Pbkdf2IterationCount,
+                raw::TEE_ATTR_PBKDF2_ITERATION_COUNT,
+            ),
+            (
+                AttributeId::Pbkdf2DkmLength,
+                raw::TEE_ATTR_PBKDF2_DKM_LENGTH,
+            ),
+        ];
+        for (attr, expected) in attr_cases {
+            assert_eq!(attr as u32, expected, "ID mismatch for {attr}");
+        }
+    }
+
+    /// Guarantees: the high-level algorithm, element, object, mode and
+    /// operation enums keep using the generated binding constants, so an
+    /// OP-TEE update that changes a value reaches the enum instead of leaving
+    /// a stale literal behind.
+    #[test]
+    fn high_level_ids_match_raw_constants() {
+        let algorithms = [
+            (AlgorithmId::AesEcbNopad, raw::TEE_ALG_AES_ECB_NOPAD),
+            (AlgorithmId::AesCbcNopad, raw::TEE_ALG_AES_CBC_NOPAD),
+            (AlgorithmId::AesCtr, raw::TEE_ALG_AES_CTR),
+            (AlgorithmId::AesCts, raw::TEE_ALG_AES_CTS),
+            (AlgorithmId::AesXts, raw::TEE_ALG_AES_XTS),
+            (AlgorithmId::AesCbcMacNopad, raw::TEE_ALG_AES_CBC_MAC_NOPAD),
+            (AlgorithmId::AesCbcMacPkcs5, raw::TEE_ALG_AES_CBC_MAC_PKCS5),
+            (AlgorithmId::AesCmac, raw::TEE_ALG_AES_CMAC),
+            (AlgorithmId::AesCcm, raw::TEE_ALG_AES_CCM),
+            (AlgorithmId::AesGcm, raw::TEE_ALG_AES_GCM),
+            (AlgorithmId::DesEcbNopad, raw::TEE_ALG_DES_ECB_NOPAD),
+            (AlgorithmId::DesCbcNopad, raw::TEE_ALG_DES_CBC_NOPAD),
+            (AlgorithmId::DesCbcMacNopad, raw::TEE_ALG_DES_CBC_MAC_NOPAD),
+            (AlgorithmId::DesCbcMacPkcs5, raw::TEE_ALG_DES_CBC_MAC_PKCS5),
+            (AlgorithmId::Des3EcbNopad, raw::TEE_ALG_DES3_ECB_NOPAD),
+            (AlgorithmId::Des3CbcNopad, raw::TEE_ALG_DES3_CBC_NOPAD),
+            (
+                AlgorithmId::Des3CbcMacNopad,
+                raw::TEE_ALG_DES3_CBC_MAC_NOPAD,
+            ),
+            (
+                AlgorithmId::Des3CbcMacPkcs5,
+                raw::TEE_ALG_DES3_CBC_MAC_PKCS5,
+            ),
+            (AlgorithmId::RsassaPkcs1V15, raw::TEE_ALG_RSASSA_PKCS1_V1_5),
+            (
+                AlgorithmId::RsassaPkcs1V15MD5,
+                raw::TEE_ALG_RSASSA_PKCS1_V1_5_MD5,
+            ),
+            (
+                AlgorithmId::RsassaPkcs1V15Sha1,
+                raw::TEE_ALG_RSASSA_PKCS1_V1_5_SHA1,
+            ),
+            (
+                AlgorithmId::RsassaPkcs1V15Sha224,
+                raw::TEE_ALG_RSASSA_PKCS1_V1_5_SHA224,
+            ),
+            (
+                AlgorithmId::RsassaPkcs1V15Sha256,
+                raw::TEE_ALG_RSASSA_PKCS1_V1_5_SHA256,
+            ),
+            (
+                AlgorithmId::RsassaPkcs1V15Sha384,
+                raw::TEE_ALG_RSASSA_PKCS1_V1_5_SHA384,
+            ),
+            (
+                AlgorithmId::RsassaPkcs1V15Sha512,
+                raw::TEE_ALG_RSASSA_PKCS1_V1_5_SHA512,
+            ),
+            (
+                AlgorithmId::RsassaPkcs1V15MD5Sha1,
+                raw::TEE_ALG_RSASSA_PKCS1_V1_5_MD5SHA1,
+            ),
+            (
+                AlgorithmId::RsassaPkcs1PssMgf1MD5,
+                raw::TEE_ALG_RSASSA_PKCS1_PSS_MGF1_MD5,
+            ),
+            (
+                AlgorithmId::RsassaPkcs1PssMgf1Sha1,
+                raw::TEE_ALG_RSASSA_PKCS1_PSS_MGF1_SHA1,
+            ),
+            (
+                AlgorithmId::RsassaPkcs1PssMgf1Sha224,
+                raw::TEE_ALG_RSASSA_PKCS1_PSS_MGF1_SHA224,
+            ),
+            (
+                AlgorithmId::RsassaPkcs1PssMgf1Sha256,
+                raw::TEE_ALG_RSASSA_PKCS1_PSS_MGF1_SHA256,
+            ),
+            (
+                AlgorithmId::RsassaPkcs1PssMgf1Sha384,
+                raw::TEE_ALG_RSASSA_PKCS1_PSS_MGF1_SHA384,
+            ),
+            (
+                AlgorithmId::RsassaPkcs1PssMgf1Sha512,
+                raw::TEE_ALG_RSASSA_PKCS1_PSS_MGF1_SHA512,
+            ),
+            (AlgorithmId::RsaesPkcs1V15, raw::TEE_ALG_RSAES_PKCS1_V1_5),
+            (
+                AlgorithmId::RsaesPkcs1OAepMgf1MD5,
+                raw::TEE_ALG_RSAES_PKCS1_OAEP_MGF1_MD5,
+            ),
+            (
+                AlgorithmId::RsaesPkcs1OAepMgf1Sha1,
+                raw::TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA1,
+            ),
+            (
+                AlgorithmId::RsaesPkcs1OAepMgf1Sha224,
+                raw::TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA224,
+            ),
+            (
+                AlgorithmId::RsaesPkcs1OAepMgf1Sha256,
+                raw::TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA256,
+            ),
+            (
+                AlgorithmId::RsaesPkcs1OAepMgf1Sha384,
+                raw::TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA384,
+            ),
+            (
+                AlgorithmId::RsaesPkcs1OAepMgf1Sha512,
+                raw::TEE_ALG_RSAES_PKCS1_OAEP_MGF1_SHA512,
+            ),
+            (AlgorithmId::RsaNopad, raw::TEE_ALG_RSA_NOPAD),
+            (AlgorithmId::DSASha1, raw::TEE_ALG_DSA_SHA1),
+            (AlgorithmId::DSASha224, raw::TEE_ALG_DSA_SHA224),
+            (AlgorithmId::DSASha256, raw::TEE_ALG_DSA_SHA256),
+            (
+                AlgorithmId::DhDeriveSharedSecret,
+                raw::TEE_ALG_DH_DERIVE_SHARED_SECRET,
+            ),
+            (
+                AlgorithmId::EcDhDeriveSharedSecret,
+                raw::TEE_ALG_ECDH_DERIVE_SHARED_SECRET,
+            ),
             (
                 AlgorithmId::Pbkdf2HmacSha1,
                 raw::TEE_ALG_PBKDF2_HMAC_SHA1_DERIVE_KEY,
@@ -1927,38 +2060,154 @@ mod tests {
                 AlgorithmId::Pbkdf2HmacSm3,
                 raw::TEE_ALG_PBKDF2_HMAC_SM3_DERIVE_KEY,
             ),
+            (AlgorithmId::EcDsaSha1, raw::TEE_ALG_ECDSA_SHA1),
+            (AlgorithmId::EcDsaSha224, raw::TEE_ALG_ECDSA_SHA224),
+            (AlgorithmId::EcDsaSha256, raw::TEE_ALG_ECDSA_SHA256),
+            (AlgorithmId::EcDsaSha384, raw::TEE_ALG_ECDSA_SHA384),
+            (AlgorithmId::EcDsaSha512, raw::TEE_ALG_ECDSA_SHA512),
+            (AlgorithmId::Ed25519, raw::TEE_ALG_ED25519),
+            (AlgorithmId::X25519, raw::TEE_ALG_X25519),
+            (AlgorithmId::Md5, raw::TEE_ALG_MD5),
+            (AlgorithmId::Sha1, raw::TEE_ALG_SHA1),
+            (AlgorithmId::Sha224, raw::TEE_ALG_SHA224),
+            (AlgorithmId::Sha256, raw::TEE_ALG_SHA256),
+            (AlgorithmId::Sha384, raw::TEE_ALG_SHA384),
+            (AlgorithmId::Sha512, raw::TEE_ALG_SHA512),
+            (AlgorithmId::Md5Sha1, raw::TEE_ALG_MD5SHA1),
+            (AlgorithmId::HmacMd5, raw::TEE_ALG_HMAC_MD5),
+            (AlgorithmId::HmacSha1, raw::TEE_ALG_HMAC_SHA1),
+            (AlgorithmId::HmacSha224, raw::TEE_ALG_HMAC_SHA224),
+            (AlgorithmId::HmacSha256, raw::TEE_ALG_HMAC_SHA256),
+            (AlgorithmId::HmacSha384, raw::TEE_ALG_HMAC_SHA384),
+            (AlgorithmId::HmacSha512, raw::TEE_ALG_HMAC_SHA512),
         ];
-        for (algo, expected) in cases {
-            assert_eq!(algo as u32, expected, "algorithm ID mismatch for {algo}");
+        for (algorithm, expected) in algorithms {
+            assert_eq!(
+                algorithm as u32, expected,
+                "algorithm ID mismatch for {algorithm}"
+            );
         }
-    }
-
-    #[test]
-    // Guarantee: the high-level PBKDF2 object type and attribute IDs map
-    // 1:1 to the OP-TEE raw constants, so password objects and PBKDF2
-    // operation parameters are built with the correct IDs.
-    fn pbkdf2_object_and_attribute_ids_match_raw_constants() {
-        let object_cases = [(
-            TransientObjectType::Pbkdf2Password,
-            raw::TEE_TYPE_PBKDF2_PASSWORD,
-        )];
-        for (obj_type, expected) in object_cases {
-            assert_eq!(obj_type as u32, expected, "ID mismatch for {obj_type}");
+        let elements = [
+            (ElementId::ElementNone, raw::TEE_CRYPTO_ELEMENT_NONE),
+            (ElementId::EccCurveNistP192, raw::TEE_ECC_CURVE_NIST_P192),
+            (ElementId::EccCurveNistP224, raw::TEE_ECC_CURVE_NIST_P224),
+            (ElementId::EccCurveNistP256, raw::TEE_ECC_CURVE_NIST_P256),
+            (ElementId::EccCurveNistP384, raw::TEE_ECC_CURVE_NIST_P384),
+            (ElementId::EccCurveNistP521, raw::TEE_ECC_CURVE_NIST_P521),
+            (ElementId::EccCurve25519, raw::TEE_ECC_CURVE_25519),
+        ];
+        for (element, expected) in elements {
+            assert_eq!(element as u32, expected, "element ID mismatch");
         }
-        let attr_cases = [
-            (AttributeId::Pbkdf2Password, raw::TEE_ATTR_PBKDF2_PASSWORD),
-            (AttributeId::Pbkdf2Salt, raw::TEE_ATTR_PBKDF2_SALT),
+        let object_types = [
+            (TransientObjectType::Aes, raw::TEE_TYPE_AES),
+            (TransientObjectType::Des, raw::TEE_TYPE_DES),
+            (TransientObjectType::Des3, raw::TEE_TYPE_DES3),
+            (TransientObjectType::HmacMd5, raw::TEE_TYPE_HMAC_MD5),
+            (TransientObjectType::HmacSha1, raw::TEE_TYPE_HMAC_SHA1),
+            (TransientObjectType::HmacSha224, raw::TEE_TYPE_HMAC_SHA224),
+            (TransientObjectType::HmacSha256, raw::TEE_TYPE_HMAC_SHA256),
+            (TransientObjectType::HmacSha384, raw::TEE_TYPE_HMAC_SHA384),
+            (TransientObjectType::HmacSha512, raw::TEE_TYPE_HMAC_SHA512),
             (
-                AttributeId::Pbkdf2IterationCount,
-                raw::TEE_ATTR_PBKDF2_ITERATION_COUNT,
+                TransientObjectType::RsaPublicKey,
+                raw::TEE_TYPE_RSA_PUBLIC_KEY,
+            ),
+            (TransientObjectType::RsaKeypair, raw::TEE_TYPE_RSA_KEYPAIR),
+            (
+                TransientObjectType::DsaPublicKey,
+                raw::TEE_TYPE_DSA_PUBLIC_KEY,
+            ),
+            (TransientObjectType::DsaKeypair, raw::TEE_TYPE_DSA_KEYPAIR),
+            (TransientObjectType::DhKeypair, raw::TEE_TYPE_DH_KEYPAIR),
+            (
+                TransientObjectType::Pbkdf2Password,
+                raw::TEE_TYPE_PBKDF2_PASSWORD,
             ),
             (
-                AttributeId::Pbkdf2DkmLength,
-                raw::TEE_ATTR_PBKDF2_DKM_LENGTH,
+                TransientObjectType::EcdsaPublicKey,
+                raw::TEE_TYPE_ECDSA_PUBLIC_KEY,
+            ),
+            (
+                TransientObjectType::EcdsaKeypair,
+                raw::TEE_TYPE_ECDSA_KEYPAIR,
+            ),
+            (
+                TransientObjectType::EcdhPublicKey,
+                raw::TEE_TYPE_ECDH_PUBLIC_KEY,
+            ),
+            (TransientObjectType::EcdhKeypair, raw::TEE_TYPE_ECDH_KEYPAIR),
+            (
+                TransientObjectType::Ed25519PublicKey,
+                raw::TEE_TYPE_ED25519_PUBLIC_KEY,
+            ),
+            (
+                TransientObjectType::Ed25519Keypair,
+                raw::TEE_TYPE_ED25519_KEYPAIR,
+            ),
+            (
+                TransientObjectType::X25519PublicKey,
+                raw::TEE_TYPE_X25519_PUBLIC_KEY,
+            ),
+            (
+                TransientObjectType::X25519Keypair,
+                raw::TEE_TYPE_X25519_KEYPAIR,
+            ),
+            (
+                TransientObjectType::GenericSecret,
+                raw::TEE_TYPE_GENERIC_SECRET,
+            ),
+            (
+                TransientObjectType::CorruptedObject,
+                raw::TEE_TYPE_CORRUPTED_OBJECT,
+            ),
+            (TransientObjectType::Data, raw::TEE_TYPE_DATA),
+        ];
+        for (object_type, expected) in object_types {
+            assert_eq!(
+                object_type as u32, expected,
+                "object type mismatch for {object_type}"
+            );
+        }
+        let modes = [
+            (OperationMode::Encrypt, raw::TEE_MODE_ENCRYPT),
+            (OperationMode::Decrypt, raw::TEE_MODE_DECRYPT),
+            (OperationMode::Sign, raw::TEE_MODE_SIGN),
+            (OperationMode::Verify, raw::TEE_MODE_VERIFY),
+            (OperationMode::Mac, raw::TEE_MODE_MAC),
+            (OperationMode::Digest, raw::TEE_MODE_DIGEST),
+            (OperationMode::Derive, raw::TEE_MODE_DERIVE),
+        ];
+        for (mode, expected) in modes {
+            assert_eq!(mode as u32, expected, "operation mode mismatch");
+        }
+        let states = [
+            (OperationStates::Initial, raw::TEE_OPERATION_STATE_INITIAL),
+            (OperationStates::Active, raw::TEE_OPERATION_STATE_ACTIVE),
+        ];
+        for (state, expected) in states {
+            assert_eq!(state as u32, expected, "operation state mismatch");
+        }
+        let operation_classes = [
+            (OperationConstant::Cipher, raw::TEE_OPERATION_CIPHER),
+            (OperationConstant::Mac, raw::TEE_OPERATION_MAC),
+            (OperationConstant::Ae, raw::TEE_OPERATION_AE),
+            (OperationConstant::Digest, raw::TEE_OPERATION_DIGEST),
+            (
+                OperationConstant::AsymmetricCipher,
+                raw::TEE_OPERATION_ASYMMETRIC_CIPHER,
+            ),
+            (
+                OperationConstant::AsymmetricSignature,
+                raw::TEE_OPERATION_ASYMMETRIC_SIGNATURE,
+            ),
+            (
+                OperationConstant::KeyDerivation,
+                raw::TEE_OPERATION_KEY_DERIVATION,
             ),
         ];
-        for (attr, expected) in attr_cases {
-            assert_eq!(attr as u32, expected, "ID mismatch for {attr}");
+        for (class, expected) in operation_classes {
+            assert_eq!(class as u32, expected, "operation class mismatch");
         }
     }
 
