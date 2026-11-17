@@ -24,8 +24,6 @@ Relevant Patch File:
     in QEMU.
 2. arm-atf_expand_secure_memory.patch: Updates ARM Trusted Firmware definitions
     to match the QEMU memory expansion.
-3. optee-build_expand_memory.patch: Updates build configurations to reflect the
-    expanded memory setup.
 
 ## Patches for enabling ssh
 

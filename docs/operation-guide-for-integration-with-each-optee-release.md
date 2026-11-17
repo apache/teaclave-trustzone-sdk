@@ -55,7 +55,8 @@ For each OP-TEE release (e.g., 4.8.0), the following files are generated:
 - **Standard images**: By default, our examples use standard images, which are built 
   on the OP-TEE repo without changes.
 - **Expand-ta-memory images**: Used by TAs that need large memory, such as TLS examples. 
-  The patch is applied based on the OP-TEE repo codebase. See 
+  The QEMU and TF-A memory map is patched, and OP-TEE is built with expanded
+  TZDRAM make arguments. See
   [Expanding TA Secure Memory on QEMUv8](expanding-ta-secure-memory-on-qemuv8.md) 
   for details.
 

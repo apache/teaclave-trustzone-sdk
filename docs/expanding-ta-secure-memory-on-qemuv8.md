@@ -9,17 +9,18 @@ larger TA memory (about 18M heap), we've expanded TA secure memory on OP-TEE
 QEMUv8 platform. On QEMUv8 platform it supports 7M TA memory originally, after
 expanding it supports 27M TA memory at most.
 
-We modified the firmware and configuration of QEMU, ATF and OPTEE. You can
+We modified the firmware and configuration of QEMU and ATF. You can
 download the pre-built image from
 https://nightlies.apache.org/teaclave/teaclave-trustzone-sdk/ or patch the code
 and build the images by yourself.
 
-For details on the modifications, please refer to the 
+For details on the modifications, please refer to the
 [Patches](https://github.com/apache/teaclave-trustzone-sdk/.patches/test_qemu)
 
 Finally, build images:
 
 ```
 $ cd optee-repo/build
-$ make
+$ make CFG_TZDRAM_SIZE=0x01f00000 CFG_PGT_CACHE_ENTRIES=32 \
+       CFG_WITH_LPAE=y CFG_CORE_PREALLOC_EL0_TBLS=y
 ```
