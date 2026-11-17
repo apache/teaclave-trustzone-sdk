@@ -32,7 +32,7 @@ jobs:
   test-on-amd64-host:
     uses: ./.github/workflows/reuse_test.yml
     with:
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       container: ghcr.io/ivila/teaclave-trustzone-sdk-ci-runner:ubuntu-24.04
 
   # Run test on ARM64 host
@@ -120,7 +120,7 @@ jobs:
             host: arm32
             image: teaclave/teaclave-trustzone-emulator-std-expand-memory:latest
     name: test-build-on-dev-docker (${{ matrix.arch }}, ${{ matrix.std && 'std' || 'no-std' }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container:
       image: ${{ matrix.image }}
     steps:
@@ -154,7 +154,7 @@ jobs:
 
 
   unused-dependencies:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -171,7 +171,7 @@ jobs:
           done
 
   license:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - name: Check License Header

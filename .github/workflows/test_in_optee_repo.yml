@@ -42,7 +42,7 @@ jobs:
   test-on-amd64-host:
     uses: ./.github/workflows/reuse_test_in_optee_repo.yml
     with:
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       container: ghcr.io/ivila/teaclave-trustzone-sdk-ci-runner:ubuntu-24.04
 
   # Run test on ARM64 host
