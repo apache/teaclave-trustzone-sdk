@@ -29,7 +29,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Run Release Drafter
         uses: release-drafter/release-drafter@v7

@@ -39,14 +39,14 @@ jobs:
   amd64-ubuntu24-expand-ta-memory:
     uses: ./.github/workflows/reuse_build_test_qemu_image.yml
     with:
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       expand-memory: true
       optee-version: ${{ inputs.optee-version }}
 
   amd64-ubuntu24:
     uses: ./.github/workflows/reuse_build_test_qemu_image.yml
     with:
-      runs-on: ubuntu-latest
+      runs-on: ubuntu-24.04
       expand-memory: false
       optee-version: ${{ inputs.optee-version }}
 
