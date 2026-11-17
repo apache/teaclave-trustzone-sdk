@@ -117,7 +117,6 @@ jobs:
       - name: Apply patches to expand memory
         if: ${{ inputs.expand-memory == true }}
         run: |
-          (cd ${{ env.QEMUV8_BUILD_FOLDER }}/build && git apply $GITHUB_WORKSPACE/.patches/test_qemu/optee-build_expand_memory.patch)
           (cd ${{ env.QEMUV8_BUILD_FOLDER }}/qemu && git apply $GITHUB_WORKSPACE/.patches/test_qemu/qemu-qemu_expand_secure_memory.patch)
           (cd ${{ env.QEMUV8_BUILD_FOLDER }}/trusted-firmware-a && git apply $GITHUB_WORKSPACE/.patches/test_qemu/arm-atf_expand_secure_memory.patch)
 
@@ -129,19 +128,30 @@ jobs:
         env:
           OUTPUT_NAME: ${{ steps.output_name.outputs.name }}
           OUTPUT_FOLDER: /tmp/${{ steps.output_name.outputs.name }}
+          EXPAND_MEMORY: ${{ inputs.expand-memory }}
         run: |
-          cd ${{ env.QEMUV8_BUILD_FOLDER }} &&
-          cd build &&
-          make toolchains -j$(nproc) &&
-          make all -j$(nproc) &&
+          cd ${{ env.QEMUV8_BUILD_FOLDER }}
+          cd build
+          make toolchains -j"$(nproc)"
 
-          mkdir -p ${{ env.OUTPUT_FOLDER }} &&
-          cp ${{ env.QEMUV8_BUILD_FOLDER }}/out/bin/* ${{ env.OUTPUT_FOLDER }} &&
-          cp ${{ env.QEMUV8_BUILD_FOLDER }}/qemu/build/qemu-system-aarch64 ${{ env.OUTPUT_FOLDER }} &&
+          EXPAND_FLAGS=()
+          if [ "$EXPAND_MEMORY" = "true" ]; then
+            EXPAND_FLAGS+=(
+              CFG_TZDRAM_SIZE=0x01f00000
+              CFG_PGT_CACHE_ENTRIES=32
+              CFG_WITH_LPAE=y
+              CFG_CORE_PREALLOC_EL0_TBLS=y
+            )
+          fi
+          make all -j"$(nproc)" "${EXPAND_FLAGS[@]}"
 
-          mkdir -p $GITHUB_WORKSPACE/out &&
-          cd ${{ env.OUTPUT_FOLDER }} &&
-          cd .. &&
+          mkdir -p ${{ env.OUTPUT_FOLDER }}
+          cp ${{ env.QEMUV8_BUILD_FOLDER }}/out/bin/* ${{ env.OUTPUT_FOLDER }}
+          cp ${{ env.QEMUV8_BUILD_FOLDER }}/qemu/build/qemu-system-aarch64 ${{ env.OUTPUT_FOLDER }}
+
+          mkdir -p $GITHUB_WORKSPACE/out
+          cd ${{ env.OUTPUT_FOLDER }}
+          cd ..
           tar -czvf $GITHUB_WORKSPACE/out/${{ env.OUTPUT_NAME }}.tar.gz ${{ env.OUTPUT_NAME }}
 
       - name: Upload
