@@ -75,3 +75,25 @@ index 9c36c8a..8d553d3 100644
  
  PLAT_QEMU ?= virt
  ifeq ($(PLAT_QEMU),virt)
+diff --git a/qemu.mk b/qemu.mk
+index c9cb8c9..9ec4451 100644
+--- a/qemu.mk
++++ b/qemu.mk
+@@ -7,10 +7,15 @@
+ override COMPILE_NS_USER   := 32
+ override COMPILE_NS_KERNEL := 32
+ override COMPILE_S_USER    := 32
+ override COMPILE_S_KERNEL  := 32
++ENABLE_SSH ?= y
+ 
+ BR2_ROOTFS_OVERLAY = $(ROOT)/build/br-ext/board/qemu/overlay
+ BR2_ROOTFS_POST_BUILD_SCRIPT = $(ROOT)/build/br-ext/board/qemu/post-build.sh
+-BR2_ROOTFS_POST_SCRIPT_ARGS = "$(QEMU_VIRTFS_AUTOMOUNT) $(QEMU_VIRTFS_MOUNTPOINT) $(QEMU_PSS_AUTOMOUNT)"
++BR2_ROOTFS_POST_SCRIPT_ARGS = "$(QEMU_VIRTFS_AUTOMOUNT) $(QEMU_VIRTFS_MOUNTPOINT) $(QEMU_PSS_AUTOMOUNT) $(ENABLE_SSH)"
++ifeq ($(ENABLE_SSH),y)
++BR2_PACKAGE_OPENSSH ?= y
++BR2_SYSTEM_DHCP ?= eth0
++endif
+ 
+ OPTEE_OS_PLATFORM = vexpress-qemu_virt
+ 

@@ -36,9 +36,11 @@ them to the nightlies repository.
 
 **Location:** https://nightlies.apache.org/teaclave/teaclave-trustzone-sdk/
 
-For each OP-TEE release, we maintain a comprehensive set of images across multiple 
-architectures (aarch64, x86_64). These images serve dual purposes:
-1. **CI Infrastructure:** Enable automated testing of TAs on QEMUv8 platforms
+For each OP-TEE release, we maintain a set of images across both
+host architectures (x86_64, aarch64) and both guest architectures (AArch64,
+AArch32). These images serve dual purposes:
+1. **CI Infrastructure:** Enable automated testing of TAs on the AArch64 and
+   AArch32 QEMU guests
 2. **Developer Environment:** Provide ready-to-use emulation environments for quick 
    TA development and testing
 
@@ -46,19 +48,21 @@ architectures (aarch64, x86_64). These images serve dual purposes:
 
 For each OP-TEE release (e.g., 4.8.0), the following files are generated:
 - `aarch64-optee-4.8.0-qemuv8-ubuntu-24.04-expand-ta-memory.tar.gz`
-- `aarch64-optee-4.8.0-qemuv8-ubuntu-24.04.tar.gz`
 - `x86_64-optee-4.8.0-qemuv8-ubuntu-24.04-expand-ta-memory.tar.gz`
-- `x86_64-optee-4.8.0-qemuv8-ubuntu-24.04.tar.gz`
+- `aarch64-optee-4.8.0-qemu-arm32-ubuntu-24.04-expand-ta-memory.tar.gz`
+- `x86_64-optee-4.8.0-qemu-arm32-ubuntu-24.04-expand-ta-memory.tar.gz`
 
 #### Image Types
 
-- **Standard images**: By default, our examples use standard images, which are built 
-  on the OP-TEE repo without changes.
-- **Expand-ta-memory images**: Used by TAs that need large memory, such as TLS examples. 
-  The QEMU and TF-A memory map is patched, and OP-TEE is built with expanded
-  TZDRAM make arguments. See
-  [Expanding TA Secure Memory on QEMUv8](expanding-ta-secure-memory-on-qemuv8.md) 
-  for details.
+All images are built with expanded TA secure memory because some TAs, such as
+the TLS examples, need a large heap. The QEMU and TF-A memory map is patched,
+and OP-TEE is built with expanded TZDRAM make arguments. See
+[Expanding TA Secure Memory on QEMUv8](expanding-ta-secure-memory-on-qemuv8.md)
+for details.
+
+Images with `qemuv8` in the name run an AArch64 guest, while images with
+`qemu-arm32` run an AArch32 guest. The client and TA architecture must match
+the guest.
 
 #### Upload Process
 
@@ -76,9 +80,12 @@ For each OP-TEE release (e.g., 4.8.0), the following files are generated:
    Upload each of the four artifacts using curl. Example command:
    ```bash
    curl -u YOUR_ASF_ID \
-        -T ./aarch64-optee-4.8.0-qemuv8-ubuntu-24.04.tar.gz \
+        -T ./aarch64-optee-4.8.0-qemuv8-ubuntu-24.04-expand-ta-memory.tar.gz \
         "https://nightlies.apache.org/teaclave/teaclave-trustzone-sdk/"
    ```
+
+   CI downloads these images from nightlies, so publish them before expecting
+   the QEMU test jobs to pass.
 
 ### 3. PR to Bump optee-version.txt
 
