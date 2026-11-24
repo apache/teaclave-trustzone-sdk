@@ -19,3 +19,5 @@ screenlog.*
 shared
 x86_64-optee-*-qemuv8-ubuntu-24.04*
 aarch64-optee-*-qemuv8-ubuntu-24.04*
+x86_64-optee-*-qemu-arm32-ubuntu-24.04*
+aarch64-optee-*-qemu-arm32-ubuntu-24.04*

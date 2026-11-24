@@ -17,10 +17,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
-cd $1 && ./qemu-system-aarch64 \
+# Serial 1: Normal World (NON_SECURE_WORLD_SERIAL, stdio by default).
+# Serial 2: Secure World, logged to /tmp/serial.log.
+cd "$1" || exit 1
+
+./qemu-system-aarch64 \
     -nodefaults \
     -nographic \
-    -serial stdio -serial file:/tmp/serial.log \
+    -monitor none \
+    -serial "${NON_SECURE_WORLD_SERIAL:-stdio}" -serial file:/tmp/serial.log \
     -smp 2 \
     -s -machine virt,secure=on,acpi=off,gic-version=3 \
     -cpu cortex-a57 \
