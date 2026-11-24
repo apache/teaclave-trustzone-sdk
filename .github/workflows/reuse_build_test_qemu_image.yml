@@ -23,10 +23,10 @@ on:
       runs-on:
         required: true
         type: string
-      expand-memory:
+      guest-arch:
+        description: 'QEMU guest architecture: aarch64 or arm32'
         required: true
-        type: boolean
-        default: false
+        type: string
       optee-version:
         description: 'OP-TEE version tag to sync (e.g. 4.11.0)'
         required: true
@@ -37,7 +37,7 @@ defaults:
     shell: bash
 
 env:
-  QEMUV8_BUILD_FOLDER: /tmp/qemuv8
+  BUILD_FOLDER: /tmp/${{ inputs.guest-arch == 'arm32' && 'qemu-arm32' || 'qemuv8' }}
 
 jobs:
   build:
@@ -79,11 +79,11 @@ jobs:
           path: |
             ~/.cache/ccache
             # cache build tool cache, helpful on arm64 host
-            ${{ env.QEMUV8_BUILD_FOLDER }}/out-aarch64-sdk
-            ${{ env.QEMUV8_BUILD_FOLDER }}/toolchains
-          key: builds-cache-${{ runner.arch }}${{ inputs.expand-memory && '-expand-ta-memory' || ''}}-${{ github.sha }}
+            ${{ env.BUILD_FOLDER }}/out-aarch64-sdk
+            ${{ env.BUILD_FOLDER }}/toolchains
+          key: builds-cache-${{ runner.arch }}-${{ inputs.guest-arch }}-${{ github.sha }}
           restore-keys: |
-            builds-cache-${{ runner.arch }}
+            builds-cache-${{ runner.arch }}-${{ inputs.guest-arch }}-
 
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -94,9 +94,11 @@ jobs:
           
       - name: Checkout OP-TEE repository
         run: |
-          mkdir -p ${{ env.QEMUV8_BUILD_FOLDER }} && 
-          cd ${{ env.QEMUV8_BUILD_FOLDER }} &&
-          repo init -u https://github.com/OP-TEE/manifest.git -m qemu_v8.xml -b ${{ inputs.optee-version }} &&
+          mkdir -p ${{ env.BUILD_FOLDER }} &&
+          cd ${{ env.BUILD_FOLDER }} &&
+          repo init -u https://github.com/OP-TEE/manifest.git \
+            -m ${{ inputs.guest-arch == 'arm32' && 'default.xml' || 'qemu_v8.xml' }} \
+            -b ${{ inputs.optee-version }} &&
           repo sync -j4 --no-clone-bundle
 
       - name: Get Output Name
@@ -105,49 +107,58 @@ jobs:
           OPTEE_TAG=optee-${{ inputs.optee-version }}
           OS_VERSION_TAG="ubuntu-24.04"
           ARCH_TAG=$(uname -m)
-          SUFFIX_TAG=${{ inputs.expand-memory && '-expand-ta-memory' || '' }}
-          OUTPUT_NAME=$ARCH_TAG-$OPTEE_TAG-qemuv8-$OS_VERSION_TAG$SUFFIX_TAG
+          PLATFORM_TAG=${{ inputs.guest-arch == 'arm32' && 'qemu-arm32' || 'qemuv8' }}
+          OUTPUT_NAME=$ARCH_TAG-$OPTEE_TAG-$PLATFORM_TAG-$OS_VERSION_TAG-expand-ta-memory
 
           echo "name=$OUTPUT_NAME" > $GITHUB_OUTPUT
 
       - name: Apply patches for Disabling WatchDog Test
+        if: ${{ inputs.guest-arch != 'arm32' }}
         run: |
-          (cd ${{ env.QEMUV8_BUILD_FOLDER }}/build && git apply $GITHUB_WORKSPACE/.patches/test_qemu/optee-build_disable_wd_test.patch)
+          (cd ${{ env.BUILD_FOLDER }}/build && git apply $GITHUB_WORKSPACE/.patches/test_qemu/optee-build_disable_wd_test.patch)
 
       - name: Apply patches to expand memory
-        if: ${{ inputs.expand-memory == true }}
         run: |
-          (cd ${{ env.QEMUV8_BUILD_FOLDER }}/qemu && git apply $GITHUB_WORKSPACE/.patches/test_qemu/qemu-qemu_expand_secure_memory.patch)
-          (cd ${{ env.QEMUV8_BUILD_FOLDER }}/trusted-firmware-a && git apply $GITHUB_WORKSPACE/.patches/test_qemu/arm-atf_expand_secure_memory.patch)
+          (cd ${{ env.BUILD_FOLDER }}/qemu && git apply $GITHUB_WORKSPACE/.patches/test_qemu/qemu-qemu_expand_secure_memory.patch)
+          (cd ${{ env.BUILD_FOLDER }}/trusted-firmware-a && git apply $GITHUB_WORKSPACE/.patches/test_qemu/arm-atf_expand_secure_memory.patch)
 
       - name: Apply patches to enable ssh
         run: |
-          (cd ${{ env.QEMUV8_BUILD_FOLDER }}/build && git apply $GITHUB_WORKSPACE/.patches/test_qemu/optee-build_enable_ssh.patch)
+          (cd ${{ env.BUILD_FOLDER }}/build && git apply $GITHUB_WORKSPACE/.patches/test_qemu/optee-build_enable_ssh.patch)
+
+      - name: Apply patch for the user VA range overflow
+        run: |
+          (cd ${{ env.BUILD_FOLDER }}/optee_os && git apply $GITHUB_WORKSPACE/.patches/test_qemu/optee-os_user_va_range_overflow.patch)
       # cd to the output folder first to avoid extra path in the tar file.
       - name: Build And Pack
         env:
           OUTPUT_NAME: ${{ steps.output_name.outputs.name }}
           OUTPUT_FOLDER: /tmp/${{ steps.output_name.outputs.name }}
-          EXPAND_MEMORY: ${{ inputs.expand-memory }}
+          GUEST_ARCH: ${{ inputs.guest-arch }}
         run: |
-          cd ${{ env.QEMUV8_BUILD_FOLDER }}
+          cd ${{ env.BUILD_FOLDER }}
           cd build
           make toolchains -j"$(nproc)"
 
-          EXPAND_FLAGS=()
-          if [ "$EXPAND_MEMORY" = "true" ]; then
-            EXPAND_FLAGS+=(
-              CFG_TZDRAM_SIZE=0x01f00000
-              CFG_PGT_CACHE_ENTRIES=32
-              CFG_WITH_LPAE=y
-              CFG_CORE_PREALLOC_EL0_TBLS=y
-            )
-          fi
+          EXPAND_FLAGS=(
+            CFG_TZDRAM_SIZE=0x01f00000
+            CFG_PGT_CACHE_ENTRIES=32
+            CFG_WITH_LPAE=y
+            CFG_CORE_PREALLOC_EL0_TBLS=y
+          )
           make all -j"$(nproc)" "${EXPAND_FLAGS[@]}"
 
           mkdir -p ${{ env.OUTPUT_FOLDER }}
-          cp ${{ env.QEMUV8_BUILD_FOLDER }}/out/bin/* ${{ env.OUTPUT_FOLDER }}
-          cp ${{ env.QEMUV8_BUILD_FOLDER }}/qemu/build/qemu-system-aarch64 ${{ env.OUTPUT_FOLDER }}
+          cp ${{ env.BUILD_FOLDER }}/out/bin/* ${{ env.OUTPUT_FOLDER }}
+          if [ "$GUEST_ARCH" = "arm32" ]; then
+            # qemu.mk does not link the rootfs into out/bin.
+            cp ${{ env.BUILD_FOLDER }}/out-br/images/rootfs.cpio.gz ${{ env.OUTPUT_FOLDER }}
+            QEMU_BINARY=$(find ${{ env.BUILD_FOLDER }}/qemu/build -maxdepth 2 -name qemu-system-arm -type f | head -n 1)
+          else
+            QEMU_BINARY=$(find ${{ env.BUILD_FOLDER }}/qemu/build -maxdepth 2 -name qemu-system-aarch64 -type f | head -n 1)
+          fi
+          test -n "$QEMU_BINARY"
+          cp "$QEMU_BINARY" ${{ env.OUTPUT_FOLDER }}
 
           mkdir -p $GITHUB_WORKSPACE/out
           cd ${{ env.OUTPUT_FOLDER }}

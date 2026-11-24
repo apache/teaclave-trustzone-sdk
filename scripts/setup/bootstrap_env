@@ -29,10 +29,4 @@ export OPTEE_CLIENT_DIR=${OPTEE_DIR}/optee_client
 export IMG_DIRECTORY=${TEACLAVE_TOOLCHAIN_BASE}/images
 
 export IMG_VERSION="$(uname -m)-optee-${OPTEE_VERSION}-qemuv8-ubuntu-24.04"
-export NEED_EXPANDED_MEM="${NEED_EXPANDED_MEM:-true}"
-
-if [ "$NEED_EXPANDED_MEM" = true ]; then
-    export IMG_NAME="${IMG_VERSION}-expand-ta-memory"
-else
-    export IMG_NAME="$IMG_VERSION"
-fi
+export IMG_NAME="${IMG_VERSION}-expand-ta-memory"

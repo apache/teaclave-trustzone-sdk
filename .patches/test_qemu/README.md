@@ -16,7 +16,8 @@ Relevant Patch File:
 ## Patches for Expand Memory
 
 Some of our tests require more Trusted Application (TA) memory than the default
-OP-TEE configuration provides.
+OP-TEE configuration provides. Both the AArch64 and AArch32 images use these
+patches together with the expanded TZDRAM make arguments.
 
 Relevant Patch File:
 
@@ -24,6 +25,19 @@ Relevant Patch File:
     in QEMU.
 2. arm-atf_expand_secure_memory.patch: Updates ARM Trusted Firmware definitions
     to match the QEMU memory expansion.
+
+## Patch for the user VA range overflow
+
+On a 32-bit core with LPAE, OP-TEE can choose the top 1 GB slot for user
+mappings. That range ends at 4 GB, which does not fit in a 32-bit `vaddr_t`,
+so the range end wrapped to 0 and no user TA could be loaded. The patch caps
+the range end at the last `CORE_MMU_PGDIR_SIZE` boundary, which leaves the
+last 2 MB of the slot unused but keeps the slot usable.
+
+Relevant Patch File:
+
+1. optee-os_user_va_range_overflow.patch: Caps the user VA range end in
+    `core/mm/vm.c`.
 
 ## Patches for enabling ssh
 

@@ -40,26 +40,26 @@ jobs:
     uses: ./.github/workflows/reuse_build_test_qemu_image.yml
     with:
       runs-on: ubuntu-24.04
-      expand-memory: true
-      optee-version: ${{ inputs.optee-version }}
-
-  amd64-ubuntu24:
-    uses: ./.github/workflows/reuse_build_test_qemu_image.yml
-    with:
-      runs-on: ubuntu-24.04
-      expand-memory: false
+      guest-arch: aarch64
       optee-version: ${{ inputs.optee-version }}
 
   arm64-ubuntu24-expand-ta-memory:
     uses: ./.github/workflows/reuse_build_test_qemu_image.yml
     with:
       runs-on: ubuntu-24.04-arm
-      expand-memory: true
+      guest-arch: aarch64
       optee-version: ${{ inputs.optee-version }}
 
-  arm64-ubuntu24:
+  amd64-ubuntu24-arm32-expand-ta-memory:
+    uses: ./.github/workflows/reuse_build_test_qemu_image.yml
+    with:
+      runs-on: ubuntu-24.04
+      guest-arch: arm32
+      optee-version: ${{ inputs.optee-version }}
+
+  arm64-ubuntu24-arm32-expand-ta-memory:
     uses: ./.github/workflows/reuse_build_test_qemu_image.yml
     with:
       runs-on: ubuntu-24.04-arm
-      expand-memory: false
+      guest-arch: arm32
       optee-version: ${{ inputs.optee-version }}

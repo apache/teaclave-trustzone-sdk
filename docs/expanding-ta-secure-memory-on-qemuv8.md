@@ -12,7 +12,8 @@ expanding it supports 27M TA memory at most.
 We modified the firmware and configuration of QEMU and ATF. You can
 download the pre-built image from
 https://nightlies.apache.org/teaclave/teaclave-trustzone-sdk/ or patch the code
-and build the images by yourself.
+and build the images by yourself. The AArch32 images use the same firmware
+patches and OP-TEE make arguments.
 
 For details on the modifications, please refer to the
 [Patches](https://github.com/apache/teaclave-trustzone-sdk/.patches/test_qemu)
