@@ -30,9 +30,17 @@ mkdir -p "$OPTEE_DIR"
 export CROSS_COMPILE32="${CROSS_COMPILE32:-arm-linux-gnueabihf-}"
 export CROSS_COMPILE64="${CROSS_COMPILE64:-aarch64-linux-gnu-}"
 
-# build optee_os and optee_client for qemu_v8
+# A 32-bit client has to run in a 32-bit OP-TEE, so use the AArch32 QEMU
+# platform for that configuration.
+if [ "${ARCH_HOST:-}" = "arm" ] && [ "${ARCH_TA:-}" = "arm" ]; then
+    OPTEE_PLATFORM=${OPTEE_PLATFORM:-vexpress-qemu_virt}
+else
+    OPTEE_PLATFORM=${OPTEE_PLATFORM:-vexpress-qemu_armv8a}
+fi
+
+# build optee_os and optee_client for qemu
 git clone https://github.com/OP-TEE/optee_os.git -b $OPTEE_VERSION $OPTEE_DIR/optee_os
-(cd $OPTEE_DIR/optee_os && make PLATFORM=vexpress-qemu_armv8a -j$(nproc))
+(cd $OPTEE_DIR/optee_os && make PLATFORM=$OPTEE_PLATFORM -j$(nproc))
 
 git clone https://github.com/OP-TEE/optee_client.git -b $OPTEE_VERSION $OPTEE_DIR/optee_client
 (cd $OPTEE_DIR/optee_client && make -j$(nproc) WITH_TEEACL=0 DESTDIR=$PWD/export_arm32 CROSS_COMPILE=$CROSS_COMPILE32)
