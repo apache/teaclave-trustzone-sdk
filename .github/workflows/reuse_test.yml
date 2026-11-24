@@ -26,6 +26,10 @@ on:
       container:
         required: true
         type: string
+      host_arch:
+        description: 'Host architecture used in artifact names: x86_64 or aarch64'
+        required: true
+        type: string
 
 defaults:
   run:
@@ -53,7 +57,7 @@ jobs:
           # Setup Rust and toolchains
           ./setup.sh
           source "$HOME/.cargo/env"
- 
+
           # Build optee_os and optee_client for qemu_v8
           ./build_optee_libraries.sh $HOME
 
@@ -94,34 +98,153 @@ jobs:
             cargo clippy -p cargo-optee -- -D warnings && \
             cargo fmt --all --check)
 
-  build-and-test-examples-for-32bit-no-std-TAs:
-    uses: ./.github/workflows/reuse_host_build_and_qemu_run.yml
-    with:
-      runs-on: ${{ inputs.runs-on }}
-      container: ${{ inputs.container }}
-      std: false
-      ta_arch: arm
+  # Build the CA and TA binaries once per mode and target architecture.
+  # The resulting artifacts are consumed by test-examples.
+  build-examples:
+    name: build-examples (${{ matrix.mode }}, ${{ matrix.target_arch }})
+    runs-on: ${{ inputs.runs-on }}
+    container: ${{ inputs.container }}
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [no-std, std]
+        target_arch: [arm32, aarch64]
+    env:
+      OPTEE_DIR: /tmp/optee
+      ARCH_HOST: ${{ matrix.target_arch == 'arm32' && 'arm' || 'aarch64' }}
+      ARCH_TA: ${{ matrix.target_arch == 'arm32' && 'arm' || 'aarch64' }}
+      STD: ${{ matrix.mode == 'std' && 'y' || '' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Cache Cargo downloads
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/index
+          key: cargo-v1-examples-${{ inputs.host_arch }}-${{ matrix.mode }}-${{ matrix.target_arch }}-${{ hashFiles('rust-toolchain.toml') }}
+          restore-keys: |
+            cargo-v1-examples-${{ inputs.host_arch }}-${{ matrix.mode }}-
+      # Setup Rust and toolchains
+      - name: Setup
+        run: |
+          ./setup.sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      # Setup std dependencies
+      - name: Setup STD
+        if: ${{ matrix.mode == 'std' }}
+        run: |
+          ./setup_std_dependencies.sh
+      - name: Build
+        run: |
+          mkdir -p $OPTEE_DIR
+          ./build_optee_libraries.sh $OPTEE_DIR
+          source environment
+          if [ "${{ matrix.mode }}" = "std" ]; then
+            make std-examples -j2
+            (cd projects/web3/eth_wallet && make)
+          else
+            make no-std-examples -j2
+          fi
+      - name: Pack examples
+        run: |
+          set -euo pipefail
 
-  build-and-test-examples-for-64bit-no-std-TAs:
-    uses: ./.github/workflows/reuse_host_build_and_qemu_run.yml
-    with:
-      runs-on: ${{ inputs.runs-on }}
-      container: ${{ inputs.container }}
-      std: false
-      ta_arch: aarch64
+          case "${{ matrix.target_arch }}-${{ matrix.mode }}" in
+            arm32-std)
+              CA_TARGET=arm-unknown-linux-gnueabihf
+              TA_TARGET=arm-unknown-optee
+              ;;
+            arm32-no-std)
+              CA_TARGET=arm-unknown-linux-gnueabihf
+              TA_TARGET=arm-unknown-linux-gnueabihf
+              ;;
+            aarch64-std)
+              CA_TARGET=aarch64-unknown-linux-gnu
+              TA_TARGET=aarch64-unknown-optee
+              ;;
+            aarch64-no-std)
+              CA_TARGET=aarch64-unknown-linux-gnu
+              TA_TARGET=aarch64-unknown-linux-gnu
+              ;;
+          esac
 
-  build-and-test-examples-for-32bit-std-TAs:
-    uses: ./.github/workflows/reuse_host_build_and_qemu_run.yml
-    with:
-      runs-on: ${{ inputs.runs-on }}
-      container: ${{ inputs.container }}
-      std: true
-      ta_arch: arm
+          mkdir -p "$GITHUB_WORKSPACE/.ci-artifacts"
+          CA_PATHS=("examples/ca/target/$CA_TARGET/release")
+          TA_PATHS=("examples/ta/target/$TA_TARGET/release")
+          if [ "${{ matrix.mode }}" = "std" ]; then
+            CA_PATHS+=("projects/web3/eth_wallet/host/target/$CA_TARGET/release")
+            TA_PATHS+=("projects/web3/eth_wallet/ta/target/$TA_TARGET/release")
+          fi
 
-  build-and-test-examples-for-64bit-std-TAs:
-    uses: ./.github/workflows/reuse_host_build_and_qemu_run.yml
-    with:
-      runs-on: ${{ inputs.runs-on }}
-      container: ${{ inputs.container }}
-      std: true
-      ta_arch: aarch64
+          tar -czf "$GITHUB_WORKSPACE/.ci-artifacts/ca.tar.gz" "${CA_PATHS[@]}"
+          tar -czf "$GITHUB_WORKSPACE/.ci-artifacts/ta.tar.gz" "${TA_PATHS[@]}"
+      - name: Upload CA artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ca-${{ inputs.host_arch }}-${{ matrix.mode }}-${{ matrix.target_arch }}
+          path: ${{ github.workspace }}/.ci-artifacts/ca.tar.gz
+          if-no-files-found: error
+      - name: Upload TA artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ta-${{ inputs.host_arch }}-${{ matrix.mode }}-${{ matrix.target_arch }}
+          path: ${{ github.workspace }}/.ci-artifacts/ta.tar.gz
+          if-no-files-found: error
+
+  # Run the QEMU tests with prebuilt CA/TA artifacts.
+  test-examples:
+    name: test-examples (${{ matrix.mode }}, ${{ matrix.guest }} guest, ${{ matrix.ta_arch }} TA)
+    needs: build-examples
+    runs-on: ${{ inputs.runs-on }}
+    container: ${{ inputs.container }}
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [no-std, std]
+        guest: [arm32, aarch64]
+        ta_arch: [arm32, aarch64]
+        exclude:
+          # A 32-bit guest cannot load a 64-bit TA.
+          - guest: arm32
+            ta_arch: aarch64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Download CA artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ca-${{ inputs.host_arch }}-${{ matrix.mode }}-${{ matrix.guest }}
+          path: ${{ github.workspace }}/.ci-artifacts/ca
+      - name: Download TA artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ta-${{ inputs.host_arch }}-${{ matrix.mode }}-${{ matrix.ta_arch }}
+          path: ${{ github.workspace }}/.ci-artifacts/ta
+      - name: Extract artifacts
+        run: |
+          tar -xzf "$GITHUB_WORKSPACE/.ci-artifacts/ca/ca.tar.gz"
+          tar -xzf "$GITHUB_WORKSPACE/.ci-artifacts/ta/ta.tar.gz"
+      - name: Configure target
+        run: |
+          case "${{ matrix.guest }}" in
+            arm32) TARGET_HOST=arm-unknown-linux-gnueabihf ;;
+            aarch64) TARGET_HOST=aarch64-unknown-linux-gnu ;;
+          esac
+          echo "TARGET_HOST=$TARGET_HOST" >> $GITHUB_ENV
+
+          case "${{ matrix.ta_arch }}-${{ matrix.mode }}" in
+            arm32-std) TARGET_TA=arm-unknown-optee ;;
+            arm32-no-std) TARGET_TA=arm-unknown-linux-gnueabihf ;;
+            aarch64-std) TARGET_TA=aarch64-unknown-optee ;;
+            aarch64-no-std) TARGET_TA=aarch64-unknown-linux-gnu ;;
+          esac
+          echo "TARGET_TA=$TARGET_TA" >> $GITHUB_ENV
+
+          if [ "${{ matrix.mode }}" = "std" ]; then
+            echo "STD=y" >> $GITHUB_ENV
+          fi
+      - name: Run
+        run: |
+          cd ci && ./ci.sh

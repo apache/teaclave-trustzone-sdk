@@ -33,6 +33,7 @@ jobs:
     uses: ./.github/workflows/reuse_test.yml
     with:
       runs-on: ubuntu-24.04
+      host_arch: x86_64
       container: ghcr.io/ivila/teaclave-trustzone-sdk-ci-runner:ubuntu-24.04
 
   # Run test on ARM64 host
@@ -40,6 +41,7 @@ jobs:
     uses: ./.github/workflows/reuse_test.yml
     with:
       runs-on: ubuntu-24.04-arm
+      host_arch: aarch64
       container: ghcr.io/ivila/teaclave-trustzone-sdk-ci-runner:ubuntu-24.04
 
   # Regenerate the committed `*-sys` bindings from the OP-TEE release pinned in
