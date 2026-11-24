@@ -61,7 +61,7 @@ then
 fi
 
 case "$TARGET_TA" in
-  arm-unknown-*)
+  arm*)
     export TA_DEV_KIT_DIR="$OPTEE_OS_DIR/out/arm-plat-vexpress/export-ta_arm32"
     ;;
   *)
@@ -101,7 +101,7 @@ then
 fi
 
 case "$TARGET_HOST" in
-  arm-unknown-*)
+  arm*)
     export OPTEE_CLIENT_EXPORT="$OPTEE_CLIENT_DIR/export_arm32"
     ;;
   *)

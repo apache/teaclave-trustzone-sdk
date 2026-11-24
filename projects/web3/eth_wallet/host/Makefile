@@ -16,7 +16,7 @@
 # under the License.
 
 TARGET ?= $(or $(TARGET_HOST),aarch64-unknown-linux-gnu)
-ifneq ($(filter arm-unknown-%,$(TARGET)),)
+ifneq ($(filter arm%,$(TARGET)),)
 OPTEE_ARCH := --arch arm
 else
 OPTEE_ARCH := --arch aarch64

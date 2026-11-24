@@ -18,7 +18,7 @@
 # STD-ONLY example
 
 TARGET ?= $(or $(TARGET_TA),aarch64-unknown-linux-gnu)
-ifneq ($(filter arm-unknown-%,$(TARGET)),)
+ifneq ($(filter arm%,$(TARGET)),)
 OPTEE_ARCH := --arch arm
 else
 OPTEE_ARCH := --arch aarch64

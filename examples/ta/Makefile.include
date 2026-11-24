@@ -18,7 +18,7 @@
 # TARGET is the OP-TEE rust.mk / `source environment` interface.
 # cargo-optee --arch / --std are derived from that triple.
 TARGET ?= $(or $(TARGET_TA),aarch64-unknown-linux-gnu)
-ifneq ($(filter arm-unknown-%,$(TARGET)),)
+ifneq ($(filter arm%,$(TARGET)),)
 OPTEE_ARCH := --arch arm
 else
 OPTEE_ARCH := --arch aarch64
