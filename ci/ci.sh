@@ -21,6 +21,21 @@ set -xe
 
 pushd ../tests
 
+# setup.sh selects the guest; print it before starting the suites.
+case "${TARGET_HOST:-}" in
+    arm*)
+        echo "Running tests in the AArch32 QEMU guest"
+        ;;
+    aarch64*)
+        echo "Running tests in the AArch64 QEMU guest"
+        ;;
+    *)
+        echo "Unsupported TARGET_HOST: ${TARGET_HOST:-<unset>}" >&2
+        echo "source environment first" >&2
+        exit 1
+        ;;
+esac
+
 # Prioritize running specialized test suites first, as they have a higher
 # probability of detecting failures early in the pipeline.
 # Run std only tests

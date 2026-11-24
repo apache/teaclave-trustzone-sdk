@@ -19,7 +19,6 @@
 
 set -xe
 
-NEED_EXPANDED_MEM=true
 # Include base script
 source setup.sh
 
@@ -29,7 +28,18 @@ copy_ca_to_qemu ../examples/ca/target/$TARGET_HOST/release/tls_server-rs
 
 # Run script specific commands in QEMU
 run_in_qemu "nohup tls_server-rs > /tmp/tls_server.log 2>&1 &"
-(sleep 5 && run_in_qemu "cat /tmp/tls_server.log" | grep -q "listening") || (echo " [TIMEOUT] Server failed to start." && print_detail_and_exit)
+
+# Wait until the server listens on 4433. AArch32 TCG can be slow.
+run_in_qemu_with_timeout_secs '
+    while ! netstat -lnt | grep -q ":4433 "; do
+        pidof tls_server-rs >/dev/null || exit 1
+        sleep 1
+    done
+' 60 || {
+    echo " [TIMEOUT] Server is not listening on 4433."
+    run_in_qemu "cat /tmp/tls_server.log" || true
+    print_detail_and_exit
+}
 # Outside the QEMU: connect the server using openssl, accept the self-signed CA cert
 # || true because we want to continue testing even if the connection fails, and check the log later
 OPENSSL_OUTPUT=$(echo "Q" | timeout 10s openssl s_client -connect 127.0.0.1:54433 -CAfile ../examples/ta/tls_server-rs/test-ca/ecdsa/ca.cert -debug 2>&1) || true

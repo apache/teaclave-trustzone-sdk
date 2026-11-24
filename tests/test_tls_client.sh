@@ -19,7 +19,6 @@
 
 set -xe
 
-NEED_EXPANDED_MEM=true
 # Include base script
 source setup.sh
 

@@ -19,25 +19,8 @@
 
 set -xe
 
-# Default value for NEED_EXPANDED_MEM
-: ${NEED_EXPANDED_MEM:=false}
 OPTEE_TAG=optee-$(cat ../optee-version.txt)
-
-# Define IMG_VERSION
-IMG_VERSION="$(uname -m)-$OPTEE_TAG-qemuv8-ubuntu-24.04"
-
-IMG="$IMG_VERSION"
-NORMAL_SESSION_NAME="qemu_screen"
-EXPAND_MEMORY_SESSION_NAME="qemu_screen_expand_ta_memory"
-
-CURRENT_SESSION_NAME=$NORMAL_SESSION_NAME
-OTHER_SESSION_NAME=$EXPAND_MEMORY_SESSION_NAME
-# Change Options based on NEED_EXPANDED_MEM
-if [ "$NEED_EXPANDED_MEM" = true ]; then
-    IMG="${IMG_VERSION}-expand-ta-memory"
-    CURRENT_SESSION_NAME=$EXPAND_MEMORY_SESSION_NAME
-    OTHER_SESSION_NAME=$NORMAL_SESSION_NAME
-fi
+IMG_SUFFIX="ubuntu-24.04-expand-ta-memory"
 
 SSH_PORT=54432
 # StrictHostKeyChecking=no: Bypasses the interactive prompt to confirm the
@@ -50,6 +33,33 @@ SSH_TARGET="root@127.0.0.1"
 
 SCREEN_LOG_PATH=screenlog.0
 SERIAL_LOG_PATH=/tmp/serial.log
+NW_SERIAL_LOG_PATH=/tmp/serial-nw.log
+
+# A 32-bit client runs in the AArch32 guest; a 64-bit client runs in the AArch64 guest.
+case "${TARGET_HOST:-}" in
+    arm*)
+        IMG="$(uname -m)-$OPTEE_TAG-qemu-arm32-$IMG_SUFFIX"
+        QEMU_SCRIPT=./optee-qemu-arm32.sh
+        CURRENT_SESSION_NAME=qemu_screen_arm32
+        OTHER_SESSION_NAME=qemu_screen
+        # AArch32 runs under TCG, which is noticeably slower than the AArch64 guest.
+        RUN_IN_QEMU_TIMEOUT=20s
+        BOOT_TIMEOUT=120s
+        ;;
+    aarch64*)
+        IMG="$(uname -m)-$OPTEE_TAG-qemuv8-$IMG_SUFFIX"
+        QEMU_SCRIPT=./optee-qemuv8.sh
+        CURRENT_SESSION_NAME=qemu_screen
+        OTHER_SESSION_NAME=qemu_screen_arm32
+        RUN_IN_QEMU_TIMEOUT=10s
+        BOOT_TIMEOUT=30s
+        ;;
+    *)
+        echo "Unsupported TARGET_HOST: ${TARGET_HOST:-<unset>}" >&2
+        echo "source environment first" >&2
+        exit 1
+        ;;
+esac
 
 # Function to download image
 download_image() {
@@ -58,7 +68,7 @@ download_image() {
 
 # Functions for running commands in QEMU
 run_in_qemu() {
-    run_in_qemu_with_timeout_secs "$1" 10s
+    run_in_qemu_with_timeout_secs "$1" "$RUN_IN_QEMU_TIMEOUT"
 }
 
 run_in_qemu_with_timeout_secs() {
@@ -91,6 +101,9 @@ copy_plugin_to_qemu() {
 # Functions for handling failure
 print_detail_and_exit() {
     cat -v $SCREEN_LOG_PATH
+    if [ -f "$NW_SERIAL_LOG_PATH" ]; then
+        cat -v "$NW_SERIAL_LOG_PATH"
+    fi
     cat -v $SERIAL_LOG_PATH
     exit 1
 }
@@ -111,14 +124,17 @@ mkdir -p shared
 if screen -list | grep -q "\.${OTHER_SESSION_NAME}[[:space:]]"; then
     echo "Other Session '${OTHER_SESSION_NAME}' is running, terminate it to prevent conflicts"
     screen -S $OTHER_SESSION_NAME -X quit
-    rm -f $SERIAL_LOG_PATH && rm -f $SCREEN_LOG_PATH
+    rm -f $SERIAL_LOG_PATH && rm -f $NW_SERIAL_LOG_PATH && rm -f $SCREEN_LOG_PATH
 fi
 # Start QEMU screen
 if screen -list | grep -q "\.${CURRENT_SESSION_NAME}[[:space:]]"; then
     echo "Session '${CURRENT_SESSION_NAME}' is already running. Skipping start."
 else
     echo "Starting new session: ${CURRENT_SESSION_NAME}"
-    screen -L -d -m -S $CURRENT_SESSION_NAME ./optee-qemuv8.sh $IMG
+    # Tests log Normal World to a file; the qemu scripts default to stdio.
+    export NON_SECURE_WORLD_SERIAL=file:/tmp/serial-nw.log
+    rm -f $SCREEN_LOG_PATH $SERIAL_LOG_PATH $NW_SERIAL_LOG_PATH
+    screen -L -d -m -S $CURRENT_SESSION_NAME $QEMU_SCRIPT $IMG
 fi
 
 TEST_QEMU_SCRIPT_NAME=/tmp/teaclave-$CURRENT_SESSION_NAME.sh
@@ -128,5 +144,5 @@ cat <<EOF > "$TEST_QEMU_SCRIPT_NAME"
         sleep 1
     done
 EOF
-timeout 30s bash $TEST_QEMU_SCRIPT_NAME
+timeout $BOOT_TIMEOUT bash $TEST_QEMU_SCRIPT_NAME
 echo "QEMU SSH Ready"

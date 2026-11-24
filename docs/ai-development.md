@@ -244,6 +244,7 @@ For QEMU runtime testing, inspect the relevant entry points and prerequisites:
 cat ci/ci.sh
 cat tests/setup.sh
 cat tests/optee-qemuv8.sh
+cat tests/optee-qemu-arm32.sh
 ```
 
 The repository's QEMU test scripts include `tests/test_*.sh`. Follow their current usage to select the setup, launcher, and relevant test invocation.
