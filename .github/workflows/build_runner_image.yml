@@ -55,7 +55,7 @@ on:
       image_tag:
         description: 'Docker tag'
         required: true
-        default: 'ubuntu-24.04'
+        default: 'debian-trixie'
       image_name:
         description: 'Docker image name'
         required: true

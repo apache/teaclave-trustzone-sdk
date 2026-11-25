@@ -32,120 +32,34 @@ defaults:
     shell: bash
 
 jobs:
-  # Cross-compile for ARM64 on host and run tests in QEMU, use the check script
-  # in OP-TEE repo.
-  OPTEE-repo-build-and-run-examples-64bit-TAs:
+  # Cross-compile the examples inside the OP-TEE tree and run the QEMU check
+  # script from the OP-TEE repo. The 32-bit variant runs 32-bit CAs and TAs.
+  OPTEE-repo-build-and-run-examples:
+    name: OPTEE-repo-build-and-run-examples-${{ matrix.tas }}-TAs
     runs-on: ${{ inputs.runs-on }}
+    container: ${{ inputs.container }}
+    strategy:
+      fail-fast: false
+      matrix:
+        tas: [64bit, 32bit]
     steps:
-      - name: Cleanup unused packages to free disk space
-        run: |
-          echo "Removing top large packages"
-          packages=(
-            google-chrome-stable microsoft-edge-stable firefox
-            azure-cli google-cloud-cli kubectl podman skopeo buildah snapd
-            temurin-8-jdk temurin-11-jdk temurin-17-jdk temurin-21-jdk
-            dotnet-sdk-8.0 dotnet-runtime-8.0 aspnetcore-runtime-8.0 aspnetcore-targeting-pack-8.0 netstandard-targeting-pack-2.1-8.0 dotnet-targeting-pack-8.0
-            llvm-16-dev llvm-17-dev llvm-18-dev
-            clang-tools-16 clang-tools-17 clang-tools-18
-            clang-tidy-16 clang-tidy-17 clang-tidy-18
-          )
-          for pkg in "${packages[@]}"; do
-              if dpkg-query -W -f='${Package}\n' $pkg 2>/dev/null | grep -q .; then
-                  echo "Package $pkg exists, removing..."
-                  sudo apt-get remove -y --purge --allow-change-held-packages --allow-remove-essential --no-install-recommends $pkg || true
-              else
-                  echo "Package $pkg not found, skipping."
-              fi
-          done
-          sudo apt-get autoremove -y || true
-          sudo apt-get clean || true
-
-          echo "Removing heavy preinstalled SDKs..."
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/hostedtoolcache
-          
-          echo "Disk usage after cleanup:"
-          df -h
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
           submodules: recursive
           path: 'teaclave-trustzone-sdk'
-      - name: Install OP-TEE dependencies
-        run: |
-          cd $GITHUB_WORKSPACE/teaclave-trustzone-sdk
-          chmod +x setup_optee_dependencies.sh
-          sudo ./setup_optee_dependencies.sh
       - name: Checkout OP-TEE repository
         run: |
           mkdir -p ~/optee-qemuv8 && cd ~/optee-qemuv8 &&
           repo init -u https://github.com/OP-TEE/manifest.git -m qemu_v8.xml &&
           repo sync -j4 --no-clone-bundle
       - name: Build images and run tests
+        env:
+          MAKE_ARGS: ${{ matrix.tas == '32bit' && 'COMPILE_S_USER=32' || '' }}
         run: |
           cd ~/optee-qemuv8
           rm -rf optee_rust/ &&
-          mv $GITHUB_WORKSPACE/teaclave-trustzone-sdk optee_rust/
+          mv "$GITHUB_WORKSPACE/teaclave-trustzone-sdk" optee_rust/
           cd build &&
           make -j3 toolchains &&
-          make -j`nproc` RUST_ENABLE=y check
-
-  # Cross-compile for ARM32 on host and run tests in QEMU, use the check script
-  # in OP-TEE repo.
-  OPTEE-repo-build-and-run-examples-32bit-TAs:
-    runs-on: ${{ inputs.runs-on }}
-    steps:
-      - name: Cleanup unused packages to free disk space
-        run: |
-          echo "Removing top large packages"
-          packages=(
-            google-chrome-stable microsoft-edge-stable firefox
-            azure-cli google-cloud-cli kubectl podman skopeo buildah snapd
-            temurin-8-jdk temurin-11-jdk temurin-17-jdk temurin-21-jdk
-            dotnet-sdk-8.0 dotnet-runtime-8.0 aspnetcore-runtime-8.0 aspnetcore-targeting-pack-8.0 netstandard-targeting-pack-2.1-8.0 dotnet-targeting-pack-8.0
-            llvm-16-dev llvm-17-dev llvm-18-dev
-            clang-tools-16 clang-tools-17 clang-tools-18
-            clang-tidy-16 clang-tidy-17 clang-tidy-18
-          )
-          for pkg in "${packages[@]}"; do
-              if dpkg-query -W -f='${Package}\n' $pkg 2>/dev/null | grep -q .; then
-                  echo "Package $pkg exists, removing..."
-                  sudo apt-get remove -y --purge --allow-change-held-packages --allow-remove-essential --no-install-recommends $pkg || true
-              else
-                  echo "Package $pkg not found, skipping."
-              fi
-          done
-          sudo apt-get autoremove -y || true
-          sudo apt-get clean || true
-          
-          echo "Removing heavy preinstalled SDKs..."
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/hostedtoolcache
-          
-          echo "Disk usage after cleanup:"
-          df -h
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          submodules: recursive
-          path: 'teaclave-trustzone-sdk'
-      - name: Install OP-TEE dependencies
-        run: |
-          cd $GITHUB_WORKSPACE/teaclave-trustzone-sdk
-          chmod +x setup_optee_dependencies.sh
-          sudo ./setup_optee_dependencies.sh
-      - name: Checkout OP-TEE repository
-        run: |
-          mkdir -p ~/optee-qemuv8 && cd ~/optee-qemuv8 &&
-          repo init -u https://github.com/OP-TEE/manifest.git -m qemu_v8.xml &&
-          repo sync -j4 --no-clone-bundle
-      - name: Build images and run tests
-        run: |
-          cd ~/optee-qemuv8
-          rm -rf optee_rust/ &&
-          mv $GITHUB_WORKSPACE/teaclave-trustzone-sdk optee_rust/
-          cd build &&
-          make -j3 toolchains &&
-          make -j`nproc` RUST_ENABLE=y COMPILE_S_USER=32 check
+          make -j"$(nproc)" RUST_ENABLE=y DUMP_LOGS_ON_ERROR=1 $MAKE_ARGS check
