@@ -15,11 +15,20 @@
 # specific language governing permissions and limitations
 # under the License.
 
-FROM ubuntu:24.04
+FROM debian:trixie
 MAINTAINER Teaclave Contributors <dev@teaclave.apache.org>
 LABEL org.opencontainers.image.description "Github CI Runner"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install dependencies for building OP-TEE
 COPY setup_optee_dependencies.sh /tmp/setup_optee_dependencies.sh
-RUN /tmp/setup_optee_dependencies.sh
+RUN /tmp/setup_optee_dependencies.sh && rm -f /tmp/setup_optee_dependencies.sh
+
+# OP-TEE stopped building QEMU from source for the QEMU targets in
+# https://github.com/OP-TEE/build/commit/4e38530, so `make check` now uses the
+# distribution qemu-system-aarch64. Debian trixie ships QEMU 10, the version
+# upstream CI validates against. Only the OP-TEE test workflow needs QEMU, so
+# it is installed here instead of in setup_optee_dependencies.sh.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends qemu-system-arm && \
+    rm -rf /var/lib/apt/lists/*

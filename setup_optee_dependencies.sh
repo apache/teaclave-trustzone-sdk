@@ -23,8 +23,9 @@ set -xe
 apt-get update && \
     apt-get install -y \
     git \
-    android-tools-adb \
-    android-tools-fastboot \
+    acpica-tools \
+    adb \
+    fastboot \
     autoconf \
     automake \
     bc \
@@ -38,7 +39,7 @@ apt-get update && \
     flex \
     ftp-upload \
     gdisk \
-    iasl \
+    gnupg \
     libattr1-dev \
     libcap-dev \
     libfdt-dev \
@@ -47,13 +48,14 @@ apt-get update && \
     libgmp-dev \
     libhidapi-dev \
     libmpc-dev \
-    libncurses5-dev \
+    libncurses-dev \
     libpixman-1-dev \
     libssl-dev \
     libtool \
     make \
     mtools \
     ninja-build \
+    openssh-client \
     python3 \
     python3-pycryptodome \
     python3-pyelftools \
@@ -61,7 +63,6 @@ apt-get update && \
     python3-cryptography \
     python3-tomli \
     rsync \
-    repo \
     unzip \
     uuid-dev \
     xdg-utils \
@@ -75,6 +76,17 @@ apt-get update && \
     screen \
     libvdeplug-dev \
     libsdl2-dev \
-    pip \
+    python3-pip \
     ca-certificates \
     libgnutls28-dev
+
+# Debian does not package the repo launcher that Ubuntu ships, so fetch the
+# upstream launcher there. It is needed to check out the OP-TEE tree.
+if apt-cache show repo >/dev/null 2>&1; then
+    apt-get install -y repo
+else
+    curl -fsSL --retry 3 \
+        https://storage.googleapis.com/git-repo-downloads/repo \
+        -o /usr/local/bin/repo
+    chmod a+x /usr/local/bin/repo
+fi
